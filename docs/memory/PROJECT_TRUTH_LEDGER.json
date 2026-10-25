@@ -1739,15 +1739,16 @@
     {
       "id": "programme-audit-20261025",
       "scope": "Audit 28 lots/92 proposals; stable nonfinancial recovery controls and verified evidence links",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-10-25",
-      "statement": "Original 92 identifiers and criteria preserved. Baseline local CI 1058/1058; three proof regressions added. WebKit pointer-loss negative control reproduced before fix. Final same-source qualification and publication pending. Runtime change limited to settings layout and scoped scrolling; no financial owner, data, permission or schema change.",
+      "statement": "v41 published at 6d3264bd7f345d808fb8cbfcc618d99c274d3891;1061 native/82 Chromium/20 WebKit, zero fail/skip. Recovery controls and proof guard corrected with negative controls. All 92 original criteria preserved. BIR scope D1/source verified, financial owners preserved; real money disabled and field acceptance pending.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-25-PROGRAMME-AUDIT.md",
-        "tests/proposal-proof-integrity-20261025.test.mjs",
-        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs"
+        "docs/release/evidence/PROGRAMME-AUDIT-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/PROGRAMME-AUDIT-PUBLIC-2026-10-25.json",
+        "docs/release/evidence/PROGRAMME-AUDIT-BACKUP-SOURCE-2026-10-25.json",
+        "docs/implementation/PROGRAMME_AUDIT_2026-10-25.md"
       ],
-      "next": "Complete same-source qualification, verified D1/source backup, code-only delivery and closure; field acceptance remains separate."
+      "next": "Use the existing final proof receipts. Physical field acceptance and external economic outcomes remain distinct; do not reopen completed lots without a new reproduced defect."
     }
   ]
 }

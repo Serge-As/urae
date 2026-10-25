@@ -1,3 +1,19 @@
+## Audit finalisé et livraison v41 vérifiée — 25 octobre 2026
+
+Production **1.5.2.41-programme-audit**, source `6d3264bd7f345d808fb8cbfcc618d99c274d3891`, arbre `b2fc714baf776d0de9e36d542d1dd654e8aa5eea`, Worker `b426cd0c-af79-4d7b-9dfc-aed6333ad457`. Livraison et qualification indépendante du même SHA : [40235349803 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40235349803) ; [40235349738 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40235349738). **1061/1061 natifs, 82/82 Chromium et 20/20 WebKit**, zéro échec et zéro ignoré. Santé, catalogue de **164 capacités** et 76 empreintes publiques vérifiés lors de la livraison ; **13 fichiers publics relus indépendamment**, dont le correctif `data-quality-ui.js`, CSS et PWA. Pas d’écriture de recette en production.
+
+Les **28 lots, 48 propositions fonctionnelles A/I et 44 références T/M** sont rapprochés des documents d’origine. Les **92 identifiants et critères restent intacts**. Matrice détaillée : `docs/implementation/PROGRAMME_AUDIT_2026-10-25.md` et `.json`. Trois outils sont réellement réutilisés/intégrés dans leur portée (Playwright, PDF.js, Tesseract.js) ; les **41 autres références** restent facultatives et non importées. Aucune ambition stratégique ou promesse de revenu n’est déclarée acquise par ce bilan.
+
+Défauts fermés : référence de preuve inexistante acceptée par le garde ; statuts d’outils/limites historiques contradictoires ; clic de reprise perdu lors d’un déplacement WebKit de **297 px** entre appui et relâchement, puis défilement/focus mobile sous l’en-tête. Test négatif conservé, placement des commandes stabilisé et défilement limité aux paramètres. **Trois régressions natives nouvelles** et **un scénario navigateur permanent dans chaque moteur**, assertions financières conservées. Vérifications locales complémentaires : 21 natifs ciblés et 11 WebKit, dont OCR réel FR/EN, tous réussis. Les échecs initiaux restent dans les artefacts locaux ; aucune relance aveugle du SHA final en CI.
+
+BIR+ avant mutation du Worker : export D1 en lecture seule, restauration sur copie vierge, **50 tables / 48 attendues**, intégrité et clés étrangères valides. Archive privée R2 relue SHA256 `d4425a25da7b48cb8d87a8ce2bb8444962351432d25ef1da01d9b84105ecbfb6`. Portée **D1_AND_EXACT_SOURCE_ONLY** ; pièces R2, données/outbox d’appareil et prestataires exclus. Source exacte récupérable : `Eco-System_1.5.2.41_Source_Verifiee_6d3264bd_2026-10-25.zip`, **962 fichiers Git vérifiés**, SHA256 `db43508bd416a5aa9b862b089350e9e41d30716015858ba55ce984cb121435b4`. Aucune restauration de production ni migration.
+
+Invariants conservés : dix étapes, rubriques et deux feuilles, Ledger/D1 canonique, politiques de prêt, Living Rules, droits, historique, Live et outbox. Aucun reset, force-push, fusion de main, nouveau fournisseur ou redémarrage. `realMoneyEnabled=false`, **`FIELD_ACCEPTED=NOT_ACCEPTED`** : l’acceptation sur vrais groupes, comptes et appareils reste distincte. URAE reste public conformément au choix déjà confirmé du fondateur ; aucune visibilité modifiée.
+
+**ÉTAT DU PROJET APRÈS ÉTAPE** : programme audité, correctifs prouvés, qualifiés et publiés dans leur portée explicite. Aucun reliquat de code identifié dans ce programme borné ; tests terrain et résultats/contrats externes restent à valider. Réutiliser ces preuves du même SHA. Consommation exacte de crédits non mesurable.
+
+## Historique conservé
+
 ## Finalisation intégrée vérifiée v40 — 25 octobre 2026
 
 Programme intégré conservé à la source `67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f` : 1058 natifs / 81 Chromium / 19 WebKit, zéro échec ou ignoré ; publication, sauvegarde privée et OCR réel en production vérifiés sur cette source. Les reprises après erreur, annulation et changement FR/EN complètent le critère A26. Les 48 propositions A/I demeurent livrées dans leurs limites explicites. 24 outils et 20 modèles sont des références ; aucun résultat économique, prestataire externe ou recette réelle n'est déduit de ces preuves.
@@ -572,4 +588,3 @@ Vérification de clôture : suites de livraison sur la source intégrée, gardes
 **limits (registre conservé)** : "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. A source solution remains independently reviewed in its original context. Cross-group adaptations preserve their own method, conditions and result; each needs local review and remains dependent on the original author grant and readable sources. No raw messages or automatic rule changes."
 
 Vérification de clôture : suites de livraison sur la source intégrée, gardes de couverture du registre et preuves de publication dans le dossier de livraison. Les limites ci-dessus ne sont pas transformées en résultats terrain acquis.
-

@@ -1,0 +1,109 @@
+{
+  "protocol": "ECO_PUBLIC_VERIFICATION_1",
+  "sourceSha": "6d3264bd7f345d808fb8cbfcc618d99c274d3891",
+  "version": "1.5.2.41-programme-audit",
+  "buildId": "eco-system-1.5.2.41-20261025-programme-audit",
+  "pwaCache": "eco-system-v15241-programme-audit-20261025",
+  "healthOk": true,
+  "capabilities": 164,
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "deliveryPublicAssetHashes": 76,
+  "independentAssets": [
+    {
+      "path": "/",
+      "status": 200,
+      "sha256": "72ab4338768e75a36e9ed567f6ee5b1a7d8bf5862ce98efa2fb89d3575540267",
+      "bytes": 156875,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/styles.css",
+      "status": 200,
+      "sha256": "831656da1d79c8c938f3c2efc8e23ad4db3fbcdbfb1c2fed4199947c5b6441b2",
+      "bytes": 174687,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/sw.js",
+      "status": 200,
+      "sha256": "57726ea1475dd731bcbcf80518a61477aad7791206e1b184b217debc36e97319",
+      "bytes": 29926,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/eco-shell-manifest.json",
+      "status": 200,
+      "sha256": "bb67cd9db4f6761b2209664d5fbdcd3d3a8da3a4bb56f7a52c3d3263e4ab1c21",
+      "bytes": 26524,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/src/main.js",
+      "status": 200,
+      "sha256": "07414a1040c6a417a9e8282ff29cd3c127d1ea49517c89e80359ebc85cf4f607",
+      "bytes": 353650,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/src/data-quality-ui.js",
+      "status": 200,
+      "sha256": "3fc9b2cbede8c74941d02753cec948d88a2331a60da3883daec852c77cdd7ddf",
+      "bytes": 12912,
+      "expectedHashOrigin": "LOCAL_COMPILATION_OF_EXACT_SOURCE"
+    },
+    {
+      "path": "/src/engine-rehearsal-ui.js",
+      "status": 200,
+      "sha256": "1f5bc10ab83d4165baf0409de04bf430d4be7c5fcb36d64f4d89a8c780255a3d",
+      "bytes": 15254,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/src/notification-center-ui.js",
+      "status": 200,
+      "sha256": "b0e40d370ff9ec629f208d1a0b81ee508dd28d0d52aaa4469a3f93e7c4c10534",
+      "bytes": 20490,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/src/local-document-preparation.js",
+      "status": 200,
+      "sha256": "0fa576d95d021611ffb9aa1ceb693b584f870ea936349c00cdf41c8f8e8cb1c5",
+      "bytes": 10943,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/src/local-ocr-session.js",
+      "status": 200,
+      "sha256": "08292b45303682b92ecdcdbadb5d7f870a46824919e0114ba40216a68de0e6e7",
+      "bytes": 2446,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/src/local-document-ocr-worker.js",
+      "status": 200,
+      "sha256": "6ad17a7d81675ff9a08fc30b6d3d442f445cdd1f2ad9783341416589671cd075",
+      "bytes": 1417,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/src/public-notebook-ui.js",
+      "status": 200,
+      "sha256": "54cfec439f8cbc45f3166bc9816b1ddc5b1bab303f6e8583cf68783a76fb5b16",
+      "bytes": 2257,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    },
+    {
+      "path": "/vendor/documents/manifest.json",
+      "status": 200,
+      "sha256": "41e0001f9a11593511c389ad72ca96df384c00e368b43e0344922f1a51b31424",
+      "bytes": 9064,
+      "expectedHashOrigin": "SUCCESSFUL_EXACT_SOURCE_DELIVERY_RECEIPT"
+    }
+  ],
+  "lockedOptionalEngineAssets": 17,
+  "engineHashesReusedFromExactSourceDelivery": true,
+  "productionWritesPerformed": false,
+  "verifiedAt": "2026-10-25T21:43:54.744714+00:00"
+}

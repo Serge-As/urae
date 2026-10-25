@@ -1,7 +1,7 @@
 {
   "protocol": "ECO_PROGRAMME_AUDIT_1",
   "date": "2026-10-25",
-  "status": "CANDIDATE_QUALIFICATION_PENDING",
+  "status": "AUTOMATED_VERIFIED_AND_DEPLOYED_WITH_DOCUMENTED_LIMITS",
   "baselineSourceSha": "67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f",
   "lots": [
     {
@@ -492,5 +492,65 @@
   "criteriaPreserved": true,
   "canonicalOriginalCriteriaSha256": "4a53ada863e5d2338873b29e7254253d178c680876fec360a1dc967dc0a58c52",
   "fieldAcceptance": "NOT_ACCEPTED",
-  "realMoneyEnabled": false
+  "realMoneyEnabled": false,
+  "sourceSha": "6d3264bd7f345d808fb8cbfcc618d99c274d3891",
+  "treeSha": "b2fc714baf776d0de9e36d542d1dd654e8aa5eea",
+  "qualification": {
+    "protocol": "ECO_RELEASE_QUALIFICATION_1",
+    "sourceSha": "6d3264bd7f345d808fb8cbfcc618d99c274d3891",
+    "sameSource": true,
+    "native": 1061,
+    "chromium": 82,
+    "webkit": 20,
+    "failed": 0,
+    "skipped": 0,
+    "workerVersionId": "b426cd0c-af79-4d7b-9dfc-aed6333ad457",
+    "runs": [
+      {
+        "runId": 40235349803,
+        "path": ".github/workflows/qualify-1.5.2.10-offline-conflicts-loans.yml",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 121295616975,
+            "name": "browser-critical",
+            "status": "completed",
+            "conclusion": "success",
+            "activeStep": null,
+            "failedSteps": []
+          },
+          {
+            "id": 121295617096,
+            "name": "governed-ci",
+            "status": "completed",
+            "conclusion": "success",
+            "activeStep": null,
+            "failedSteps": []
+          }
+        ]
+      },
+      {
+        "runId": 40235349738,
+        "path": ".github/workflows/deploy-1.5.2.10-offline-conflicts-loans.yml",
+        "status": "completed",
+        "conclusion": "success",
+        "jobs": [
+          {
+            "id": 121295616992,
+            "name": "qualify-deploy-smoke",
+            "status": "completed",
+            "conclusion": "success",
+            "activeStep": null,
+            "failedSteps": []
+          }
+        ]
+      }
+    ],
+    "checkedAt": "2026-10-25T21:42:20.697288+00:00",
+    "fieldAcceptance": "NOT_ACCEPTED",
+    "realMoneyEnabled": false
+  },
+  "publicEvidence": "docs/release/evidence/PROGRAMME-AUDIT-PUBLIC-2026-10-25.json",
+  "recoveryEvidence": "docs/release/evidence/PROGRAMME-AUDIT-BACKUP-SOURCE-2026-10-25.json"
 }

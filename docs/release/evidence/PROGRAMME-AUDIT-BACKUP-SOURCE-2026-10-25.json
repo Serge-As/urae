@@ -1,0 +1,42 @@
+{
+  "sourceSha": "6d3264bd7f345d808fb8cbfcc618d99c274d3891",
+  "backup": {
+    "protocol": "ECO_RECOVERY_2",
+    "sourceSha": "6d3264bd7f345d808fb8cbfcc618d99c274d3891",
+    "scope": "D1_AND_EXACT_SOURCE_ONLY",
+    "completeApplicationBackup": false,
+    "database": "eco-system-db",
+    "bucket": "eco-system-backups",
+    "integrity": "ok",
+    "foreignKeys": "ok",
+    "tables": 50,
+    "expectedTables": 48,
+    "expectedSchemaPresent": true,
+    "sqlSha256": "f217a6b45ace2a3ba13bd40d2e87184b61d1d9628f968064dd7b5d9d8362d5c6",
+    "dataSha256": "57501727569d33bd71cb38c8aaed8a829b291c5b8368be2191e07dfce8063fc0",
+    "excluded": [
+      "R2_ATTACHMENT_OBJECTS",
+      "DEVICE_INDEXEDDB_AND_PENDING_OUTBOX",
+      "EXTERNAL_PROVIDER_STATE"
+    ],
+    "productionRestorePerformed": false,
+    "productionRowsIncludedInThisReceipt": false
+  },
+  "privateRecoveryArchive": {
+    "sourceSha": "6d3264bd7f345d808fb8cbfcc618d99c274d3891",
+    "privateArchiveReadbackSha256": "d4425a25da7b48cb8d87a8ce2bb8444962351432d25ef1da01d9b84105ecbfb6"
+  },
+  "exactSourceArchive": {
+    "sourceSha": "6d3264bd7f345d808fb8cbfcc618d99c274d3891",
+    "archive": "Eco-System_1.5.2.41_Source_Verifiee_6d3264bd_2026-10-25.zip",
+    "files": 962,
+    "sha256": "db43508bd416a5aa9b862b089350e9e41d30716015858ba55ce984cb121435b4",
+    "allGitBlobsVerified": true,
+    "scope": "EXACT_GIT_SOURCE_ONLY",
+    "containsProductionData": false
+  },
+  "completeApplicationBackup": false,
+  "productionRestorePerformed": false,
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED"
+}
