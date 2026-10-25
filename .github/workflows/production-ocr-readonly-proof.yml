@@ -12,7 +12,7 @@ jobs:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
       options: --ipc=host
     env:
-      ECO_4439791823cddc857ad898bfed8e702017b9f1d1: 4439791823cddc857ad898bfed8e702017b9f1d1
+      ECO_TARGET_SOURCE: 4439791823cddc857ad898bfed8e702017b9f1d1
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
