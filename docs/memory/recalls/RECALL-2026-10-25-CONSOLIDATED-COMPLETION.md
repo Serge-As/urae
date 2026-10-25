@@ -19,3 +19,5 @@ Confidentialité : URAE privé ; UTRAE seulement outils génériques publics rev
 ÉTAT DU PROJET APRÈS ÉTAPE : finalisation locale en cours, pas de v39 publiée. `realMoneyEnabled=false` ; `FIELD_ACCEPTED=NOT_ACCEPTED`. Consommation exacte de crédits non mesurable.
 
 Le contrôle distant a aussi relevé une collision de structure dans l'Inbox : la nouvelle section de rappels était imbriquée dans « Qui attend quoi ? », ajoutant un second titre au périmètre historique. Les deux sections sont maintenant sœurs, chacune vidée sur changement de contexte et hors ligne. Les assertions historiques sont conservées. Aucun reçu de lecture ni état métier modifié.
+
+Assemblage local : le worker amont non modifié est placé dans le dossier des quatre variantes du cœur. Le chargeur WASM externe résout son binaire depuis ce dossier, sans chercher à côté d’un autre worker ni accéder à un CDN. La source intermédiaire `62c14c88ed36cedb97058ce0c2f8d2f92ccf31de` est remplacée avant livraison par cet assemblage cohérent. Les fichiers binaires restent inchangés et leurs empreintes conservées.

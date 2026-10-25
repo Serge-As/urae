@@ -17,11 +17,12 @@
       "package": "tesseract.js",
       "version": "6.0.1",
       "license": "Apache-2.0",
-      "path": "tesseract.js/dist/worker.min.js",
+      "path": "tesseract.js-core/worker.min.js",
       "bytes": 111162,
       "sha256": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
       "source": "https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js",
-      "fallback": "https://unpkg.com/tesseract.js@6.0.1/dist/worker.min.js"
+      "fallback": "https://unpkg.com/tesseract.js@6.0.1/dist/worker.min.js",
+      "packaging": "Unmodified upstream worker in the core directory, so standard external-WASM loaders resolve their binary against the same-origin worker directory."
     },
     {
       "package": "tesseract.js",
@@ -189,6 +190,7 @@
       "tesseract-core-simd",
       "tesseract-core-simd-lstm"
     ],
-    "verification": "Exact version/asset hashes plus real Chromium and WebKit recognition. No arbitrary substitution across major versions."
+    "verification": "Exact version/asset hashes plus real Chromium and WebKit recognition. No arbitrary substitution across major versions.",
+    "workerPath": "tesseract.js-core/worker.min.js"
   }
 }

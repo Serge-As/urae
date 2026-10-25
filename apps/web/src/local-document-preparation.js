@@ -17,7 +17,7 @@ export function installLocalDocumentPreparation(input,parent,getContext=()=>''){
  const progress=(token,text)=>{if(alive(token))status.textContent=text;};
  async function ocr(source,token){
   if(!worker){const url=root+'tesseract.js/dist/tesseract.esm.min.js',module=await import(url);if(!alive(token))throw Error('DOCUMENT_PREPARATION_CANCELLED');
-   const created=await module.default.createWorker('fra+eng',1,{workerPath:root+'tesseract.js/dist/worker.min.js',corePath:root+'tesseract.js-core/',langPath:root+'languages',workerBlobURL:false,cacheMethod:'none',logger:m=>progress(token,String(m.status??'')+(Number.isFinite(m.progress)?' · '+Math.round(m.progress*100)+'%':''))});
+   const created=await module.default.createWorker('fra+eng',1,{workerPath:root+'tesseract.js-core/worker.min.js',corePath:root+'tesseract.js-core/',langPath:root+'languages',workerBlobURL:false,cacheMethod:'none',logger:m=>progress(token,String(m.status??'')+(Number.isFinite(m.progress)?' · '+Math.round(m.progress*100)+'%':''))});
    if(!alive(token)){await created.terminate();throw Error('DOCUMENT_PREPARATION_CANCELLED');}worker=created;workerEpoch=token;
   }
   const {data}=await worker.recognize(source);return String(data.text??'');

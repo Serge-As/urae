@@ -6,6 +6,7 @@ const run=promisify(execFile);
 const lock=JSON.parse(await fs.readFile('apps/web/document-engines.lock.json','utf8')),root=path.resolve('apps/web/vendor/documents');
 const api=lock.assets.find(a=>a.package==='tesseract.js'),core=lock.assets.find(a=>a.package==='tesseract.js-core'),compat=lock.compatibility;
 if(!compat||api?.version!==compat.tesseractApi||core?.version!==compat.tesseractCore||api.version.split('.')[0]!==core.version.split('.')[0])throw Error('DOCUMENT_ENGINE_INCOMPATIBLE_API_CORE');
+if(compat.workerPath!=='tesseract.js-core/worker.min.js'||!lock.assets.some(a=>a.package==='tesseract.js'&&a.path===compat.workerPath&&a.version===api.version))throw Error('DOCUMENT_ENGINE_WORKER_BINARY_DIRECTORY');
 for(const stem of compat.coreVariants)for(const suffix of ['.wasm','.wasm.js'])if(!lock.assets.some(a=>a.package==='tesseract.js-core'&&a.version===core.version&&a.path==='tesseract.js-core/'+stem+suffix))throw Error('DOCUMENT_ENGINE_MISSING_CORE_VARIANT:'+stem+suffix);
 for(const a of lock.assets)if(!/^[a-zA-Z0-9@_./-]+$/.test(a.path)||a.path.includes('..')||!/^https:\/\/(cdn.jsdelivr.net|unpkg.com)\//.test(a.source)||!/^[a-f0-9]{64}$/.test(a.sha256)||a.bytes>24*1024*1024)throw Error('INVALID_DOCUMENT_ENGINE_LOCK');
 const hash=b=>createHash('sha256').update(b).digest('hex');
