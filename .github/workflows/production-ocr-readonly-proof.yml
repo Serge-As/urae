@@ -1,0 +1,34 @@
+name: Eco deployed OCR read-only proof
+on:
+  push:
+    branches: ['codex/document-recovery-ocr-proof-20261025']
+permissions:
+  contents: read
+jobs:
+  deployed-ocr-readonly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --ipc=host
+    env:
+      ECO_TARGET_SOURCE: 67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: npm ci --ignore-scripts
+      - name: Check deployed OCR with a synthetic image and no account or business writes
+        run: node .github/production-ocr-smoke.mjs
+      - name: Preserve metadata-only proof
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: deployed-ocr-readonly-proof
+          path: |
+            DOCUMENT_RECOVERY_PRODUCTION_OCR.json
+            DOCUMENT_RECOVERY_PRODUCTION_OCR_DIAGNOSTIC.json
+          if-no-files-found: error
+          retention-days: 14
