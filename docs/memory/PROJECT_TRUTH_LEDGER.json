@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-24",
+  "generatedOn": "2026-10-25",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1715,6 +1715,20 @@
       ],
       "next": "Reuse exact-source receipts and integrated acceptance matrix. No repeated source audit or partial reimplementation without a concrete defect. Real-account field acceptance and unknown incidents remain separate.",
       "workerVersionId": "c3a9d6a2-1249-45d8-b35d-723e34bd91d6"
+    },
+    {
+      "id": "document-recovery-20261025",
+      "scope": "Bounded cancellable local extraction and preserved FR/EN selected-file/review context",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "observedOn": "2026-10-25",
+      "statement": "Six local targeted lifecycle tests pass; actual new-source Chromium/WebKit and publication remain pending. Canonical GroupDocuments and locked same-origin engines reused; business owners preserved. Consolidated A/I programme is already delivered within its documented limits.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-25-DOCUMENT-RECOVERY.md",
+        "docs/memory/recalls/RECALL-2026-10-25-DOCUMENT-RECOVERY.md",
+        "tests/local-document-recovery-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs"
+      ],
+      "next": "Qualify actual extraction/failure/cancellation/language and acquired loan/Live/outbox suites on this exact source, then verify deployment and private recovery. No field acceptance inferred."
     }
   ]
 }

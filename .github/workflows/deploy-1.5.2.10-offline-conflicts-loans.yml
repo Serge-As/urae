@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.39 — Live and Refonte Cloudflare Delivery
+name: Eco-System 1.5.2.40 — Live and Refonte Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.39-consolidated-completion
-  EXPECTED_BUILD: eco-system-1.5.2.39-20261025-consolidated-completion
-  EXPECTED_CACHE: eco-system-v15239-consolidated-completion-20261025
+  EXPECTED_VERSION: 1.5.2.40-document-recovery
+  EXPECTED_BUILD: eco-system-1.5.2.40-20261025-document-recovery
+  EXPECTED_CACHE: eco-system-v15240-document-recovery-20261025
   MIN_CAPABILITIES: 164
 
 jobs:
@@ -309,7 +309,7 @@ jobs:
           if(catalog.version!==process.env.EXPECTED_VERSION) throw new Error('CATALOG_VERSION_MISMATCH:'+catalog.version);
           if(!Array.isArray(catalog.capabilities)||catalog.count<Number(process.env.MIN_CAPABILITIES)||catalog.capabilities.length!==catalog.count) throw new Error('CAPABILITY_CATALOG_INCOMPLETE:'+catalog.count);
           console.log(JSON.stringify({version:health.version,commitSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled}));
-          const files=['/','/styles.css','/sw.js','/eco-shell-manifest.json','/src/main.js','/src/financial-work-ui.js','/src/completion-ui.js','/src/ui-modes.js','/src/field-hardening.js','/src/runtime-i18n.js','/src/shell-navigation.js','/src/session-rehearsal.js','/src/request-budget-ui.js','/packages/application/src/index.js','/packages/application/src/request-budget.js','/src/cockpit-priorities.js','/src/cockpit-priorities-ui.js','/src/journey-context.js','/src/personal-cockpit-ui.js','/src/workspace-navigation.js','/src/assistant-actions.js','/src/local-assistant.js','/src/universal-search.js','/src/advanced-ui.js','/src/community-shop-ui.js','/src/market-order-board.js','/src/market-quotes-ui.js','/src/personal-shops-ui.js','/src/business-studio-ui.js','/src/notification-center-ui.js','/packages/notifications/src/policy.js','/src/eco-care-ui.js','/packages/platform-kernel/src/case-care.js','/src/launch-studio.js','/src/launch-draft.js','/src/launch-guide-ui.js','/src/identity-verification-ui.js','/src/governed-group-ui.js','/src/economic-experiments-ui.js','/src/temporal-commerce-ui.js','/src/financial-explanations-ui.js','/src/productive-community-ui.js','/src/productive-business-ui.js','/src/safety-review-ui.js','/src/incident-package.js','/packages/trust/src/lab-review.js','/packages/group-documents/src/review.js','/src/resource-assemblies-ui.js','/src/engine-rehearsal-ui.js','/packages/offline/src/index.js','/src/productive-continuity-ui.js','/src/productive-calendar.js','/src/consolidated-completion-ui.js','/src/local-document-preparation.js','/src/public-notebook-ui.js','/public-notebook.html','/vendor/documents/manifest.json'];
+          const files=['/','/styles.css','/sw.js','/eco-shell-manifest.json','/src/main.js','/src/financial-work-ui.js','/src/completion-ui.js','/src/ui-modes.js','/src/field-hardening.js','/src/runtime-i18n.js','/src/shell-navigation.js','/src/session-rehearsal.js','/src/request-budget-ui.js','/packages/application/src/index.js','/packages/application/src/request-budget.js','/src/cockpit-priorities.js','/src/cockpit-priorities-ui.js','/src/journey-context.js','/src/personal-cockpit-ui.js','/src/workspace-navigation.js','/src/assistant-actions.js','/src/local-assistant.js','/src/universal-search.js','/src/advanced-ui.js','/src/community-shop-ui.js','/src/market-order-board.js','/src/market-quotes-ui.js','/src/personal-shops-ui.js','/src/business-studio-ui.js','/src/notification-center-ui.js','/packages/notifications/src/policy.js','/src/eco-care-ui.js','/packages/platform-kernel/src/case-care.js','/src/launch-studio.js','/src/launch-draft.js','/src/launch-guide-ui.js','/src/identity-verification-ui.js','/src/governed-group-ui.js','/src/economic-experiments-ui.js','/src/temporal-commerce-ui.js','/src/financial-explanations-ui.js','/src/productive-community-ui.js','/src/productive-business-ui.js','/src/safety-review-ui.js','/src/incident-package.js','/packages/trust/src/lab-review.js','/packages/group-documents/src/review.js','/src/resource-assemblies-ui.js','/src/engine-rehearsal-ui.js','/packages/offline/src/index.js','/src/productive-continuity-ui.js','/src/productive-calendar.js','/src/consolidated-completion-ui.js','/src/local-document-preparation.js','/src/local-ocr-session.js','/src/local-document-ocr-worker.js','/src/public-notebook-ui.js','/public-notebook.html','/vendor/documents/manifest.json'];
           files.push(...JSON.parse(fs.readFileSync('apps/web/document-engines.lock.json','utf8')).assets.map(asset=>'/vendor/documents/'+asset.path));
           const assets=[];
           for(const pathname of files){

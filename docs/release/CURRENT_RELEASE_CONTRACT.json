@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.39-consolidated-completion",
-    "buildId": "eco-system-1.5.2.39-20261025-consolidated-completion",
+    "version": "1.5.2.40-document-recovery",
+    "buildId": "eco-system-1.5.2.40-20261025-document-recovery",
     "schemaVersion": "d1-additive-20260923",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15239-consolidated-completion-20261025",
-    "previousPwaCache": "eco-system-v15238-productive-continuity-20261024",
+    "pwaCache": "eco-system-v15240-document-recovery-20261025",
+    "previousPwaCache": "eco-system-v15239-consolidated-completion-20261025",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {

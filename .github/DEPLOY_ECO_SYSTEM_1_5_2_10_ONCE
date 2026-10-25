@@ -1,5 +1,5 @@
 Eco-System consolidated completion authorized by founder
-release: 1.5.2.39-consolidated-completion
+release: 1.5.2.40-document-recovery
 date: 2026-10-25
 mode: code-only-with-verified-readonly-backup-no-migration
 db_mutation: none

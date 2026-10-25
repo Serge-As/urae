@@ -1,3 +1,11 @@
+## Finalisation de la reprise documentaire — candidat v40
+
+La production prouvée demeure v39, source `4439791823cddc857ad898bfed8e702017b9f1d1`. Le programme consolidé des 28 périmètres / 48 propositions fonctionnelles reste livré dans ses limites ; aucune réimplémentation de ces acquis. Le complément v40 ferme deux défauts concrets : extraction locale bloquée après erreur de chargement, et fichier sélectionné délié de son contrôleur après changement FR/EN. Hôte OCR annulable avant initialisation, délai de 60 s sans progrès et 180 s maximum par reconnaissance, reprise manuelle et nouvelle tentative. Texte et nombres restent soumis aux confirmations humaines.
+
+CIR : `docs/change-impact/CIR-2026-10-25-DOCUMENT-RECOVERY.md`. Six régressions ciblées locales passent ; qualification navigateur complète et publication de cette nouvelle source encore à établir. Ledger/D1, prêts/Live/outbox, droits et schéma préservés ; `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Aucun redémarrage, fournisseur OCR externe, paiement ou donnée réelle de test.
+
+## Historique conservé
+
 ## Clôture intégrée vérifiée v39 — 25 octobre 2026
 
 Production **1.5.2.39-consolidated-completion**, source `4439791823cddc857ad898bfed8e702017b9f1d1`, arbre `41b6ba6adbfddc1d560299f633e4090d3bd62cbd`, Worker `c3a9d6a2-1249-45d8-b35d-723e34bd91d6`. Livraison et qualification indépendante sur la même source : [40210012385 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40210012385) ; [40210012474 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40210012474). **1052/1052 tests natifs, 78/78 Chromium, 16/16 WebKit**, zéro échec et zéro ignoré. Catalogue : **164 capacités**. Le déploiement a comparé **74 empreintes de fichiers publics**, dont les 17 fichiers verrouillés des moteurs documentaires ; **11 fichiers critiques**, la santé et le catalogue ont été relus indépendamment depuis ce poste à 2026-10-25T16:38:27.484586+00:00. Les gros moteurs ne sont pas téléchargés une deuxième fois pour reproduire une preuve déjà acquise. La clôture documentaire locale est postérieure au code déployé ; son commit n'est pas un autre runtime.

@@ -1,6 +1,7 @@
 // Optional, same-origin document preparation. Extracted text is untrusted until
 // a person compares it with the source; this module has no business write API.
-const root='/vendor/documents/',tr=(fr,en)=>document.documentElement.lang==='en'?en:fr;
+import {createLocalOCRSession} from './local-ocr-session.js';
+const root='/vendor/documents/',tr=(fr,en)=>(document.getElementById('topLanguageSelect')?.value??document.getElementById('languageSelect')?.value??document.documentElement.lang)==='en'?en:fr;
 export function validateLocalDocuments(files){
  if(!files.length||files.length>10||files.reduce((a,f)=>a+f.size,0)>25*1024*1024)throw Error('DOCUMENT_LOCAL_LIMIT_10_FILES_25_MB');
  for(const f of files)if(f.size<1||f.size>15*1024*1024||!(/\.(pdf|txt|docx|doc|png|jpe?g|webp)$/i.test(f.name)))throw Error('DOCUMENT_LOCAL_FORMAT_OR_SIZE');
@@ -16,11 +17,12 @@ export function installLocalDocumentPreparation(input,parent,getContext=()=>''){
  input.addEventListener('change',reset);cancel.onclick=reset;
  const progress=(token,text)=>{if(alive(token))status.textContent=text;};
  async function ocr(source,token){
-  if(!worker){const url=root+'tesseract.js/dist/tesseract.esm.min.js',module=await import(url);if(!alive(token))throw Error('DOCUMENT_PREPARATION_CANCELLED');
-   const created=await module.default.createWorker('fra+eng',1,{workerPath:root+'tesseract.js-core/worker.min.js',corePath:root+'tesseract.js-core/',langPath:root+'languages',workerBlobURL:false,cacheMethod:'none',logger:m=>progress(token,String(m.status??'')+(Number.isFinite(m.progress)?' · '+Math.round(m.progress*100)+'%':''))});
-   if(!alive(token)){await created.terminate();throw Error('DOCUMENT_PREPARATION_CANCELLED');}worker=created;workerEpoch=token;
-  }
-  const {data}=await worker.recognize(source);return String(data.text??'');
+  if(!alive(token))throw Error('DOCUMENT_PREPARATION_CANCELLED');
+  if(!worker){worker=createLocalOCRSession((status,value)=>progress(token,status+(Number.isFinite(value)?' · '+Math.round(value*100)+'%':'')));workerEpoch=token;}
+  const session=worker;
+  if(source instanceof HTMLCanvasElement)source=await new Promise((resolve,reject)=>source.toBlob(blob=>blob?resolve(blob):reject(Error('DOCUMENT_IMAGE_SIGNATURE')),'image/png'));
+  if(!alive(token))throw Error('DOCUMENT_PREPARATION_CANCELLED');
+  return session.recognize(source);
  }
  function preview(source,title){const figure=document.createElement('figure'),caption=document.createElement('figcaption');caption.textContent=title;if(source instanceof HTMLCanvasElement)figure.append(source);else{const img=document.createElement('img');img.src=source;img.alt=title;img.loading='lazy';figure.append(img);}figure.append(caption);previews.append(figure);}
  start.onclick=async()=>{
@@ -43,7 +45,7 @@ export function installLocalDocumentPreparation(input,parent,getContext=()=>''){
     if(!alive(token))return;total+=text.length;if(total>115000)throw Error('DOCUMENT_LOCAL_TEXT_TOO_LARGE');texts.push({name:file.name,size:file.size,text,method});
    }
    progress(token,tr('Préparation locale terminée. Téléversez pour ouvrir la relecture ; aucun texte n’est encore enregistré.','Local preparation complete. Upload to open review; no text has been saved yet.'));
-  }catch(error){if(alive(token)){texts=[];status.textContent=String(error?.message??error)+tr(' · Vous pouvez encore préparer la transcription manuelle.',' · You can still prepare manual transcription.');}}
+  }catch(error){if(alive(token)){texts=[];const code=String(error?.message??error),message=code==='DOCUMENT_OCR_TIMEOUT'?tr('L’extraction locale ne répond plus. Elle a été arrêtée ; vous pouvez réessayer.','Local extraction stopped responding and was stopped. You can retry.'):code==='DOCUMENT_OCR_UNAVAILABLE'?tr('Le moteur local n’a pas pu charger ou lire cette pièce. Vous pouvez réessayer.','The local engine could not load or read this file. You can retry.'):code;status.textContent=message+tr(' · Vous pouvez encore préparer la transcription manuelle.',' · You can still prepare manual transcription.');}}
     finally{if(alive(token)){busy=false;start.disabled=false;cancel.hidden=true;}if(pdfEpoch===token){const finished=pdfTask;pdfTask=null;pdfEpoch=-1;await finished?.destroy();}if(workerEpoch===token){const finished=worker;worker=null;workerEpoch=-1;await finished?.terminate();}}
  };
  return{reset,getTexts:()=>{if(busy)throw Error('DOCUMENT_PREPARATION_IN_PROGRESS');return captured===getContext()?texts.map(x=>({...x})):[];}};

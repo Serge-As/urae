@@ -463,7 +463,8 @@
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
+      "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A17",
@@ -528,7 +529,8 @@
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
+      "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "A19",
@@ -1202,7 +1204,8 @@
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
+      "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I16",
@@ -1255,7 +1258,8 @@
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
+      "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
     },
     {
       "id": "I18",
