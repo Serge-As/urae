@@ -148,18 +148,6 @@ jobs:
           node -e "if(require('@playwright/test/package.json').version!=='1.56.1')throw Error('BROWSER_LIBRARY_VERSION_MISMATCH');"
           python3 --version
           node -e "(async()=>{const p=require('@playwright/test');for(const name of ['chromium','webkit']){const browser=await p[name].launch();console.log(name+': '+browser.version());await browser.close();}})().catch(error=>{console.error(error);process.exit(1);});"
-      - name: Mandatory Chromium finance and shell qualification
-        run: node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/consolidated-completion-20261025.spec.mjs tests/browser/productive-continuity-20261024.spec.mjs tests/browser/engine-rehearsal-incident-20261024.spec.mjs tests/browser/common-innovations-20261023.spec.mjs tests/browser/review-recovery-20261023.spec.mjs tests/browser/business-value-network-20261022.spec.mjs tests/browser/personal-shops-lot10-20261020.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs tests/browser/cockpit-continuity-20261015.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs tests/browser/cockpit-priorities-lot02-20261020.spec.mjs tests/browser/assistant-tools-lot23-20261020.spec.mjs tests/browser/market-orders-lot10-20261020.spec.mjs tests/browser/notification-inbox-lot24-20261021.spec.mjs tests/browser/care-lot25-20261021.spec.mjs tests/browser/launch-kit-lot03-20261022.spec.mjs tests/browser/groups-governance-trust-20261022.spec.mjs tests/browser/temporal-commerce-pilots-20261022.spec.mjs tests/browser/financial-explanations-20261022.spec.mjs tests/browser/productive-community-20261022.spec.mjs
-
-      - name: Status · gate-chromium
-        continue-on-error: true
-        shell: bash
-        run: |
-          curl --fail --silent --show-error -X POST \
-            -H "Authorization: Bearer ${{ github.token }}" \
-            -H "Accept: application/vnd.github+json" \
-            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d '{"state":"success","context":"eco-system/gate-chromium","description":"Chromium finance + shell passed"}' >/dev/null
       - name: Mandatory WebKit sovereign offline qualification
         run: node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/consolidated-completion-20261025.spec.mjs tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs tests/browser/engine-rehearsal-incident-20261024.spec.mjs tests/browser/productive-continuity-20261024.spec.mjs
 
@@ -180,6 +168,18 @@ jobs:
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-webkit","description":"WebKit sovereign offline passed"}' >/dev/null
+      - name: Mandatory Chromium finance and shell qualification
+        run: node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/consolidated-completion-20261025.spec.mjs tests/browser/productive-continuity-20261024.spec.mjs tests/browser/engine-rehearsal-incident-20261024.spec.mjs tests/browser/common-innovations-20261023.spec.mjs tests/browser/review-recovery-20261023.spec.mjs tests/browser/business-value-network-20261022.spec.mjs tests/browser/personal-shops-lot10-20261020.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs tests/browser/cockpit-continuity-20261015.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs tests/browser/cockpit-priorities-lot02-20261020.spec.mjs tests/browser/assistant-tools-lot23-20261020.spec.mjs tests/browser/market-orders-lot10-20261020.spec.mjs tests/browser/notification-inbox-lot24-20261021.spec.mjs tests/browser/care-lot25-20261021.spec.mjs tests/browser/launch-kit-lot03-20261022.spec.mjs tests/browser/groups-governance-trust-20261022.spec.mjs tests/browser/temporal-commerce-pilots-20261022.spec.mjs tests/browser/financial-explanations-20261022.spec.mjs tests/browser/productive-community-20261022.spec.mjs
+
+      - name: Status · gate-chromium
+        continue-on-error: true
+        shell: bash
+        run: |
+          curl --fail --silent --show-error -X POST \
+            -H "Authorization: Bearer ${{ github.token }}" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
+            -d '{"state":"success","context":"eco-system/gate-chromium","description":"Chromium finance + shell passed"}' >/dev/null
       - name: Resolve acquired D1 and R2 without replacement
         shell: bash
         run: |

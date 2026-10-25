@@ -1957,6 +1957,10 @@ html:has(#view-ecosystem.active #productiveCommunityCenter){scroll-behavior:auto
 @media(max-width:760px){.productive-community .productive-notebook-row{grid-template-columns:minmax(0,1fr);}.productive-community .form-grid{grid-template-columns:minmax(0,1fr);}.productive-community nav button{flex:1 1 135px;white-space:normal;}}
 
 .document-review{min-width:0}.document-review textarea{width:100%;min-width:0;box-sizing:border-box}.document-review pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto}
+html:has(#view-documents.active){scroll-behavior:auto;scroll-padding-block-start:calc(var(--eco-header-height,76px) + 100px);scroll-padding-block-end:120px;}
+#view-documents :is(input,select,textarea,button,summary){scroll-margin-block:calc(var(--eco-header-height,76px) + 100px) 120px;}
+.document-review>label:has(input[type=checkbox]){display:flex;align-items:flex-start;gap:12px;min-height:44px;padding-block:8px;line-height:1.5;}
+.document-review>label>input[type=checkbox]{margin:2px 0 0;align-self:flex-start;flex:0 0 20px;}
 
 .safety-review{min-width:0}.safety-review .form-grid>*{min-width:0}.safety-review input,.safety-review select{max-width:100%;box-sizing:border-box}.safety-review .table-wrap{overflow:auto}.safety-review td,.safety-review th{padding:.5rem;white-space:nowrap}#recoveryReadOnlyPanel pre{white-space:pre-wrap;overflow-wrap:anywhere}
 /* Consolidated productive journeys: shared spacing, restrained density and

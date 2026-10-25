@@ -29,3 +29,9 @@ La source `925f142e10abd2c5e056536d6f55fca6cb262211` passe la compilation, les c
 Le fondateur a rendu URAE public puis demandé explicitement de poursuivre : « Tu vas seulement continuer, on verra le problème de confidentialité plutard. Priorité au travail ». Cette décision autorise la poursuite de cette livraison dans URAE tel qu'il est configuré ; elle ne vaut ni transfert vers UTRAE ni publication de secrets ou de données personnelles/financières réelles. Les exports D1 restent uniquement dans le stockage R2 privé existant ; seuls les reçus sans lignes de données sont conservés en artefacts CI. La politique durable de visibilité reste à réexaminer séparément. Aucun redémarrage de l'ordinateur.
 
 Cette correction reste candidate tant que les deux chaînes obligatoires du SHA corrigé, le déploiement effectif et les empreintes publiques ne sont pas vérifiés. `FIELD_ACCEPTED=NOT_ACCEPTED`, `realMoneyEnabled=false`.
+
+## Correction d’accessibilité de la relecture — 25 octobre 2026
+
+La source `fe7d04c39fd599ca560d7f368830fa21f9bfd25d` passe 1052 tests natifs et les 78 parcours Chromium, y compris la mesure de zéro requête au repos. WebKit passe quatre des cinq nouveaux parcours, dont l’extraction OCR réelle, mais arrête le clic sur la confirmation du contenu : le défilement animé et l’en-tête fixe interceptent le pointeur. Le déploiement est resté arrêté avant toute mutation de production.
+
+Correction visuelle limitée à Documents : défilement direct sur cette vue, marges de défilement adaptées à la hauteur réelle de l’en-tête et de la navigation, cases de relecture séparées dans des labels flexibles d’au moins 44 pixels. Les deux confirmations, leurs événements natifs et les assertions restent inchangés ; aucun clic forcé ou contournement de l’approbation humaine. Qualification complète exigée sur la source corrigée.
