@@ -1,0 +1,16 @@
+{
+  "sourceSha": "67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f",
+  "version": "1.5.2.40-document-recovery",
+  "checkedAt": "2026-10-25T19:02:11.095Z",
+  "result": "PASS",
+  "scope": "Real French/English image OCR against deployed same-origin assets and production CSP. Synthetic image generated only in the disposable browser; no account or business write.",
+  "transport": "GitHub Ubuntu runner, default Chromium transport. Workstation QUIC/DNS incidents remain a separate, unaccepted client condition.",
+  "realMoneyEnabled": false,
+  "externalRequests": 0,
+  "remoteWrites": 0,
+  "requests": 15,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "proofRunId": 40224028371,
+  "proofCommitSha": "7db3bcf0bbcbca06dd1556e0bbd353fceb737e3e",
+  "proofUrl": "https://github.com/Serge-As/urae/actions/runs/40224028371"
+}

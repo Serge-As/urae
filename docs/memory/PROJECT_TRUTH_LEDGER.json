@@ -1719,16 +1719,22 @@
     {
       "id": "document-recovery-20261025",
       "scope": "Bounded cancellable local extraction and preserved FR/EN selected-file/review context",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-10-25",
-      "statement": "Six local targeted lifecycle tests pass; actual new-source Chromium/WebKit and publication remain pending. Canonical GroupDocuments and locked same-origin engines reused; business owners preserved. Consolidated A/I programme is already delivered within its documented limits.",
+      "statement": "Consolidated v40 exact-source qualification and actual Cloudflare publication verified. Local document initialization/failure/cancellation is bounded; FR/EN file binding, active view and edited review are preserved. Acquired programme, loan/Live/outbox and canonical owners retained. No real-account field acceptance.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-25-DOCUMENT-RECOVERY.md",
         "docs/memory/recalls/RECALL-2026-10-25-DOCUMENT-RECOVERY.md",
         "tests/local-document-recovery-20261025.test.mjs",
-        "tests/browser/consolidated-completion-20261025.spec.mjs"
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "source:67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-PUBLIC-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-PRODUCTION-OCR-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-BACKUP-SOURCE-2026-10-25.json"
       ],
-      "next": "Qualify actual extraction/failure/cancellation/language and acquired loan/Live/outbox suites on this exact source, then verify deployment and private recovery. No field acceptance inferred."
+      "next": "Reuse exact-source evidence; no remaining code item identified in the consolidated 48 A/I programme within documented limits. Only a concrete new defect or separately authorized evolution reopens implementation.",
+      "workerVersionId": "b147a132-2ae3-46bc-bae1-92287792f028"
     }
   ]
 }

@@ -12,7 +12,8 @@
         "docs/release/evidence/LOT01-NAVIGATION-PUBLIC-2026-10-20.json",
         "docs/release/evidence/LOT01-STABILITY-PUBLIC-2026-10-20.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
@@ -39,7 +40,8 @@
       "evidence": [
         "docs/release/evidence/LOT02-COCKPIT-CONTINUITY-PUBLIC-2026-10-20.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
@@ -70,7 +72,8 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "10 steps/fictional canonical simulation/scoped optional draft and same-project Kit recovery. No raw identity files or atomic cross-tab lock. Field acceptance pending.",
       "ownerLot": 3,
@@ -98,7 +101,8 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Adopted closed decision tasks, current assignee, immutable reports/review with evidence. No automatic finance, mandate, federation or succession effects.",
       "ownerLot": 4,
@@ -122,7 +126,8 @@
       "evidence": [
         "docs/release/evidence/LOT05-SESSION-REHEARSAL-PUBLIC-2026-10-20.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
@@ -165,7 +170,8 @@
         "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
@@ -193,7 +199,8 @@
         "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
@@ -221,7 +228,8 @@
         "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
@@ -249,7 +257,8 @@
         "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
@@ -264,7 +273,8 @@
         "docs/release/DELIVERY-2026-10-20-LOT10-PERSONAL-COMMERCE.md",
         "docs/release/evidence/LOT10-PERSONAL-COMMERCE-PUBLIC-2026-10-21.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Canonical group quotes/order/returns and personal shops/mandates/buyer receipt/support reference qualified. Future personal quote/procurement variants are not newly delivered. Transversal SAV L25; no real payment/reimbursement inferred.",
       "targetLots": [
@@ -295,7 +305,8 @@
         "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Private immutable hypotheses/observations, two prices, current canonical deliveries net of returns, declared costs/cash kept distinct, voluntary sanitized price draft.20 order references/100 recent files; no certified accounting, I16 resource booking or automatic publication.",
       "ownerLot": 11,
@@ -323,7 +334,8 @@
         "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Existing hard-constraint matching reused for current aggregate needs, with unknown costs and explicit expiration. No duplicated inventory or automatic procurement/order commitment; I06 Harvest not included.",
       "ownerLot": 12,
@@ -351,7 +363,8 @@
         "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Canonical dated group/shop availability and reservation, closed pickup and explicit local terms;100 recent items. No certified location, national map or transport.",
       "ownerLot": 13,
@@ -396,7 +409,8 @@
         "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
         "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. Original method sharing requires validated readable sources and author consent. Target adaptations require local conditions/results and independent review; source revocation invalidates derived visibility. No raw messages or automatic group rules."
     },
@@ -431,7 +445,8 @@
         "tests/consolidated-completion-20261025.test.mjs",
         "tests/browser/consolidated-completion-20261025.spec.mjs",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
-        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json"
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 4439791823cddc857ad898bfed8e702017b9f1d1; FIELD_ACCEPTED=NOT_ACCEPTED. Explicit PUBLIC field consent and chosen alias, same projection for preview and anonymous page, fresh canonical withdrawal. Private/group/chosen-contact audiences preserved. Bounded directory rereads at most 50 current pointers per request, at most20 results; no public personal contacts or universal full-text index. Already downloaded copies cannot be remotely recalled."
     },
@@ -461,7 +476,8 @@
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
       "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
@@ -497,7 +513,8 @@
         "tests/consolidated-completion-20261025.test.mjs",
         "tests/browser/consolidated-completion-20261025.spec.mjs",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
-        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json"
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 4439791823cddc857ad898bfed8e702017b9f1d1; FIELD_ACCEPTED=NOT_ACCEPTED. Existing exclusive interviews and authorized applications preserved. Voluntary private calendar snapshot plus a chosen internal Inbox reminder, freshly authorized. No guaranteed external transport, employment contract, payment or automatic calendar sync."
     },
@@ -527,7 +544,8 @@
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
       "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
@@ -563,7 +581,8 @@
         "tests/consolidated-completion-20261025.test.mjs",
         "tests/browser/consolidated-completion-20261025.spec.mjs",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
-        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json"
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 4439791823cddc857ad898bfed8e702017b9f1d1; FIELD_ACCEPTED=NOT_ACCEPTED. Private plans preserved; voluntary group programmes add independent invitations, individual consent, versioned reciprocal conditions, optional progress counters, reported versus independently reviewed results, reasoned amendment/exit/closure. No automatic funding, guaranteed turnover or transfer of external commitments."
     },
@@ -579,7 +598,8 @@
         "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Free moderated internal pilots with CAS caps, live consent, viewport-confirmed views and20 authorized canonical orders; contact is intent, delivered value is not cash. No billing, external advertising or rewards.",
       "ownerLot": 20,
@@ -607,7 +627,8 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Dated limited assertions; current rights, withdrawal and expiry revalidated. Human manager review is not institutional certification. No identity-owner replacement.",
       "ownerLot": 21,
@@ -648,7 +669,8 @@
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
@@ -660,7 +682,8 @@
       "evidence": [
         "docs/release/evidence/LOT23-ASSISTANT-TOOLS-PUBLIC-2026-10-20.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
@@ -693,7 +716,8 @@
         "tests/consolidated-completion-20261025.test.mjs",
         "tests/browser/consolidated-completion-20261025.spec.mjs",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
-        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json"
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 4439791823cddc857ad898bfed8e702017b9f1d1; FIELD_ACCEPTED=NOT_ACCEPTED. Stable notification events and read/transport/business states preserved. Chosen reminders are revalidated when Inbox is read; completed/inaccessible sources stop reminding, changed sources require a new choice. No background polling, guaranteed external transport or business completion inferred from a click.",
       "ownerLot": 24,
@@ -723,7 +747,8 @@
         "tests/consolidated-completion-20261025.test.mjs",
         "tests/browser/consolidated-completion-20261025.spec.mjs",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
-        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json"
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 4439791823cddc857ad898bfed8e702017b9f1d1; FIELD_ACCEPTED=NOT_ACCEPTED. Existing case rights, assignments, indicative dates, mediation and reopening preserved. Voluntary internal reminders and patterns within the authorized list (100maximum); declared categories and reopening counts do not establish root cause, staffing or guaranteed response. Financial corrections remain canonical.",
       "ownerLot": 25,
@@ -766,7 +791,8 @@
         "tests/consolidated-completion-20261025.test.mjs",
         "tests/browser/consolidated-completion-20261025.spec.mjs",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
-        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json"
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 4439791823cddc857ad898bfed8e702017b9f1d1; FIELD_ACCEPTED=NOT_ACCEPTED. Optional local image OCR and PDF text/scanned-page preparation; locked free libraries served by Eco on demand, outside the initial precache. Human source/content/numeric review required before library save. Old Word and unreadable/encrypted documents retain manual transcription. Limits10files25MBtotal15MBperfile10PDFpages; no certified OCR, legal verdict or financial write. Backups exclude R2objects/device outboxes/external state."
     },
@@ -795,7 +821,8 @@
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
@@ -807,7 +834,8 @@
       "evidence": [
         "docs/release/evidence/LOT28-RESOURCE-PROOF-PUBLIC-2026-10-20.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Automated delivery evidence, not field acceptance or completion of all future refinements.",
       "targetLots": [
@@ -847,7 +875,8 @@
         "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
         "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Bounded implementation published and automatically qualified at 93ed895af495425d7963dc4dbd8b9cf4dc7f123d; field acceptance pending. Local reference retention, selective forget and per-account device pause; no cross-device/full-object memory."
     },
@@ -875,7 +904,8 @@
         "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-QUALIFICATION-2026-10-24.json",
         "docs/release/DELIVERY-2026-10-24-ENGINE-REHEARSAL-INCIDENT.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at a07f96edcc49b6132d00e292edf222d47034b12e; FIELD_ACCEPTED=NOT_ACCEPTED. Actual canonical loans, ledger, sheet outbox and GroupLiveHub; two injected faults, six loan policies, durable fictional browser queue, Memory/SQLite qualification. Not exhaustive for all engine states or every failure; intermediate server FAILED snapshot is restored separately from browser initial/final persistence."
     },
@@ -900,7 +930,8 @@
         "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Explicit application HTTP budget; not D1/WebSocket/provider billing. Acquired v35 automatically qualified; field acceptance pending."
     },
@@ -913,7 +944,8 @@
         "docs/release/evidence/BUSINESS-VALUE-NETWORK-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-BUSINESS-VALUE-NETWORK.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Group-only current-member aggregates from explicit own contributions, compatible units, immutable first confirmation, absorbing withdrawal including after leaving, closure/expiration.100 recent pools, three batched repository reads for ten pools; not constant row cost.",
       "targetLots": [
@@ -953,7 +985,8 @@
         "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
         "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. Existing private productive plans enriched with voluntary future milestone calendar exports after fresh access checks. Reporting, evidence and actual results remain separate; no automated funding, outreach or multi-party programme."
     },
@@ -966,7 +999,8 @@
         "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Atomic same-unit kg/g loss/transformation with source/output evidence and no automatic output publication. No recipe conversion, certified quality or agricultural yield estimate.",
       "targetLots": [
@@ -990,7 +1024,8 @@
         "docs/release/evidence/GROUPS-GOVERNANCE-TRUST-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-GROUPS-GOVERNANCE-TRUST.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Subject-chosen summary and revocable random-secret card, effective minimum expiry. Requires Eco account/online; lost secret cannot be recovered; private evidence is not disclosed.",
       "targetLots": [
@@ -1014,7 +1049,8 @@
         "docs/release/evidence/TEMPORAL-COMMERCE-PILOTS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-TEMPORAL-COMMERCE-PILOTS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Minimum5 distinct current-tenant public personal sellers with equal declared category/quality/unit/locality/currency; median per seller then median across sellers. Asking prices only, no individual prices or identities.",
       "targetLots": [
@@ -1050,7 +1086,8 @@
         "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Worker/SQLite financial effect mirror for the qualified scenarios, not universal replay. Acquired v35 automatically qualified; field acceptance pending."
     },
@@ -1078,7 +1115,8 @@
         "docs/release/evidence/ENGINE-REHEARSAL-INCIDENT-QUALIFICATION-2026-10-24.json",
         "docs/release/DELIVERY-2026-10-24-ENGINE-REHEARSAL-INCIDENT.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at a07f96edcc49b6132d00e292edf222d47034b12e; FIELD_ACCEPTED=NOT_ACCEPTED. Strict normalized synthetic recipes for LOST_ACK and LIVE_OUTAGE, fresh canonical replay and untrusted prior observations. No arbitrary personal trace/secret capture, universal incident reproduction or acceptance of real customer data."
     },
@@ -1102,7 +1140,8 @@
         "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
@@ -1127,7 +1166,8 @@
         "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Shared modes and preserved acquired actions/drafts in qualified browser scenarios, not universal coverage of future screens. Acquired v35 automatically qualified; field acceptance pending."
     },
@@ -1151,7 +1191,8 @@
         "docs/release/evidence/FINANCIAL-EXPLANATIONS-PUBLIC-2026-10-22.json",
         "docs/release/DELIVERY-2026-10-22-FINANCIAL-EXPLANATIONS.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Authorized canonical read projections and hypothetical calculations; no financial commands. XAF,100movements/page,20recent closures,1000declared deposits,120coefficients,24loan periods,120tontine rounds. Missing historical inputs not invented. Independent browser rerun outcome tracked separately from successful full delivery."
     },
@@ -1176,7 +1217,8 @@
         "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "FR/EN negotiation draft preparation only; no autonomous sending, acceptance or commitment. Acquired v35 automatically qualified; field acceptance pending."
     },
@@ -1202,7 +1244,8 @@
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
       "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
@@ -1230,7 +1273,8 @@
         "tests/consolidated-completion-20261025.test.mjs",
         "tests/browser/consolidated-completion-20261025.spec.mjs",
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
-        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json"
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 4439791823cddc857ad898bfed8e702017b9f1d1; FIELD_ACCEPTED=NOT_ACCEPTED. Four-resource private plans, independent owner agreement and unique canonical order assignment preserved. Optional reusable-resource calendar is owned by Market: half-open intervals, capacity/CAS, stable retry, recoverable parent-write interruption and explicit cancellation. Archived plans do not release reservations; no atomic multi-owner purchase, inferred payment, automatic renewal or refund."
     },
@@ -1256,7 +1300,8 @@
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
         "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Later complementary deliveries v38/v39 add consented notebook audiences, reviewed cross-group solution adaptation, chosen source-checked reminders and individually consented collective programmes. See CONSOLIDATED_ACCEPTANCE_2026-10-25.md for current limits; no automatic business outcome or guaranteed external delivery.",
       "historicalLimitsBeforeConsolidation": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
@@ -1270,7 +1315,8 @@
         "docs/release/evidence/LOT25-ECO-CARE-PUBLIC-2026-10-21.json",
         "docs/release/DELIVERY-2026-10-21-LOT25-ECO-CARE.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED.",
       "targetLots": [
@@ -1294,7 +1340,8 @@
         "docs/release/evidence/LOT24-NOTIFICATION-INBOX-PUBLIC-2026-10-21.json",
         "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED.",
       "targetLots": [
@@ -1334,7 +1381,8 @@
         "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
         "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md",
         "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
-        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
       "limits": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. A source solution remains independently reviewed in its original context. Cross-group adaptations preserve their own method, conditions and result; each needs local review and remains dependent on the original author grant and readable sources. No raw messages or automatic rule changes."
     },
@@ -2273,6 +2321,6 @@
     "finalCohort": "Remaining improvements and innovations of previously delivered lots; individual proof required",
     "requestedOn": "2026-10-22"
   },
-  "lastVerifiedSource": "4439791823cddc857ad898bfed8e702017b9f1d1",
+  "lastVerifiedSource": "67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f",
   "lastVerificationDate": "2026-10-25"
 }

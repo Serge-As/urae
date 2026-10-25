@@ -1,3 +1,9 @@
+## Finalisation intégrée vérifiée v40 — 25 octobre 2026
+
+Programme intégré conservé à la source `67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f` : 1058 natifs / 81 Chromium / 19 WebKit, zéro échec ou ignoré ; publication, sauvegarde privée et OCR réel en production vérifiés sur cette source. Les reprises après erreur, annulation et changement FR/EN complètent le critère A26. Les 48 propositions A/I demeurent livrées dans leurs limites explicites. 24 outils et 20 modèles sont des références ; aucun résultat économique, prestataire externe ou recette réelle n'est déduit de ces preuves.
+
+## Historique conservé
+
 ## Clôture intégrée vérifiée v39 — 25 octobre 2026
 
 Le programme est publié à la source `4439791823cddc857ad898bfed8e702017b9f1d1` : 1052 tests natifs, 78 Chromium et 16 WebKit, zéro échec et zéro ignoré. Les reçus de qualification et de publication du dossier `docs/release/evidence/` concernent ce même SHA. La relecture documentaire a aussi été vérifiée après déploiement, avec OCR réel sur image synthétique, zéro fournisseur externe et zéro écriture distante.

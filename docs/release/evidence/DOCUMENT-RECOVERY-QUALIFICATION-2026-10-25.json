@@ -1,0 +1,77 @@
+{
+  "protocol": "ECO_RELEASE_QUALIFICATION_1",
+  "sourceSha": "67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f",
+  "native": 1058,
+  "chromium": 81,
+  "webkit": 19,
+  "failed": 0,
+  "skipped": 0,
+  "workerVersionId": "b147a132-2ae3-46bc-bae1-92287792f028",
+  "runs": [
+    {
+      "runId": 40222475194,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 121257110748,
+          "name": "qualify-deploy-smoke",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "runId": 40222475251,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 121261274792,
+          "name": "browser-critical",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        },
+        {
+          "id": 121261275970,
+          "name": "governed-ci",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    }
+  ],
+  "checkedAt": "2026-10-25T19:18:24.940054+00:00",
+  "initialBrowserFailureAndBoundedRetry": {
+    "sourceSha": "67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f",
+    "failedJobId": 121257075951,
+    "unchangedSource": true,
+    "maximumRetries": 1,
+    "observation": "The failed snapshot retains the pending synthetic queue and enabled replay control, with no running/error/result status. The same 19 WebKit checks passed in the independent delivery job on the same source. No financial engine or assertion was changed.",
+    "limitation": "The snapshot does not prove why the click did not start the action. Preserve the failed run and error context. A repeated failure requires code-level diagnosis.",
+    "requestedAt": "2026-10-25T19:02:11.836194+00:00",
+    "originalRunUrl": "https://github.com/Serge-As/urae/actions/runs/40222475251/attempts/1",
+    "httpStatus": 201,
+    "errorContextSha256": "716e89fc2df9a9152924956fc673cff0529aa8a7ed5e99572784e3744a112f14",
+    "failingTest": "tests/browser/engine-rehearsal-incident-20261024.spec.mjs:17",
+    "expected": "[data-engine-totals] contains 6 000 after explicit replay following reload",
+    "observed": "No totals element; synthetic pending queue and enabled replay control retained.",
+    "causeConfirmed": false
+  },
+  "treeSha": "9809d06c3658150334956a8cbb25b2a7df5f55d6",
+  "version": "1.5.2.40-document-recovery",
+  "sameSource": true,
+  "publicVerification": "docs/release/evidence/DOCUMENT-RECOVERY-PUBLIC-2026-10-25.json",
+  "productionOcrProof": "docs/release/evidence/DOCUMENT-RECOVERY-PRODUCTION-OCR-2026-10-25.json",
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "scope": "INTEGRATED_A01_A28_I01_I20_PRESERVED_PLUS_DOCUMENT_FAILURE_CANCELLATION_AND_LANGUAGE_RECOVERY",
+  "universalCapabilityCompletion": false,
+  "arbitraryUserIncidentReproduced": false
+}
