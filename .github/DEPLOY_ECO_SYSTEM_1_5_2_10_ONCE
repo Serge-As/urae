@@ -1,13 +1,13 @@
-Eco-System final document recovery authorized by founder
-release: 1.5.2.40-document-recovery
+Eco-System programme audit and recovery control correction authorized by founder
+release: 1.5.2.41-programme-audit
 date: 2026-10-25
 mode: code-only-with-verified-readonly-backup-no-migration
 db_mutation: none
-baseline_source: 4439791823cddc857ad898bfed8e702017b9f1d1
+baseline_source: 67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f
 qualification: complete governed CI, Chromium and WebKit on exact source
-scope: bounded cancellable local document extraction, preserved bilingual file and review context, all acquired canonical journeys
+scope: stable settings recovery controls, strict proposal proof validation and reconciled programme inventory
 backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 public_verification: health, catalogue, shell assets and locked optional document engines
-trigger_nonce: 2026-10-25-document-recovery-complete-review-fixture
+trigger_nonce: 2026-10-25-programme-audit-reproduced-pointer-loss

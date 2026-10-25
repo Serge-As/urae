@@ -1,0 +1,496 @@
+{
+  "protocol": "ECO_PROGRAMME_AUDIT_1",
+  "date": "2026-10-25",
+  "status": "CANDIDATE_QUALIFICATION_PENDING",
+  "baselineSourceSha": "67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f",
+  "lots": [
+    {
+      "lot": 1,
+      "title": "Navigation, contexte et modes",
+      "proposals": [
+        "A01",
+        "I12"
+      ],
+      "owner": "apps/web/src/shell-navigation.js",
+      "note": "Routes autorisées, reprise locale et brouillon préservé ; les préférences ne modifient pas les calculs.",
+      "nativeTests": [
+        "tests/shell-navigation-20261020.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/navigation-lot01-20261020.spec.mjs"
+      ]
+    },
+    {
+      "lot": 2,
+      "title": "Cockpit personnel et continuité",
+      "proposals": [
+        "A02",
+        "I01"
+      ],
+      "owner": "apps/web/src/cockpit-priorities-ui.js",
+      "note": "Projections des owners, contexte compte/groupe, source manquante explicite et priorités modifiables.",
+      "nativeTests": [
+        "tests/cockpit-priorities-lot02-20261020.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/cockpit-priorities-lot02-20261020.spec.mjs"
+      ]
+    },
+    {
+      "lot": 3,
+      "title": "Kit et création en dix étapes",
+      "proposals": [
+        "A03"
+      ],
+      "owner": "apps/web/src/launch-draft.js",
+      "note": "Brouillon volontaire borné au compte/projet, reprise sans seconde création ; aucune fusion automatique d’identités.",
+      "nativeTests": [
+        "tests/launch-draft-lot03-20261022.test.mjs",
+        "tests/groups-governance-trust-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/launch-kit-lot03-20261022.spec.mjs",
+        "tests/browser/groups-governance-trust-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 4,
+      "title": "Décisions et gouvernance",
+      "proposals": [
+        "A04"
+      ],
+      "owner": "packages/governance-vote/src/index.ts",
+      "note": "Quorum, vote, mandat et journal sous les autorités existantes ; adoption sans décaissement automatique.",
+      "nativeTests": [
+        "tests/groups-governance-trust-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/groups-governance-trust-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 5,
+      "title": "Séance multi-gestionnaires et répétition",
+      "proposals": [
+        "A05",
+        "I02"
+      ],
+      "owner": "apps/web/src/session-rehearsal.js",
+      "note": "Saisie, présence/confrontation et répétition synthétique ; aucune saisie réelle par la démonstration.",
+      "nativeTests": [
+        "tests/session-rehearsal-20261020.test.mjs",
+        "tests/engine-rehearsal-incident-20261024.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/session-rehearsal-lot05-20261020.spec.mjs",
+        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs"
+      ]
+    },
+    {
+      "lot": 6,
+      "title": "Solde explicable",
+      "proposals": [
+        "A06"
+      ],
+      "owner": "apps/web/src/financial-explanations-ui.js",
+      "note": "Mouvements, rapprochement et provenance du solde canonique ; aucune seconde comptabilité.",
+      "nativeTests": [
+        "tests/financial-explanations-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/financial-explanations-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 7,
+      "title": "Prêts détaillés et simulation",
+      "proposals": [
+        "A07",
+        "I11"
+      ],
+      "owner": "apps/web/src/financial-explanations-ui.js",
+      "note": "Capital/intérêts et six politiques, simulations explicites ; ni accord ni remboursement par le simulateur.",
+      "nativeTests": [
+        "tests/financial-explanations-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/financial-explanations-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 8,
+      "title": "Reçu de rendement",
+      "proposals": [
+        "A08"
+      ],
+      "owner": "packages/savings-yield/src/proof.ts",
+      "note": "Entrées/règle et arrondis conservant l’enveloppe ; données historiques absentes signalées.",
+      "nativeTests": [
+        "tests/financial-explanations-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/financial-explanations-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 9,
+      "title": "Calendrier tontine et solidarité",
+      "proposals": [
+        "A09",
+        "I13"
+      ],
+      "owner": "apps/web/src/financial-explanations-ui.js",
+      "note": "Tours et projections suivant la règle adoptée ; un stress-test ne déplace pas un pot réel.",
+      "nativeTests": [
+        "tests/financial-explanations-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/financial-explanations-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 10,
+      "title": "Commandes, boutiques et SAV",
+      "proposals": [
+        "A10"
+      ],
+      "owner": "packages/market/src/index.ts",
+      "note": "Boutiques privées, mandats, fournisseurs, stock, réservation, livraison/retour et référence support. Aucun paiement réel déduit.",
+      "nativeTests": [
+        "tests/market-orders-lot10-20261020.test.mjs",
+        "tests/market-personal-shops-lot10-20261020.test.mjs",
+        "tests/care-lot25-20261021.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/market-orders-lot10-20261020.spec.mjs",
+        "tests/browser/personal-shops-lot10-20261020.spec.mjs",
+        "tests/browser/care-lot25-20261021.spec.mjs"
+      ]
+    },
+    {
+      "lot": 11,
+      "title": "Business Studio et ressources",
+      "proposals": [
+        "A11",
+        "I16"
+      ],
+      "owner": "packages/business-studio/src/resource-assemblies.ts",
+      "note": "Hypothèses/résultats, coûts inconnus, commandes nettes des retours ; calendrier canonique, capacité et accord séparé des propriétaires.",
+      "nativeTests": [
+        "tests/business-value-network-20261022.test.mjs",
+        "tests/consolidated-completion-20261025.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/business-value-network-20261022.spec.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs"
+      ]
+    },
+    {
+      "lot": 12,
+      "title": "Besoins, ressources et achats concertés",
+      "proposals": [
+        "A12",
+        "I04"
+      ],
+      "owner": "apps/web/src/productive-business-ui.js",
+      "note": "Contraintes indispensables et consentement ; mise en relation sans achat ou engagement automatique.",
+      "nativeTests": [
+        "tests/business-value-network-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/business-value-network-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 13,
+      "title": "Eco NOW, Harvest et anti-gaspillage",
+      "proposals": [
+        "A13",
+        "I06"
+      ],
+      "owner": "apps/web/src/temporal-commerce-ui.js",
+      "note": "Disponibilité datée, refus serveur après expiration, stock canonique, retrait et conditions ; ni carte nationale ni transport garanti.",
+      "nativeTests": [
+        "tests/temporal-commerce-pilots-20261022.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/temporal-commerce-pilots-20261022.spec.mjs"
+      ]
+    },
+    {
+      "lot": 14,
+      "title": "Foras productifs et solutions",
+      "proposals": [
+        "A14",
+        "I20"
+      ],
+      "owner": "packages/community/src/index.ts",
+      "note": "Échanges, sources relues, consentement à la réutilisation et adaptation locale indépendante ; aucun message privé exposé par défaut.",
+      "nativeTests": [
+        "tests/productive-community-20261022.test.mjs",
+        "tests/productive-continuity-20261024.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/productive-community-20261022.spec.mjs",
+        "tests/browser/productive-continuity-20261024.spec.mjs"
+      ]
+    },
+    {
+      "lot": 15,
+      "title": "Carnets et découverte consentie",
+      "proposals": [
+        "A15"
+      ],
+      "owner": "apps/web/src/public-notebook-ui.js",
+      "note": "Audiences privée/groupe/contacts/public choisi, même projection aperçu/public et retrait canonique ; copies téléchargées non rappelables.",
+      "nativeTests": [
+        "tests/productive-community-20261022.test.mjs",
+        "tests/consolidated-completion-20261025.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/productive-community-20261022.spec.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs"
+      ]
+    },
+    {
+      "lot": 16,
+      "title": "Academy et preuve de compétence",
+      "proposals": [
+        "A16",
+        "I17"
+      ],
+      "owner": "apps/web/src/productive-community-ui.js",
+      "note": "Apprendre/pratiquer, preuve et validation distincte de l’auteur ; badge révocable, aucun gain financier automatique.",
+      "nativeTests": [
+        "tests/productive-community-20261022.test.mjs",
+        "tests/review-recovery-20261023.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/productive-community-20261022.spec.mjs",
+        "tests/browser/review-recovery-20261023.spec.mjs"
+      ]
+    },
+    {
+      "lot": 17,
+      "title": "Eco Jobs et première mission",
+      "proposals": [
+        "A17"
+      ],
+      "owner": "packages/business-studio/src/jobs.ts",
+      "note": "Candidatures autorisées, créneaux exclusifs, offre close refusée, export calendrier et rappel Inbox choisis ; aucun emploi garanti.",
+      "nativeTests": [
+        "tests/productive-community-20261022.test.mjs",
+        "tests/productive-continuity-20261024.test.mjs",
+        "tests/consolidated-completion-20261025.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/productive-community-20261022.spec.mjs",
+        "tests/browser/productive-continuity-20261024.spec.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs"
+      ]
+    },
+    {
+      "lot": 18,
+      "title": "Data Room et vérifications",
+      "proposals": [
+        "A18",
+        "I15"
+      ],
+      "owner": "packages/trust/src/verification.ts",
+      "note": "Questions/preuves contradictoires, accès expiré/révoqué et export borné au destinataire ; absence de preuve distinguée d’un avis.",
+      "nativeTests": [
+        "tests/productive-community-20261022.test.mjs",
+        "tests/review-recovery-20261023.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/productive-community-20261022.spec.mjs",
+        "tests/browser/review-recovery-20261023.spec.mjs"
+      ]
+    },
+    {
+      "lot": 19,
+      "title": "Launch Boost et parcours productifs",
+      "proposals": [
+        "A19",
+        "I05"
+      ],
+      "owner": "packages/business-studio/src/launch-programmes.ts",
+      "note": "Plans privés et programmes collectifs volontaires, invitations indépendantes, conditions révisées/consenties, progrès déclaré et résultat relu séparés.",
+      "nativeTests": [
+        "tests/productive-community-20261022.test.mjs",
+        "tests/productive-continuity-20261024.test.mjs",
+        "tests/consolidated-completion-20261025.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/productive-community-20261022.spec.mjs",
+        "tests/browser/productive-continuity-20261024.spec.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs"
+      ]
+    },
+    {
+      "lot": 20,
+      "title": "AdManager et observatoire des prix",
+      "proposals": [
+        "A20",
+        "I08"
+      ],
+      "owner": "packages/ad-manager/src/index.ts",
+      "note": "Campagnes gouvernées et prix déclarés/qualifiés ; ni ciblage par dette/soldes privés ni promesse de demande solvable.",
+      "nativeTests": [
+        "tests/review-recovery-20261023.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/review-recovery-20261023.spec.mjs"
+      ]
+    },
+    {
+      "lot": 21,
+      "title": "Passeport de confiance et carte révocable",
+      "proposals": [
+        "A21",
+        "I07"
+      ],
+      "owner": "packages/trust/src/index.ts",
+      "note": "Affirmations et preuves distinguées, autorisation fraîche et révocation ; aucune réputation universelle ou identité certifiée inventée.",
+      "nativeTests": [
+        "tests/groups-governance-trust-20261022.test.mjs",
+        "tests/review-recovery-20261023.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/groups-governance-trust-20261022.spec.mjs",
+        "tests/browser/review-recovery-20261023.spec.mjs"
+      ]
+    },
+    {
+      "lot": 22,
+      "title": "Labo anti-arnaques",
+      "proposals": [
+        "A22"
+      ],
+      "owner": "packages/trust/src/lab-review.ts",
+      "note": "Questions versionnées, inconnues explicites, simulation déterministe et signalement privé/modéré ; aucun verdict juridique automatique.",
+      "nativeTests": [
+        "tests/review-recovery-20261023.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/review-recovery-20261023.spec.mjs"
+      ]
+    },
+    {
+      "lot": 23,
+      "title": "Assistant et négociation",
+      "proposals": [
+        "A23",
+        "I14"
+      ],
+      "owner": "apps/web/src/assistant-actions.js",
+      "note": "Actions locales FR/EN, préparation contrôlée et négociation guidée ; autorisation et effet métier restent distincts.",
+      "nativeTests": [
+        "tests/assistant-tools-lot23-20261020.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/assistant-tools-lot23-20261020.spec.mjs"
+      ]
+    },
+    {
+      "lot": 24,
+      "title": "Inbox et attentes",
+      "proposals": [
+        "A24",
+        "I19"
+      ],
+      "owner": "apps/web/src/notification-center-ui.js",
+      "note": "Notifications entre groupes autorisés, lecture privée des cibles et rappels choisis ; tentative d’ouverture différente du résultat métier.",
+      "nativeTests": [
+        "tests/notification-inbox-lot24-20261021.test.mjs",
+        "tests/productive-continuity-20261024.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/notification-inbox-lot24-20261021.spec.mjs",
+        "tests/browser/productive-continuity-20261024.spec.mjs"
+      ]
+    },
+    {
+      "lot": 25,
+      "title": "Eco Care, SAV et prévention",
+      "proposals": [
+        "A25",
+        "I18"
+      ],
+      "owner": "packages/platform-kernel/src/case-care.ts",
+      "note": "Dossier privé, transitions/reçus/version, recours, relance volontaire et prévention sans réparation ou indemnité automatique.",
+      "nativeTests": [
+        "tests/care-lot25-20261021.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/care-lot25-20261021.spec.mjs"
+      ]
+    },
+    {
+      "lot": 26,
+      "title": "Documents et extraction relue",
+      "proposals": [
+        "A26"
+      ],
+      "owner": "apps/web/src/local-document-preparation.js",
+      "note": "PDF.js/Tesseract.js locaux à la demande, annulation/reprise/FR-EN ; aucune proposition numérique appliquée sans confirmation humaine.",
+      "nativeTests": [
+        "tests/review-recovery-20261023.test.mjs",
+        "tests/consolidated-completion-20261025.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/review-recovery-20261023.spec.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs"
+      ]
+    },
+    {
+      "lot": 27,
+      "title": "Qualité, reprise et incident rejouable",
+      "proposals": [
+        "A27",
+        "I10"
+      ],
+      "owner": "apps/web/src/data-quality-ui.js",
+      "note": "Diagnostic en lecture, sauvegarde partielle nommée, restauration sur copie ; LOST_ACK/LIVE_OUTAGE synthétiques. Correctif des clics de reprise en v41.",
+      "nativeTests": [
+        "tests/review-recovery-20261023.test.mjs",
+        "tests/engine-rehearsal-incident-20261024.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/review-recovery-20261023.spec.mjs",
+        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs"
+      ]
+    },
+    {
+      "lot": 28,
+      "title": "Budget de requêtes et miroir des effets",
+      "proposals": [
+        "A28",
+        "I03",
+        "I09"
+      ],
+      "owner": "packages/application/src/request-budget.ts",
+      "note": "Mesures requêtes/écritures et comparaison d’effets financiers inchangés ; déduplication secondaire sans polling toutes les secondes.",
+      "nativeTests": [
+        "tests/request-budget-lot28-20261020.test.mjs"
+      ],
+      "browserTests": [
+        "tests/browser/request-budget-lot28-20261020.spec.mjs"
+      ]
+    }
+  ],
+  "proposalCount": 92,
+  "functionalProposals": 48,
+  "optionalReferences": 44,
+  "toolsInUse": [
+    "T16",
+    "T19",
+    "T20"
+  ],
+  "remainingReferences": 41,
+  "originalCriteriaCount": 92,
+  "criteriaPreserved": true,
+  "canonicalOriginalCriteriaSha256": "4a53ada863e5d2338873b29e7254253d178c680876fec360a1dc967dc0a58c52",
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "realMoneyEnabled": false
+}

@@ -1735,6 +1735,19 @@
       ],
       "next": "Reuse exact-source evidence; no remaining code item identified in the consolidated 48 A/I programme within documented limits. Only a concrete new defect or separately authorized evolution reopens implementation.",
       "workerVersionId": "b147a132-2ae3-46bc-bae1-92287792f028"
+    },
+    {
+      "id": "programme-audit-20261025",
+      "scope": "Audit 28 lots/92 proposals; stable nonfinancial recovery controls and verified evidence links",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "observedOn": "2026-10-25",
+      "statement": "Original 92 identifiers and criteria preserved. Baseline local CI 1058/1058; three proof regressions added. WebKit pointer-loss negative control reproduced before fix. Final same-source qualification and publication pending. Runtime change limited to settings layout and scoped scrolling; no financial owner, data, permission or schema change.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-25-PROGRAMME-AUDIT.md",
+        "tests/proposal-proof-integrity-20261025.test.mjs",
+        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs"
+      ],
+      "next": "Complete same-source qualification, verified D1/source backup, code-only delivery and closure; field acceptance remains separate."
     }
   ]
 }

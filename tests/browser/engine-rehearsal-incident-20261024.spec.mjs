@@ -1,11 +1,37 @@
 import {test,expect} from '@playwright/test';
 import {readFile} from 'node:fs/promises';
-test.use({serviceWorkers:'block',actionTimeout:20000});test.setTimeout(240000);
+test.use({serviceWorkers:'block',actionTimeout:20000,trace:'retain-on-failure'});test.setTimeout(240000);
+test.beforeEach(async({page})=>{
+ await page.addInitScript(()=>{
+  window.__ecoRehearsalEvents=[];
+  for(const type of ['pointerdown','pointerup','click','focusin'])document.addEventListener(type,event=>{
+   const target=event.target,root=document.querySelector('[data-engine-rehearsal]'),button=root?.querySelector('[data-engine-prepare]'),box=button?.getBoundingClientRect();
+   window.__ecoRehearsalEvents.push({type,at:performance.now(),tag:target?.tagName,id:target?.id,engine:target?.getAttribute?.('data-engine-prepare')!==null,replay:target?.getAttribute?.('data-engine-execute')!==null,x:event.clientX,y:event.clientY,scrollY,button:box?{x:box.x,y:box.y,width:box.width,height:box.height}:null});
+   if(window.__ecoRehearsalEvents.length>60)window.__ecoRehearsalEvents.shift();
+  },true);
+ });
+});
+test.afterEach(async({page},testInfo)=>{
+ if(testInfo.status===testInfo.expectedStatus)return;
+ const events=await page.evaluate(()=>window.__ecoRehearsalEvents).catch(()=>[]);
+ await testInfo.attach('rehearsal-pointer-events',{body:JSON.stringify(events,null,2),contentType:'application/json'});
+});
 const base='http://127.0.0.1:4173';
 async function api(page,path,method='GET',body){return page.evaluate(async({path,method,body})=>{const response=await fetch('/api/v1/'+path,{method,headers:{'content-type':'application/json','x-eco-window-id':sessionStorage.getItem('eco.window.session.v1')},body:body===undefined?undefined:JSON.stringify(body)}),data=await response.json();if(!response.ok)throw Error(JSON.stringify(data));return data;},{path,method,body});}
 async function account(page,name){await page.goto(base);await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1')),{timeout:30000}).toMatch(/^[a-f0-9]{32}$/);await expect(page.locator('#authScreen')).toBeVisible({timeout:30000});await api(page,'auth/register','POST',{username:'engine_'+name+'_'+Date.now()+'_'+Math.floor(Math.random()*10000),password:'Synthetic-engine-rehearsal-20261024!',displayName:'Fictional '+name});const project=await api(page,'group-projects','POST',{name:'Fictional engine qualification',kind:'association',governanceModel:'founder_managed',memberCount:2,sessions:2,nominalContribution:0,currency:'XAF'}),group=await api(page,'group-projects/'+project.id+'/convert','POST',{});await page.reload();await expect(page.locator('#activeGroupSelect')).toHaveValue(group.id,{timeout:30000});return group;}
 async function panel(page){await page.locator('#mainNav [data-view=settings]').click();await expect(page.locator('#view-settings')).toBeVisible();const root=page.locator('#recoveryReadOnlyPanel [data-engine-rehearsal]');if(!await root.evaluate(n=>n.open))await root.locator(':scope > summary').click();return root;}
 async function originalQueue(page){return page.evaluate(async()=>{const{IndexedDbOutboxAdapter}=await import('/packages/offline/src/index.js');return JSON.stringify(await new IndexedDbOutboxAdapter().load());});}
+
+test('late startup panels cannot move a pressed recovery control and swallow its intended action',async({page})=>{
+ await account(page,'late_panels');await page.waitForLoadState('networkidle');const root=await panel(page),prepare=root.locator('[data-engine-prepare]');
+ await prepare.scrollIntoViewIfNeeded();const box=await prepare.boundingBox();
+ await page.mouse.move(box.x+box.width/2,box.y+box.height/2);await page.mouse.down();
+ // Reproduce the captured 297px late expansion in its actual nonfinancial
+ // source panel, between pointer down and up. Do not force a synthetic click.
+ await page.evaluate(()=>{const late=document.createElement('p');late.textContent='Synthetic late provider information';late.style.minHeight='300px';document.querySelector('#identityPassport').append(late);});
+ await page.mouse.up();await expect(root.getByRole('status')).toContainText('PENDING',{timeout:30000});
+ expect(await page.evaluate(()=>Boolean(sessionStorage.getItem('eco.engine-rehearsal.plan.v1')))).toBe(true);
+});
 
 test('canonical engine rehearsal persists across reload, verifies lost ACK and never changes the actual group Ledger or outbox',async({page})=>{
  const group=await account(page,'durable'),ledgerBefore=await api(page,'groups/'+group.id+'/ledger');let root=await panel(page);await expect(root.locator('[data-engine-prepare]')).toBeEnabled();

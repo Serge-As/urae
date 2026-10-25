@@ -1,6 +1,6 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15240-document-recovery-20261025';
-const PREVIOUS_CACHE = 'eco-system-v15239-consolidated-completion-20261025';
+const CACHE = 'eco-system-v15241-programme-audit-20261025';
+const PREVIOUS_CACHE = 'eco-system-v15240-document-recovery-20261025';
 const PRIOR_COMMON_CACHE = 'eco-system-v15237-engine-rehearsal-20261024';
 const PRIOR_REVIEW_CACHE = 'eco-system-v15235-review-recovery-20261023';
 const PRIOR_PRODUCTIVE_CACHE = 'eco-system-v15234-productive-community-20261023';
@@ -35,8 +35,8 @@ const RELEASE_READY = '/__eco_release_ready__';
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=15240', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=15240', '/src/field-hardening.js?v=15240', '/src/main.js?v=15240', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15241', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15241', '/src/field-hardening.js?v=15241', '/src/main.js?v=15241', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -52,7 +52,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=15240', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15241', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -156,7 +156,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=15240 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15241 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };

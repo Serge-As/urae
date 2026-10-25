@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.40 — Live and Refonte Cloudflare Delivery
+name: Eco-System 1.5.2.41 — Live and Refonte Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.40-document-recovery
-  EXPECTED_BUILD: eco-system-1.5.2.40-20261025-document-recovery
-  EXPECTED_CACHE: eco-system-v15240-document-recovery-20261025
+  EXPECTED_VERSION: 1.5.2.41-programme-audit
+  EXPECTED_BUILD: eco-system-1.5.2.41-20261025-programme-audit
+  EXPECTED_CACHE: eco-system-v15241-programme-audit-20261025
   MIN_CAPABILITIES: 164
 
 jobs:
@@ -85,7 +85,7 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-typecheck","description":"TypeScript qualification passed"}' >/dev/null
       - name: Governance and architecture gates
-        run: npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage
+        run: npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run lint:proposals
       - name: Status · gate-governance
         continue-on-error: true
         run: |

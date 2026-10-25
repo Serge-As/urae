@@ -1,3 +1,4 @@
+# CURRENT 2026-10-25: v41 programme-audit candidate; reproduced recovery pointer loss, stable settings controls and strict proposal evidence; final qualification/deployment pending; production remains v40/67095d43.
 # CURRENT 2026-10-25 VERIFIED_REMOTE: v40/67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f;1058native/81Chromium/19WebKit;76 CI/13 independent public hashes;FIELD_ACCEPTED=NOT_ACCEPTED.
 # CURRENT 2026-10-25: v40 document recovery candidate; local targeted6/6, full same-source qualification/deployment pending; production proof remains v39.
 # CURRENT 2026-10-25 VERIFIED_REMOTE: v39/4439791823cddc857ad898bfed8e702017b9f1d1;1052native/78Chromium/16WebKit;74 CI public hashes/11 independent critical hashes;FIELD_ACCEPTED=NOT_ACCEPTED.
@@ -51,7 +52,7 @@
 # CURRENT 2026-10-08: publication HOLD; full 4000/5000 convergence still unqualified; Actions quota exhausted; prepared private local qualification runner. See recovery handoff.
 # 2026-10-08 CURRENT: 1.5.2.15 publication HOLD; offline reconfirmation clock defect under qualification. Current deployed proof remains 1.5.2.14. See CURRENT_TRUTH.
 registry_version: 1
-project_version: 1.5.2.40-document-recovery
+project_version: 1.5.2.41-programme-audit
 source_of_truth: docs/constitution + verified_code
 
 capabilities:

@@ -1959,6 +1959,10 @@ html:has(#view-ecosystem.active #productiveCommunityCenter){scroll-behavior:auto
 .document-review{min-width:0}.document-review textarea{width:100%;min-width:0;box-sizing:border-box}.document-review pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto}
 html:has(#view-documents.active){scroll-behavior:auto;scroll-padding-block-start:calc(var(--eco-header-height,76px) + 100px);scroll-padding-block-end:120px;}
 #view-documents :is(input,select,textarea,button,summary){scroll-margin-block:calc(var(--eco-header-height,76px) + 100px) 120px;}
+/* Settings recovery controls must stay reachable below the fixed header,
+   including when WebKit focuses a control immediately after opening details. */
+html:has(#view-settings.active){scroll-behavior:auto;scroll-padding-block-start:calc(var(--eco-header-height,76px) + 100px);scroll-padding-block-end:120px;}
+#dataQualityCenter :is(input,select,textarea,button,summary){scroll-margin-block:calc(var(--eco-header-height,76px) + 100px) 120px;}
 .document-review>label:has(input[type=checkbox]){display:flex;align-items:flex-start;gap:12px;min-height:44px;padding-block:8px;line-height:1.5;}
 .document-review>label>input[type=checkbox]{margin:2px 0 0;align-self:flex-start;flex:0 0 20px;}
 

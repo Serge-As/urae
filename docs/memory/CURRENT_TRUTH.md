@@ -1,3 +1,13 @@
+## Audit du programme — candidat v41, 25 octobre 2026
+
+Production de référence : **1.5.2.40-document-recovery**, source `67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f` ; clôture distante `ffffb9c6741d895f52bdfdca566f81a6b43ff036`. Le candidat v41 réutilise les 28 lots et les 92 propositions, dont les identifiants et critères d'origine sont conservés. Il ferme une perte de clic de reprise reproduite dans WebKit : panneau déplacé pendant l'appui par les chargements tardifs. Placement stable après l'en-tête, résultats après les commandes, défilement des paramètres borné sous l'en-tête fixe. Les propriétaires métier, Ledger/D1, Live, outbox et droits sont inchangés.
+
+Le garde des propositions ouvre désormais les preuves, refuse les fichiers absents, vides, invalides ou hors dépôt et exige une qualification de la source vérifiée. T16 Playwright et T19/T20 PDF.js/Tesseract.js ont un statut d'usage borné réel ; les 41 autres références restent facultatives. Les anciennes limites contradictoires de A11/A22/A27/I05 sont conservées puis rapprochées des compléments déjà livrés.
+
+CIR : `docs/change-impact/CIR-2026-10-25-PROGRAMME-AUDIT.md`. La CI locale de départ passe 1058/1058 ; le nouveau garde possède trois régressions. La reproduction du clic échoue avant correction ; la qualification finale du candidat et sa publication sont encore à établir. Aucun schéma, migration, paiement, purge de profil ou nouvel outil distant. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`.
+
+## Historique conservé
+
 ## Finalisation intégrée vérifiée v40 — 25 octobre 2026
 
 Production **1.5.2.40-document-recovery**, source `67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f`, arbre `9809d06c3658150334956a8cbb25b2a7df5f55d6`, Worker `b147a132-2ae3-46bc-bae1-92287792f028`. Livraison et qualification indépendante : [40222475194 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40222475194) ; [40222475251 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40222475251). **1058/1058 tests natifs, 81/81 Chromium, 19/19 WebKit**, zéro échec et zéro ignoré, même source. Santé et catalogue de 164 capacités contrôlés ; 76 empreintes de fichiers publics vérifiées lors de la livraison, dont 17 moteurs verrouillés, et 13 fichiers critiques relus indépendamment. OCR réel FR/EN après déploiement : [preuve indépendante](https://github.com/Serge-As/urae/actions/runs/40224028371), zéro fournisseur externe et zéro écriture distante.

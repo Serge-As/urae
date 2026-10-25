@@ -1,0 +1,11 @@
+# Recall — audit 28 lots / 92 propositions
+
+Demande directe : reprendre l'audit et la finalisation de la conversation interrompue, en conservant les acquis et les documents de référence. Source locale fe85f90f, runtime de référence 67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f, clôture distante ffffb9c6741d895f52bdfdca566f81a6b43ff036. Le fondateur avait autorisé de continuer dans URAE après l'avoir rendu public, en reportant la question de confidentialité ; ne pas redemander cette autorisation, ne pas modifier sa visibilité ou copier du contenu dans UTRAE.
+
+Relus : AGENTS parent et code, CURRENT_TRUTH, PROJECT_TRUTH_LEDGER, PROJECT_STATE, NEXT_RUN, constitution 3.2.0 et conservation de 2.3.4, économie, conventions fondatrices, Living Rules, registre des fonctionnalités, confidentialité/efficience, rapports de livraison v40, registre des 92 propositions et critères documentaires d'origine. 92 = 28 améliorations + 20 innovations + 24 outils + 20 modèles. Les références ne sont pas des installations obligatoires. Les 92 identifiants et critères sont conservés.
+
+Défauts concrets : garde acceptant un fichier de preuve absent ; statut de trois outils devenu inexact ; limites historiques de quatre fiches dépassées ; reprise A27/I10 perdant un clic sous WebKit lors d'un déplacement de 297 pixels entre appui et relâchement. Traces et négatif déterministe conservés localement. Le placement stable est complété par un défilement direct des paramètres sous l'en-tête fixe, après un échec mobile observé avec le seul placement. Pas de relance aveugle ni de clic forcé. CIR : docs/change-impact/CIR-2026-10-25-PROGRAMME-AUDIT.md.
+
+Préserver dix étapes, rubriques et deux feuilles, autorités Ledger/D1, politiques de prêt, Living Rules, droits, Live événementiel, outbox, compatibilité, données et branches. Aucune nouvelle dépendance, migration, écriture métier réelle, purge navigateur, restauration de production ou redémarrage. BIR+ reste D1_AND_EXACT_SOURCE_ONLY ; pièces R2 et données locales exclues explicitement. realMoneyEnabled=false, FIELD_ACCEPTED=NOT_ACCEPTED.
+
+La CI de départ est verte 1058/1058. La version candidate v41 doit encore recevoir ses preuves finales Chromium/WebKit, CI du même SHA, backup vérifié et déploiement. Consommation exacte de crédits non mesurable.

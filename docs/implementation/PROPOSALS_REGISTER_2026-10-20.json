@@ -1,6 +1,6 @@
 {
   "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
-  "meaning": "Inventory of proposals, not a claim that all are implemented. T/M are optional tools/reference models, not installed dependencies. Existing lots have delivery evidence, detailed proposal coverage is not inferred from a lot number.",
+  "meaning": "Inventory of 48 functional proposals/innovations, 24 optional tools and 20 reference models. Adopted tools are explicitly scoped; a lot assignment or reference is not implementation or field acceptance.",
   "count": 92,
   "proposals": [
     {
@@ -308,7 +308,7 @@
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
         "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
-      "limits": "Private immutable hypotheses/observations, two prices, current canonical deliveries net of returns, declared costs/cash kept distinct, voluntary sanitized price draft.20 order references/100 recent files; no certified accounting, I16 resource booking or automatic publication.",
+      "limits": "Private versioned hypotheses and observations, canonical deliveries net of returns, unknown versus declared costs and voluntary sanitized publication preserved. I16 now adds optional canonical Market resource calendars in v39: independent owner acceptance, capacity and half-open intervals, recoverable versioned retry. No certified accounting, atomic multi-owner purchase, inferred payment or automatic publication.",
       "ownerLot": 11,
       "acceptanceCriteria": [
         "Un coût inconnu reste inconnu ; il n’est pas remplacé par zéro dans un bénéfice présenté comme acquis.",
@@ -320,7 +320,8 @@
         "Importer par référence les commandes autorisées et permettre une saisie manuelle explicitement déclarative des coûts absents ; distinguer marge brute, trésorerie et temps de travail.",
         "Produire un bilan simple : confirmé, non confirmé et prochaine expérience. Exporter le dossier et proposer une publication volontaire vers la boutique ou les opportunités."
       ],
-      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA"
+      "integrationMeaning": "PRODUCT_CAPABILITY_WITH_EXPLICIT_ACCEPTANCE_CRITERIA",
+      "historicalLimitsBeforeProgrammeAudit": "Private immutable hypotheses/observations, two prices, current canonical deliveries net of returns, declared costs/cash kept distinct, voluntary sanitized price draft.20 order references/100 recent files; no certified accounting, I16 resource booking or automatic publication."
     },
     {
       "id": "A12",
@@ -672,7 +673,8 @@
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
         "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Private versioned risk questions, explicit unknown information, deterministic educational scenarios and human-reviewed/moderated reports. No automatic fraud verdict, public accusation, personalized investment advice or financial command. The separate A27 recovery scope and A26 OCR do not certify this assessment; field acceptance pending.",
+      "historicalLimitsBeforeProgrammeAudit": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A23",
@@ -824,7 +826,8 @@
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
         "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Read-only Ledger diagnosis and explicit quality workflows; delivery backup scope D1_AND_EXACT_SOURCE_ONLY with blank-copy integrity and foreign-key checks. R2 attachments, device-local/outbox and external state remain excluded. I10 adds strictly synthetic LOST_ACK/LIVE_OUTAGE canonical replay, not universal reproduction of arbitrary customer incidents. No automatic repair, production restore or financial write; field acceptance pending.",
+      "historicalLimitsBeforeProgrammeAudit": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
     },
     {
       "id": "A28",
@@ -988,7 +991,8 @@
         "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md",
         "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
       ],
-      "limits": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. Existing private productive plans enriched with voluntary future milestone calendar exports after fresh access checks. Reporting, evidence and actual results remain separate; no automated funding, outreach or multi-party programme."
+      "limits": "Private productive plans, voluntary future-milestone calendar exports after fresh access checks and A19 individually consented collective programmes are delivered. Reporting, evidence and independently reviewed results remain separate. No guaranteed income, automatic funding, external outreach or transfer of another participant commitment.",
+      "historicalLimitsBeforeProgrammeAudit": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. Existing private productive plans enriched with voluntary future milestone calendar exports after fresh access checks. Reporting, evidence and actual results remain separate; no automated funding, outreach or multi-party programme."
     },
     {
       "id": "I06",
@@ -1678,7 +1682,7 @@
     {
       "id": "T16",
       "title": "Playwright",
-      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "status": "REVIEWED_TOOL_IN_USE",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         5,
@@ -1688,11 +1692,24 @@
       "ownerLot": 5,
       "acceptanceCriteria": "Montrer conflit, première frappe, synthèse au changement de membre, réseau absent puis reprise et séparation des comptes.",
       "integrationPlan": "Réutiliser la dépendance existante pour une séance sur deux contextes de navigateur, plus les parcours de lecture et droits. Capturer les erreurs et l’état persistant, pas seulement une image.",
-      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
-      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "integrationMeaning": "REVIEWED_REUSE_OF_EXISTING_TOOL",
+      "adoptionDecision": "REUSE_EXISTING_REVIEWED_PLAYWRIGHT",
       "sourceUrl": "https://github.com/microsoft/playwright",
-      "limits": "Le snapshot documentaire contient @playwright/test 1.56.1 ; ce n’est pas une vérification de la version aujourd’hui déployée. Aucun abonnement de navigateur distant n’est nécessaire.",
-      "freeUseScope": "Exécution locale ; limiter les matrices CI aux besoins de la modification."
+      "limits": "Dependency reuse is verified in package.json and executable tests. Browser automation does not certify all old Android/iOS devices or real-account workflows.",
+      "freeUseScope": "Exécution locale ; limiter les matrices CI aux besoins de la modification.",
+      "previousAdoption": {
+        "status": "REFERENCE_MODEL_NOT_IMPORTED",
+        "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+        "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+        "limits": "Le snapshot documentaire contient @playwright/test 1.56.1 ; ce n’est pas une vérification de la version aujourd’hui déployée. Aucun abonnement de navigateur distant n’est nécessaire."
+      },
+      "adoptedScope": "Existing @playwright/test 1.56.1, local isolated synthetic Chromium/WebKit qualification. No remote paid browser service or real-account field acceptance.",
+      "evidence": [
+        "package.json",
+        "scripts/qualify-browser-isolated.mjs",
+        "tests/browser/engine-rehearsal-incident-20261024.spec.mjs",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json"
+      ]
     },
     {
       "id": "T17",
@@ -1738,7 +1755,7 @@
     {
       "id": "T19",
       "title": "PDF.js",
-      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "status": "REVIEWED_TOOL_IN_USE",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         16,
@@ -1748,16 +1765,31 @@
       "ownerLot": 16,
       "acceptanceCriteria": "PDF invalide, document volumineux, accès expiré et navigation clavier ; aucune pièce privée dans un cache public.",
       "integrationPlan": "Charger le lecteur à l’ouverture d’une pièce autorisée ; borner taille et pages. Pour OCR, rendre une page en image avant de la transmettre à l’étape de reconnaissance.",
-      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
-      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "integrationMeaning": "REVIEWED_ON_DEMAND_LOCAL_TOOL_INTEGRATION",
+      "adoptionDecision": "ADOPT_PINNED_ON_DEMAND_LOCAL_DOCUMENT_ENGINE",
       "sourceUrl": "https://github.com/mozilla/pdf.js",
-      "limits": "Ce lecteur n’est ni un générateur complet de PDF ni une protection contre la copie d’un document déjà consulté.",
-      "freeUseScope": "Navigateur ; chargement à la demande pour limiter réseau et mémoire."
+      "limits": "Ce lecteur n’est ni un générateur complet de PDF ni une protection contre la copie d’un document déjà consulté. Integration confirmed only for A26 within documented size/page/time limits; human review remains mandatory and downloaded engines remain optional.",
+      "freeUseScope": "Navigateur ; chargement à la demande pour limiter réseau et mémoire.",
+      "previousAdoption": {
+        "status": "REFERENCE_MODEL_NOT_IMPORTED",
+        "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+        "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+        "limits": "Ce lecteur n’est ni un générateur complet de PDF ni une protection contre la copie d’un document déjà consulté."
+      },
+      "adoptedScope": "A26 local document preparation only: pinned same-origin assets loaded on explicit request, bounded input, cancellation and mandatory human content/number review. No automatic adoption of all A16/A18 variants.",
+      "evidence": [
+        "apps/web/document-engines.lock.json",
+        "apps/web/src/local-document-ocr-worker.js",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-PRODUCTION-OCR-2026-10-25.json"
+      ]
     },
     {
       "id": "T20",
       "title": "Tesseract.js",
-      "status": "REFERENCE_MODEL_NOT_IMPORTED",
+      "status": "REVIEWED_TOOL_IN_USE",
       "sourceDocument": "ECO_SYSTEM_92_PROPOSITIONS_GRATUITES.md",
       "targetLots": [
         18,
@@ -1766,11 +1798,26 @@
       "ownerLot": 18,
       "acceptanceCriteria": "Mesurer erreurs sur montants et dates, durée et mémoire ; une faible qualité impose une saisie manuelle.",
       "integrationPlan": "Essayer sur reçus synthétiques FR/EN : recadrage proposé à l’utilisateur, reconnaissance puis validation champ par champ. Pour PDF, passer auparavant par un rendu de page avec PDF.js.",
-      "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
-      "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+      "integrationMeaning": "REVIEWED_ON_DEMAND_LOCAL_TOOL_INTEGRATION",
+      "adoptionDecision": "ADOPT_PINNED_ON_DEMAND_LOCAL_DOCUMENT_ENGINE",
       "sourceUrl": "https://github.com/naptha/tesseract.js",
-      "limits": "Pas de prise en charge native des PDF par la bibliothèque ; manuscrit et photos floues restent difficiles. Aucun montant reconnu n’entre directement dans le Ledger.",
-      "freeUseScope": "Calcul local ; prévoir téléchargement des langues et éviter le chargement automatique sur chaque page."
+      "limits": "Pas de prise en charge native des PDF par la bibliothèque ; manuscrit et photos floues restent difficiles. Aucun montant reconnu n’entre directement dans le Ledger. Integration confirmed only for A26 within documented size/page/time limits; human review remains mandatory and downloaded engines remain optional.",
+      "freeUseScope": "Calcul local ; prévoir téléchargement des langues et éviter le chargement automatique sur chaque page.",
+      "previousAdoption": {
+        "status": "REFERENCE_MODEL_NOT_IMPORTED",
+        "adoptionDecision": "KEEP_EXISTING_OWNER_UNTIL_MEASURED_BENEFIT",
+        "integrationMeaning": "REFERENCE_TO_EVALUATE_WITHIN_TARGET_LOTS_NOT_AUTOMATIC_DEPENDENCY_INSTALL",
+        "limits": "Pas de prise en charge native des PDF par la bibliothèque ; manuscrit et photos floues restent difficiles. Aucun montant reconnu n’entre directement dans le Ledger."
+      },
+      "adoptedScope": "A26 local document preparation only: pinned same-origin assets loaded on explicit request, bounded input, cancellation and mandatory human content/number review. No automatic adoption of all A16/A18 variants.",
+      "evidence": [
+        "apps/web/document-engines.lock.json",
+        "apps/web/src/local-document-ocr-worker.js",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/release/evidence/DOCUMENT-RECOVERY-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/DOCUMENT-RECOVERY-PRODUCTION-OCR-2026-10-25.json"
+      ]
     },
     {
       "id": "T21",
