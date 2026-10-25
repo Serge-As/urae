@@ -17,7 +17,7 @@ test('failed local language download releases extraction and preserves the manua
 });
 
 test('cancel during engine initialization ignores late failure and a new local OCR attempt succeeds',async({page})=>{
- await register(page,'ocr_cancel');await group(page);await page.locator('#documentsNavBtn').click();await selectSyntheticScan(page);
+ await register(page,'ocr_cancel');await group(page);await page.locator('#documentsNavBtn').click();await page.locator('#groupDocumentTitle').fill('Synthetic cancelled and retried scan');await selectSyntheticScan(page);
  let release,blocked=0;const gate=new Promise(resolve=>{release=resolve;}),pattern='**/vendor/documents/tesseract.js/dist/tesseract.esm.min.js';
  const hold=async route=>{blocked++;await gate;try{await route.abort('failed');}catch(error){if(!/already handled|closed/.test(String(error)))throw error;}};await page.context().route(pattern,hold);
  try{
