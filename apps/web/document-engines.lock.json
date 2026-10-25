@@ -5,33 +5,33 @@
   "assets": [
     {
       "package": "tesseract.js",
-      "version": "7.0.0",
+      "version": "6.0.1",
       "license": "Apache-2.0",
       "path": "tesseract.js/dist/tesseract.esm.min.js",
       "bytes": 63220,
-      "sha256": "64871d76c75609fd5413b88a8171e2ef40deedd77d5875ba23df104b2d05eb29",
-      "source": "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/tesseract.esm.min.js",
-      "fallback": "https://unpkg.com/tesseract.js@7.0.0/dist/tesseract.esm.min.js"
+      "sha256": "da6267cfe5036ae718a59eece3b5744a4655b0b8faa9f16259362b783d74c9bb",
+      "source": "https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.esm.min.js",
+      "fallback": "https://unpkg.com/tesseract.js@6.0.1/dist/tesseract.esm.min.js"
     },
     {
       "package": "tesseract.js",
-      "version": "7.0.0",
+      "version": "6.0.1",
       "license": "Apache-2.0",
       "path": "tesseract.js/dist/worker.min.js",
-      "bytes": 111307,
-      "sha256": "576b7df7e3393e137e51849357c9adb53fe7ac1bb69bfa06cf3d61520f182c6d",
-      "source": "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/dist/worker.min.js",
-      "fallback": "https://unpkg.com/tesseract.js@7.0.0/dist/worker.min.js"
+      "bytes": 111162,
+      "sha256": "38645599043239c0eb6db08a6504a92dcdc292200535f3e9339cd77c4443b842",
+      "source": "https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/worker.min.js",
+      "fallback": "https://unpkg.com/tesseract.js@6.0.1/dist/worker.min.js"
     },
     {
       "package": "tesseract.js",
-      "version": "7.0.0",
+      "version": "6.0.1",
       "license": "Apache-2.0",
       "path": "tesseract.js/LICENSE.md",
       "bytes": 11357,
       "sha256": "b40930bbcf80744c86c46a12bc9da056641d722716c378f5659b9e555ef833e1",
-      "source": "https://cdn.jsdelivr.net/npm/tesseract.js@7.0.0/LICENSE.md",
-      "fallback": "https://unpkg.com/tesseract.js@7.0.0/LICENSE.md"
+      "source": "https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/LICENSE.md",
+      "fallback": "https://unpkg.com/tesseract.js@6.0.1/LICENSE.md"
     },
     {
       "package": "tesseract.js-core",
@@ -177,5 +177,18 @@
       "source": "https://cdn.jsdelivr.net/npm/@tesseract.js-data/fra@1.0.0/4.0.0_best_int/fra.traineddata.gz",
       "fallback": "https://unpkg.com/@tesseract.js-data/fra@1.0.0/4.0.0_best_int/fra.traineddata.gz"
     }
-  ]
+  ],
+  "compatibility": {
+    "tesseractApi": "6.0.1",
+    "tesseractCore": "6.1.2",
+    "upstreamCoreRange": "^6.0.0",
+    "upstreamManifest": "https://github.com/naptha/tesseract.js/blob/v6.0.1/package.json",
+    "coreVariants": [
+      "tesseract-core",
+      "tesseract-core-lstm",
+      "tesseract-core-simd",
+      "tesseract-core-simd-lstm"
+    ],
+    "verification": "Exact version/asset hashes plus real Chromium and WebKit recognition. No arbitrary substitution across major versions."
+  }
 }
