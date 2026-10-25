@@ -1,3 +1,13 @@
+## Clôture intégrée vérifiée v39 — 25 octobre 2026
+
+Le programme est publié à la source `4439791823cddc857ad898bfed8e702017b9f1d1` : 1052 tests natifs, 78 Chromium et 16 WebKit, zéro échec et zéro ignoré. Les reçus de qualification et de publication du dossier `docs/release/evidence/` concernent ce même SHA. La relecture documentaire a aussi été vérifiée après déploiement, avec OCR réel sur image synthétique, zéro fournisseur externe et zéro écriture distante.
+
+Les 48 propositions A/I sont livrées dans les limites documentées ; les 24 outils et 20 modèles sont des références de conception et de réutilisation. Ce statut n'affirme ni réalisation de toutes les extensions imaginables, ni résultat économique réel, ni recette terrain. `FIELD_ACCEPTED=NOT_ACCEPTED` ; `realMoneyEnabled=false`.
+
+Les listes de preuves et limites ci-dessous conservent leur texte et leur date historiques. Lorsqu'une ancienne limite indique un complément manquant, la section « Compléments finaux et propriétaires » et le dossier de livraison précisent ce qui a depuis été ajouté : notamment les réservations temporelles I16, les champs publics consentis, les programmes collectifs, les rappels choisis et l'extraction documentaire locale avec relecture humaine. Les limites externes, de volumétrie et de confidentialité restent applicables.
+
+## Historique conservé
+
 # Acceptation consolidée du programme — 25 octobre 2026
 
 Cette matrice conserve les critères du registre et les rapproche de la livraison intégrée. Un document, un test synthétique, une publication et une recette terrain restent des preuves distinctes. Les recommandations d’outils T01–T24 et de modèles M01–M20 ne commandent pas 44 installations : chaque technologie nécessite une utilité et un propriétaire ; aucune dépendance payante imposée. Les limites de fournisseur, de juridiction, de fonds réellement disponibles, de consentement et de résultat terrain restent explicites.

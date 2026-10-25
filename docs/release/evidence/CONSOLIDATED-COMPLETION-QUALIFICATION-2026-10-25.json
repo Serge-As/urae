@@ -1,0 +1,61 @@
+{
+  "protocol": "ECO_RELEASE_QUALIFICATION_1",
+  "sourceSha": "4439791823cddc857ad898bfed8e702017b9f1d1",
+  "native": 1052,
+  "chromium": 78,
+  "webkit": 16,
+  "failed": 0,
+  "skipped": 0,
+  "workerVersionId": "c3a9d6a2-1249-45d8-b35d-723e34bd91d6",
+  "runs": [
+    {
+      "runId": 40210012385,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 121219025559,
+          "name": "browser-critical",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        },
+        {
+          "id": 121219025797,
+          "name": "governed-ci",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "runId": 40210012474,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 121219025833,
+          "name": "qualify-deploy-smoke",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    }
+  ],
+  "checkedAt": "2026-10-25T16:25:19.783147+00:00",
+  "treeSha": "41b6ba6adbfddc1d560299f633e4090d3bd62cbd",
+  "version": "1.5.2.39-consolidated-completion",
+  "sameSource": true,
+  "publicVerification": "docs/release/evidence/CONSOLIDATED-COMPLETION-PUBLIC-2026-10-25.json",
+  "productionOcrProof": "docs/release/evidence/CONSOLIDATED-COMPLETION-PRODUCTION-OCR-2026-10-25.json",
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "scope": "INTEGRATED_A01_A28_I01_I20_WITH_EXPLICIT_DOCUMENTED_LIMITS",
+  "universalCapabilityCompletion": false,
+  "arbitraryUserIncidentReproduced": false
+}

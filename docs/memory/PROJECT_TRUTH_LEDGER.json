@@ -1701,15 +1701,20 @@
     {
       "id": "consolidated-completion-20261025",
       "scope": "Final consolidated acceptance of A01-A28 and I01-I20 under existing canonical owners",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-10-25",
-      "statement": "v39 candidate: canonical timed resource reservations, consented public notebook projection, voluntary collective Launch programmes, current-rights private reminders, optional same-origin document extraction with mandatory human review. No financial engine replacement or field acceptance.",
+      "statement": "Integrated v39 delivery and exact-source qualification verified. Canonical timed resources, opt-in revocable public notebooks, individually consented collective Launch Boost, fresh authorized reminders and optional local document extraction with mandatory human review. Complete acquired loan/Live/outbox rehearsals remain qualified. Program completion retains documented external and field limits.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-25-CONSOLIDATED-COMPLETION.md",
         "tests/consolidated-completion-20261025.test.mjs",
-        "tests/browser/consolidated-completion-20261025.spec.mjs"
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "source:4439791823cddc857ad898bfed8e702017b9f1d1",
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-PUBLIC-2026-10-25.json",
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-QUALIFICATION-2026-10-25.json",
+        "docs/release/evidence/CONSOLIDATED-COMPLETION-BACKUP-SOURCE-2026-10-25.json"
       ],
-      "next": "Complete integrated same-source release gates, independent qualification, readonly backup and public deployment proof."
+      "next": "Reuse exact-source receipts and integrated acceptance matrix. No repeated source audit or partial reimplementation without a concrete defect. Real-account field acceptance and unknown incidents remain separate.",
+      "workerVersionId": "c3a9d6a2-1249-45d8-b35d-723e34bd91d6"
     }
   ]
 }
