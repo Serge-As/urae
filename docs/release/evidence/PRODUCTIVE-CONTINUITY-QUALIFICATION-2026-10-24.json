@@ -1,0 +1,60 @@
+{
+  "protocol": "ECO_RELEASE_QUALIFICATION_1",
+  "sourceSha": "7eb2d1e499e3f0176da553999d68ca9c16bd8489",
+  "native": 1040,
+  "chromium": 73,
+  "webkit": 11,
+  "failed": 0,
+  "skipped": 0,
+  "workerVersionId": "ce018f0b-2584-4977-90ff-4e78d9f35509",
+  "runs": [
+    {
+      "runId": 40121419255,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 120953580205,
+          "name": "browser-critical",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        },
+        {
+          "id": 120953580411,
+          "name": "governed-ci",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    },
+    {
+      "runId": 40121419469,
+      "status": "completed",
+      "conclusion": "success",
+      "jobs": [
+        {
+          "id": 120953581359,
+          "name": "qualify-deploy-smoke",
+          "status": "completed",
+          "conclusion": "success",
+          "activeStep": null,
+          "failedSteps": []
+        }
+      ]
+    }
+  ],
+  "checkedAt": "2026-10-24T18:54:41.135867+00:00",
+  "treeSha": "cacff8923eaf88e4bcb8b813694c478b6cc807c5",
+  "version": "1.5.2.38-productive-continuity",
+  "sameSource": true,
+  "publicVerification": "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+  "realMoneyEnabled": false,
+  "fieldAcceptance": "NOT_ACCEPTED",
+  "continuityScope": "CHOSEN_COMMON_GROUP_RECIPIENTS; CONSENTED_CROSS_TENANT_METHOD_ADAPTATIONS; VOLUNTARY_PRIVATE_CALENDAR_SNAPSHOTS",
+  "universalCapabilityCompletion": false,
+  "arbitraryUserIncidentReproduced": false
+}

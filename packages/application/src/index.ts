@@ -2208,6 +2208,17 @@ export class ConnectedApplication {
   async updateAcquisition(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/acquisitions/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
   async resourceAssemblies():Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies',{cache:'no-store'});}
   async createResourceAssembly(input:any):Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies',{method:'POST',body:JSON.stringify(input)});}
+  async resourceCalendar(shopId:string,itemId:string):Promise<any>{return this.request('/api/v1/market/shops/'+encodeURIComponent(shopId)+'/stock/'+encodeURIComponent(itemId)+'/calendar',{cache:'no-store'});}
+  async configureResourceCalendar(shopId:string,itemId:string,input:any):Promise<any>{return this.request('/api/v1/market/shops/'+encodeURIComponent(shopId)+'/stock/'+encodeURIComponent(itemId)+'/calendar',{method:'PUT',body:JSON.stringify(input)});}
+  async cancelResourceTime(shopId:string,itemId:string,slotId:string,note:string):Promise<any>{return this.request('/api/v1/market/shops/'+encodeURIComponent(shopId)+'/stock/'+encodeURIComponent(itemId)+'/calendar/'+encodeURIComponent(slotId)+'/cancel',{method:'POST',body:JSON.stringify({note})});}
+  async launchProgrammes():Promise<any>{return this.request('/api/v1/business-studio/launch-programmes',{cache:'no-store'});}
+  async launchProgramme(id:string):Promise<any>{return this.request('/api/v1/business-studio/launch-programmes/'+encodeURIComponent(id),{cache:'no-store'});}
+  async createLaunchProgramme(input:any):Promise<any>{return this.request('/api/v1/business-studio/launch-programmes',{method:'POST',body:JSON.stringify(input)});}
+  async updateLaunchProgramme(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/launch-programmes/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
+  async searchPublicNotebooks(q:string):Promise<any>{return this.request('/api/v1/discovery/notebooks/public?q='+encodeURIComponent(q),{cache:'no-store'});}
+  async scheduleReminder(input:any):Promise<any>{return this.request('/api/v1/notifications/reminders',{method:'POST',body:JSON.stringify(input)});}
+  async personalReminders():Promise<any>{return this.request('/api/v1/notifications/reminders',{cache:'no-store'});}
+  async dismissReminder(id:string,expectedVersion:number):Promise<any>{return this.request('/api/v1/notifications/reminders/'+encodeURIComponent(id)+'/dismiss',{method:'POST',body:JSON.stringify({expectedVersion})});}
   async resourceAssembly(id:string):Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies/'+encodeURIComponent(id),{cache:'no-store'});}
   async updateResourceAssembly(id:string,input:any):Promise<any>{return this.request('/api/v1/business-studio/resource-assemblies/'+encodeURIComponent(id)+'/commands',{method:'POST',body:JSON.stringify(input)});}
   async launchPlans():Promise<any>{return this.request('/api/v1/business-studio/launch-plans');}

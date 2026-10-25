@@ -2,6 +2,7 @@ import type {CaseRecord,EvidenceRecord,Id,Membership,WorkspaceRecord} from '../.
 import {makeId} from '../../contracts/src/index.js';
 import type {PlatformRepository} from '../../repositories/src/index.js';
 import type {PlatformKernel} from '../../platform-kernel/src/index.js';
+import * as resourceCalendar from './resource-calendar.js';
 
 const managers=new Set(['founder','manager','admin','president','treasurer']);
 const now=()=>new Date().toISOString();
@@ -20,6 +21,12 @@ export interface MarketOrderOptions {idempotencyKey?:string;evidenceRef?:string;
 
 export class MarketService{
   constructor(public repo:PlatformRepository,public kernel:PlatformKernel,private reportingTenantId?:Id){}
+  configureResourceCalendar(shopId:string,itemId:string,input:resourceCalendar.ResourceCalendarConfiguration){return resourceCalendar.configureResourceCalendar(this,shopId,itemId,input);}
+  resourceCalendar(shopId:string,itemId:string){return resourceCalendar.resourceCalendar(this,shopId,itemId);}
+  reserveResourceSlot(shopId:string,itemId:string,input:resourceCalendar.ResourceSlotInput){return resourceCalendar.reserveResourceSlot(this,shopId,itemId,input);}
+  resourceSlot(shopId:string,itemId:string,id:string){return resourceCalendar.readResourceSlot(this,shopId,itemId,id);}
+  resourceReservation(shopId:string,itemId:string,reference:string){return resourceCalendar.resourceReservation(this,shopId,itemId,reference);}
+  cancelResourceSlot(shopId:string,itemId:string,id:string,note:string){return resourceCalendar.cancelResourceSlot(this,shopId,itemId,id,note);}
   private scopeOf(record:WorkspaceRecord){return String(record.data.marketScopeId??record.groupId??'');}
   private async personalShop(id:Id){
     const c=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(c.tenantId,id);
@@ -72,7 +79,7 @@ export class MarketService{
     if(!item||item.moduleId!=='MARKETPLACE.CORE'||item.data.marketKind!=='STOCK_ITEM'||this.scopeOf(item)!==shopId||item.status!=='ACTIVE'||!item.data.published||item.data.ownership==='POT_RESERVED'||item.data.pickupClosed===true)throw Error('RESOURCE_OFFER_NOT_AVAILABLE');
     const availableAt=String(item.data.availableAt??''),availableUntil=String(item.data.availableUntil??'');
     if(availableUntil&&Date.parse(availableUntil)<=Date.now())throw Error('RESOURCE_OFFER_NOT_AVAILABLE');
-    return{shopId,stockItemId,ownerId:shop.createdBy,name:item.title,unit:String(item.data.unit??'unit'),unitPrice:Number(item.data.unitPrice??0),currency:String(item.data.currency??'XAF'),deliveryTerms:String(item.data.deliveryTerms??''),availableAt,availableUntil,available:availableAt&&Date.parse(availableAt)>Date.now()?0:Math.max(0,Number(item.data.quantity)-Number(item.data.reserved??0)-Number(item.data.quarantine??0))};
+    return{shopId,stockItemId,ownerId:shop.createdBy,name:item.title,unit:String(item.data.unit??'unit'),unitPrice:Number(item.data.unitPrice??0),currency:String(item.data.currency??'XAF'),deliveryTerms:String(item.data.deliveryTerms??''),resourceCalendarEnabled:item.data.resourceCalendarEnabled===true,resourceCapacity:Number(item.data.resourceCapacity??0),resourceTerms:String(item.data.resourceTerms??''),availableAt,availableUntil,available:availableAt&&Date.parse(availableAt)>Date.now()?0:Math.max(0,Number(item.data.quantity)-Number(item.data.reserved??0)-Number(item.data.quarantine??0))};
   }
   async resourceOrderProjection(id:Id){
     const order=await this.authorizedOrder(id),shop=await this.personalShop(this.scopeOf(order));
@@ -165,6 +172,7 @@ export class MarketService{
   async configureTemporalStock(scopeId:Id,itemId:Id,input:{kind:'NOW'|'DEAL'|'HARVEST'|'SERVICE';category:string;quality:string;locality:string;pickupPoint:string;pickupWindow:string;startsAt?:string;endsAt:string;pointOpen:boolean;confirmed:boolean}){
     await this.access(scopeId,true);const item=(await this.list(scopeId,'STOCK_ITEM')).find(r=>r.id===itemId);
     if(!item||item.status!=='ACTIVE')throw Error('STOCK_ITEM_NOT_FOUND');
+    if(item.data.resourceCalendarEnabled||resourceCalendar.hasActiveResourceSlots(item))throw Error('RESOURCE_CALENDAR_REQUIRES_EXPLICIT_RELEASE');
     if(item.data.ownership==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');
     if(!['NOW','DEAL','HARVEST','SERVICE'].includes(input.kind)||input.confirmed!==true||typeof input.pointOpen!=='boolean')throw Error('TEMPORAL_CONFIRMATION_REQUIRED');
     const end=Date.parse(input.endsAt),start=input.startsAt?Date.parse(input.startsAt):Date.now();
@@ -261,6 +269,7 @@ export class MarketService{
     return{shop:shop?{id:shop.id,name:shop.title,tagline:String(shop.data.tagline??''),visibility:String(shop.data.visibility??'GROUP_ONLY'),locality:String(shop.data.locality??''),categories:JSON.parse(String(shop.data.categoriesJson??'[]'))}:undefined,items};
   }
   private async mutateStock(item:MarketRecord,quantityDelta:number,kind:string,sourceType:string,sourceId:string,note:string){
+    if(quantityDelta<0&&resourceCalendar.hasActiveResourceSlots(item))throw Error('RESOURCE_HAS_ACTIVE_BOOKINGS');
     const ctx=this.kernel.context.get(),stamp=now(),id=makeId('market_stock'),quantity=Number(item.data.quantity)+quantityDelta;
     if(quantity<Number(item.data.reserved??0)+Number(item.data.quarantine??0))throw Error('INSUFFICIENT_STOCK');
     const record:MarketRecord={...item,data:{...item.data,quantity,lastAdjustmentReason:note,lastMarketOperationId:id,version:Number(item.data.version??1)+1},updatedAt:stamp};
@@ -302,6 +311,7 @@ export class MarketService{
     if(quote){if(quote.tenantId!==ctx.tenantId||this.scopeOf(quote)!==groupId||quote.data.marketKind!=='MARKET_QUOTE')throw Error('QUOTE_NOT_FOUND');if(quote.data.total===null)throw Error('QUOTE_COSTS_UNKNOWN');if(Date.parse(String(quote.data.validUntil))<=Date.now())throw Error('QUOTE_EXPIRED');}
     const item=publicBuyer?await this.repo.getWorkspaceRecord(ctx.tenantId,input.stockItemId) as MarketRecord|undefined:(await this.list(groupId,'STOCK_ITEM')).find(x=>x.id===input.stockItemId);if(!item||item.data.marketKind!=='STOCK_ITEM'||this.scopeOf(item)!==groupId)throw Error('STOCK_ITEM_NOT_FOUND');
     if(String(item.data.ownership??'COMMERCIAL')==='POT_RESERVED')throw Error('POT_STOCK_NOT_SELLABLE');
+    if(item.data.resourceCalendarEnabled===true)throw Error('RESOURCE_TIME_ONLY');
     if(item.status!=='ACTIVE'||(allowMember||quote)&&!Boolean(item.data.published))throw Error('STOCK_NOT_AVAILABLE');
     if(item.data.temporalKind&&item.data.pickupClosed===true)throw Error("PICKUP_POINT_CLOSED");
     if(item.data.availableAt&&Date.parse(String(item.data.availableAt))>Date.now()||item.data.availableUntil&&Date.parse(String(item.data.availableUntil))<=Date.now())throw Error('STOCK_NOT_AVAILABLE');

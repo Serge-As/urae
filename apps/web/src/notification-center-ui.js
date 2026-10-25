@@ -1,7 +1,8 @@
+import {renderPersonalReminders} from './consolidated-completion-ui.js';
 import {notificationIsQuiet} from '../../../packages/notifications/src/policy.js';
 import {buildEcoShareIntent} from './share-out.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(cls)n.className=cls;return n;};
-export function mountNotificationCenterUI({app,loadNotices,openNotice,openWaiting,showError=()=>{},notify=()=>{},date=String}){
+export function mountNotificationCenterUI({app,loadNotices,openNotice,openWaiting,openReminder=()=>{},showError=()=>{},notify=()=>{},date=String}){
  const host=document.getElementById('notificationCenterPanel'),list=document.getElementById('notificationCenterList'),meta=document.getElementById('notificationCenterMeta');
  if(!host||!list)return{refresh:async()=>{},clearForContext:()=>{},setLocale:async()=>{}};
  const tx=(fr,en)=>document.documentElement.lang.startsWith('en')?en:fr,context=()=>JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);
@@ -50,7 +51,7 @@ export function mountNotificationCenterUI({app,loadNotices,openNotice,openWaitin
   meta.textContent=tx('Lecture des notifications autorisées…','Loading authorized notifications…');
   const filterRow=el('div',undefined,'actions');for(const [value,fr,en]of [['all','Toutes','All'],['unread','Non lues','Unread'],['urgent','Urgentes','Urgent']])action(filterRow,tx(fr,en),async()=>{filter=value;await refresh();},filter===value?'primary':'secondary');controls.append(filterRow,preferences);
   try{const result=await loadNotices();if(!valid())return;const rank={CRITICAL:4,HIGH:3,NORMAL:2,LOW:1},notices=[...new Map(result.items.map(n=>[n.id,n])).values()].sort((a,b)=>Number(Boolean(a.read))-Number(Boolean(b.read))||(rank[b.priority]??0)-(rank[a.priority]??0)||String(b.createdAt).localeCompare(String(a.createdAt)));const visible=notices.filter(n=>filter==='all'||filter==='unread'&&!n.read||filter==='urgent'&&['HIGH','CRITICAL'].includes(n.priority));meta.textContent=tx('Non lues : ','Unread: ')+notices.filter(n=>!n.read).length+' · '+tx('Affichées : ','Shown: ')+Math.min(visible.length,100)+' / '+notices.length+(result.unavailable.length?' · '+tx('Chargement partiel','Partial load'):'');if(result.unavailable.length)list.append(el('p',tx('Certains groupes sont indisponibles. Aucune notification manquante n’est marquée lue.','Some groups are unavailable. No missing notice is marked read.'),'truth-notice'));for(const n of visible.slice(0,100))renderCard(n,valid);if(!visible.length)list.append(el('p',tx('Aucune notification accessible avec ce filtre.','No accessible notification for this filter.')));
-   await preferenceControls(valid);if(valid())await renderWaiting(valid);if(valid())loadedContext=captured;
+   await preferenceControls(valid);if(valid())await renderWaiting(valid);if(valid())await renderPersonalReminders(waiting,{app,current:valid,open:openReminder,action});if(valid())loadedContext=captured;
   }catch(error){if(valid()){state.textContent=tx('Chargement incomplet. Actualisez pour vérifier les droits et les états actuels.','Loading incomplete. Refresh to verify current rights and states.');showError(error);}}finally{if(valid())loadingContext='';}
  }
  return{refresh,clearForContext,setLocale:refresh};

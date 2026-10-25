@@ -1,5 +1,6 @@
 import { PlatformKernel } from '../../../packages/platform-kernel/src/index.js';
 import {caseCareAdapter} from './care.js';
+import {productiveReminderResolver} from './productive-reminders.js';
 import {financialExplanationRoute} from './financial-explanations.js';
 import {prepareEngineRehearsal,executeEngineRehearsal,forwardEngineRehearsal} from './engine-rehearsal.js';
 import type {CaseCareCommand,CaseCareCategory} from '../../../packages/contracts/src/index.js';
@@ -82,11 +83,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.38-productive-continuity';
-const RELEASE_BUILD_ID='eco-system-1.5.2.38-20261024-productive-continuity';
+const RELEASE_VERSION='1.5.2.39-consolidated-completion';
+const RELEASE_BUILD_ID='eco-system-1.5.2.39-20261025-consolidated-completion';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15238-productive-continuity-20261024';
+const RELEASE_PWA_CACHE='eco-system-v15239-consolidated-completion-20261025';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -1224,6 +1225,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(receivedSolutions&&request.method==='GET')return json(await knowledgeAcademy.receivedForumSolutions(decodeURIComponent(receivedSolutions[1]!),solutionSource),200,cors);
     const adaptSolution=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/forum-solutions\/adapt$/);
     if(adaptSolution&&request.method==='POST')return json(await knowledgeAcademy.adaptForumSolution(decodeURIComponent(adaptSolution[1]!),await readJson<any>(request),solutionSource),201,cors);
+    if(url.pathname==='/api/v1/discovery/notebooks/public'&&request.method==='GET')return json(await discovery.searchPublicNotebooks(url.searchParams.get('q')??''),200,{...cors,'cache-control':'no-store'});
+    const publicNotebookRoute=url.pathname.match(/^\/api\/v1\/discovery\/notebooks\/public\/(public_notebook_[a-f0-9]{64})$/);
+    if(publicNotebookRoute&&request.method==='GET')return json(await discovery.publicNotebook(publicNotebookRoute[1]!),200,{...cors,'cache-control':'no-store'});
     if(url.pathname==='/api/v1/discovery/notebook'){
       if(request.method==='GET')return json(await discovery.notebook(),200,cors);
       if(request.method==='PUT')return json(await discovery.saveNotebook(await readJson<any>(request)),200,cors);
@@ -1246,6 +1250,12 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     }
     const assemblyRoute=url.pathname.match(/^\/api\/v1\/business-studio\/resource-assemblies\/([^/]+)(\/commands)?$/);
     if(assemblyRoute){const id=decodeURIComponent(assemblyRoute[1]!);if(request.method==='GET'&&!assemblyRoute[2])return json(await businessStudio.resourceAssembly(id),200,cors);if(request.method==='POST'&&assemblyRoute[2])return json(await businessStudio.updateResourceAssembly(id,await readJson<any>(request)),200,cors);}
+    if(url.pathname==='/api/v1/business-studio/launch-programmes'){
+      if(request.method==='GET')return json(await businessStudio.launchProgrammes(),200,cors);
+      if(request.method==='POST')return json(await businessStudio.createLaunchProgramme(await readJson<any>(request)),201,cors);
+    }
+    const launchProgrammeRoute=url.pathname.match(/^\/api\/v1\/business-studio\/launch-programmes\/([^/]+)(\/commands)?$/);
+    if(launchProgrammeRoute){const id=decodeURIComponent(launchProgrammeRoute[1]!);if(request.method==='GET'&&!launchProgrammeRoute[2])return json(await businessStudio.launchProgramme(id),200,cors);if(request.method==='POST'&&launchProgrammeRoute[2])return json(await businessStudio.updateLaunchProgramme(id,await readJson<any>(request)),200,cors);}
     if(url.pathname==='/api/v1/business-studio/launch-plans'){
       if(request.method==='GET')return json(await businessStudio.launchPlans(),200,cors);
       if(request.method==='POST')return json(await businessStudio.createLaunchPlan(await readJson<any>(request)),201,cors);
@@ -1617,6 +1627,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&url.pathname==='/api/v1/assistant/group-launch/analyze-files'){
       if(!options.artifacts)throw Error('R2_ARTIFACT_REQUIRED');
       const form=await request.formData();
+      const localPreparation=form.get('localPreparation')==='true';let localTexts:Array<{name?:string;size?:number;text?:string;method?:string}>=[];
+      if(localPreparation){const raw=String(form.get('localTexts')??'[]');if(raw.length>150000)throw Error('LOCAL_PREPARATION_TOO_LARGE');const parsed=JSON.parse(raw);if(!Array.isArray(parsed)||parsed.length>10)throw Error('INVALID_LOCAL_PREPARATION');localTexts=parsed;}
       const files=form.getAll('files').filter((x):x is File=>typeof File!=='undefined'&&x instanceof File);
       if(!files.length)throw Error('GOVERNANCE_DOCUMENT_REQUIRED');
       if(files.length>40)throw Error('TOO_MANY_GOVERNANCE_FILES');
@@ -1632,6 +1644,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         let text='',tokens:undefined|number,format:undefined|string,error:undefined|string;
         if(kind==='LEGACY_WORD')warnings.push('LEGACY_DOC_ARCHIVED_CONVERSION_NOT_GUARANTEED:'+file.name);
         else if(kind==='TEXT'){text=new TextDecoder('utf-8',{fatal:false}).decode(buffer);format='text';}
+        else if(localPreparation){const local=localTexts.find(x=>x.name===file.name&&x.size===file.size);text=String(local?.text??'');if(text.length>120000)throw Error('LOCAL_PREPARATION_TOO_LARGE');format='local-unverified';warnings.push('LOCAL_TEXT_REQUIRES_HUMAN_REVIEW:'+file.name);}
         else if(kind==='PDF'||kind==='DOCUMENT'||kind==='IMAGE'){
           if(!options.documentAI)warnings.push('AI_DOCUMENT_CONVERTER_UNAVAILABLE:'+file.name);
           else{
@@ -1645,8 +1658,8 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         converted.push({file,kind,text,fingerprint,artifactKey,tokens,format,error});
       }
       const combinedText=converted.filter(x=>x.text.trim()).map(x=>'--- '+x.file.name+' ---\n'+x.text.trim()).join('\n\n').slice(0,1_900_000);
-      if(!combinedText.trim())throw Error('NO_EXTRACTABLE_GOVERNANCE_TEXT');
-      const suggestions=analyzeGovernanceText(combinedText),textFingerprint=await governanceFingerprint(combinedText);
+      if(!combinedText.trim()&&!localPreparation)throw Error('NO_EXTRACTABLE_GOVERNANCE_TEXT');
+      const suggestions=localPreparation?null:analyzeGovernanceText(combinedText),textFingerprint=await governanceFingerprint(combinedText);
       return json({combinedText,fingerprints:[textFingerprint,...converted.map(x=>x.fingerprint)],files:converted.map(x=>({name:x.file.name,size:x.file.size,type:x.file.type,kind:x.kind,fingerprint:x.fingerprint,artifactKey:x.artifactKey,tokens:x.tokens,format:x.format,error:x.error})),warnings,suggestions,requiresHumanConfirmation:true,financialWrites:false},200,cors);
     }
 
@@ -2628,6 +2641,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     // The authenticated actor is never replaced by a client-supplied identity/tenant.
     const marketForRecord=async(id:string)=>{const r=await repo.getMarketRecordById(id);if(!r)throw Error('MARKET_RECORD_NOT_FOUND');const k=new PlatformKernel();k.context.set({...ctx,tenantId:r.tenantId});return new MarketService(repo,k,ctx.tenantId);};
     // Personal storefronts reuse MarketService; no synthetic group or shared cashbox.
+    const resourceCalendarRoute=url.pathname.match(/^\/api\/v1\/market\/shops\/([^/]+)\/stock\/([^/]+)\/calendar$/);
+    if(resourceCalendarRoute){const shop=decodeURIComponent(resourceCalendarRoute[1]!),item=decodeURIComponent(resourceCalendarRoute[2]!),owner=await marketForRecord(shop);if(request.method==='GET')return json(await owner.resourceCalendar(shop,item),200,cors);if(request.method==='PUT')return json(await owner.configureResourceCalendar(shop,item,await readJson<any>(request)),200,cors);}
+    const resourceCancelRoute=url.pathname.match(/^\/api\/v1\/market\/shops\/([^/]+)\/stock\/([^/]+)\/calendar\/([^/]+)\/cancel$/);
+    if(resourceCancelRoute&&request.method==='POST'){const [,shop,item,slot]=resourceCancelRoute,b=await readJson<any>(request);return json(await (await marketForRecord(decodeURIComponent(shop!))).cancelResourceSlot(decodeURIComponent(shop!),decodeURIComponent(item!),decodeURIComponent(slot!),String(b.note??'')),200,cors);}
     if(url.pathname==='/api/v1/market/shops'&&request.method==='POST')return json(await market.createPersonalShop(await readJson<any>(request)),201,cors);
     if(url.pathname==='/api/v1/market/shops/mine'&&request.method==='GET')return json(await market.personalShops(),200,cors);
     if(url.pathname==='/api/v1/market/shops/directory'&&request.method==='GET')return json(await market.shopDirectory(),200,cors);
@@ -3211,7 +3228,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const timestamp=new Date().toISOString();
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:{};
       if(isProtectedSafetyRecord({moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
-      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION','FORUM_SOLUTION_TRANSMISSION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','DISCOVERY_NOTEBOOK_POINTER','FORUM_SOLUTION','FORUM_SOLUTION_TRANSMISSION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','LAUNCH_PROGRAMME','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       if(strArray(body.tags).includes('market-engine')||rawData.marketScopeId||rawData.marketKind)throw Error('CANONICAL_MARKET_ROUTE_REQUIRED');
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={};
@@ -3238,7 +3255,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const status=String(body.status??existing.status) as WorkspaceStatus; if(!['DRAFT','ACTIVE','DONE','ARCHIVED'].includes(status)) throw new Error('INVALID_WORKSPACE_STATUS');
       const rawData=body.data&&typeof body.data==='object'&&!Array.isArray(body.data)?body.data as Record<string,unknown>:existing.data;
       if(isProtectedSafetyRecord({moduleId:existing.moduleId,data:rawData}))throw Error('CANONICAL_SAFETY_ROUTE_REQUIRED');
-      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','FORUM_SOLUTION','FORUM_SOLUTION_TRANSMISSION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
+      if(strArray(body.tags).includes('governed-productive')||['PRACTICE_ATTEMPT','DISCOVERY_NOTEBOOK','DISCOVERY_NOTEBOOK_POINTER','FORUM_SOLUTION','FORUM_SOLUTION_TRANSMISSION'].includes(String(rawData.kind))||['JOB','ACQUISITION_ROOM','LAUNCH_PLAN','LAUNCH_PROGRAMME','RESOURCE_ASSEMBLY','RESOURCE_ALLOCATION_CLAIM'].includes(String(rawData.businessKind)))throw Error('CANONICAL_PRODUCTIVE_ROUTE_REQUIRED');
       const data:Record<string,string|number|boolean|null>={}; for(const [k,v] of Object.entries(rawData)){if(typeof v==='string'||typeof v==='number'||typeof v==='boolean'||v===null)data[k]=v;}
       if(strArray(body.tags).some(x=>['verification-fact','governance-follow-up','poll','ballot','business-experiment','consensual-pool','ad-pilot'].includes(x)))throw Error('CANONICAL_GOVERNED_ROUTE_REQUIRED');
       const updated:WorkspaceRecord={...existing,title:body.title===undefined?existing.title:String(body.title).trim()||existing.title,summary:body.summary===undefined?existing.summary:String(body.summary),status,tags:body.tags===undefined?existing.tags:strArray(body.tags),data,updatedAt:new Date().toISOString()};
@@ -3693,6 +3710,9 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     const closePollRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/governance\/polls\/([^/]+)\/close$/);
     if(closePollRoute&&request.method==='POST'){const body=await readJson<Record<string,unknown>>(request);return json(await governanceVotes.close(closePollRoute[1]!,closePollRoute[2]!,String(body.state??'CLOSED')==='CANCELLED'?'CANCELLED':'CLOSED'),200,cors);}
 
+    if(url.pathname==='/api/v1/notifications/reminders'){const resolve=productiveReminderResolver(repo,kernel);if(request.method==='GET')return json(await notifications.reminderInbox(resolve),200,cors);if(request.method==='POST')return json(await notifications.scheduleReminder(await readJson<any>(request),resolve),201,cors);}
+    const reminderDismiss=url.pathname.match(/^\/api\/v1\/notifications\/reminders\/([^/]+)\/dismiss$/);
+    if(reminderDismiss&&request.method==='POST'){const b=await readJson<any>(request);return json(await notifications.dismissReminder(decodeURIComponent(reminderDismiss[1]!),b.expectedVersion),200,cors);}
     if(url.pathname==='/api/v1/notifications/preferences'&&request.method==='GET')return json(await notifications.preferences(),200,cors);
     if(url.pathname==='/api/v1/notifications/preferences'&&request.method==='PUT'){const body=await readJson<any>(request);return json(await notifications.savePreferences(body),200,cors);}
     const groupNotifications=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/notifications$/);

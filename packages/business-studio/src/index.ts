@@ -6,6 +6,7 @@ import * as experiment from './experiments.js';
 import * as jobs from './jobs.js';
 import * as acquisition from './acquisition.js';
 import * as plans from './launch-plans.js';
+import * as programmes from './launch-programmes.js';
 import * as assemblies from './resource-assemblies.js';
 
 type BusinessKind='WORKSPACE'|'MANDATE'|'CLIENT'|'OFFER'|'REQUEST'|'QUOTE'|'ORDER'|'CONTRACT'|'INVOICE'|'EXPENSE'|'PAYMENT'|'REVENUE'|'TIME'|'COMMUNICATION'|'ACTION'|'SCENARIO';
@@ -39,6 +40,10 @@ export class BusinessStudioService{
   acquisitionListings(){return acquisition.acquisitionListings(this.repo,this.kernel);}
   acquisitionRoom(id:string){return acquisition.readAcquisition(this.repo,this.kernel,id);}
   updateAcquisition(id:string,input:acquisition.AcquisitionCommand){return acquisition.updateAcquisition(this.repo,this.kernel,id,input);}
+  createLaunchProgramme(input:programmes.LaunchProgrammeInput){return programmes.createLaunchProgramme(this.repo,this.kernel,input);}
+  launchProgrammes(){return programmes.launchProgrammes(this.repo,this.kernel);}
+  launchProgramme(id:string){return programmes.readLaunchProgramme(this.repo,this.kernel,id);}
+  updateLaunchProgramme(id:string,input:programmes.LaunchProgrammeCommand){return programmes.updateLaunchProgramme(this.repo,this.kernel,id,input);}
   createLaunchPlan(input:plans.LaunchPlanInput){return plans.createLaunchPlan(this.repo,this.kernel,input);}
   launchPlans(){return plans.launchPlans(this.repo,this.kernel);}
   launchPlan(id:string){return plans.readLaunchPlan(this.repo,this.kernel,id);}

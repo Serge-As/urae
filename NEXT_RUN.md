@@ -1,3 +1,49 @@
+## Finalisation consolidée v39 — candidat en qualification
+
+Base de production vérifiée : v38, source `7eb2d1e499e3f0176da553999d68ca9c16bd8489`. Cette livraison regroupe les derniers compléments d’acceptation du programme A01–A28 et I01–I20. Elle conserve les propriétaires métier existants, la finance Ledger/D1, le Live, les prêts et l’outbox. Aucun abonnement payant, encaissement réel, migration ou redémarrage.
+
+Market détient les créneaux explicites des ressources réutilisables : capacité, concurrence, période, reprise après interruption et annulation tracée. L’archivage d’un plan n’annule pas un créneau ; sa confirmation demeure visible et son annulation reste explicite. Le carnet peut publier seulement les champs choisis, avec nom volontaire et consentement, aperçu identique à la page anonyme et retrait à la prochaine lecture. Aucun profil privé ni donnée de groupe publié. La recherche publique relit au plus 50 pointeurs actuels par demande et présente au plus 20 résultats.
+
+Launch Boost collectif : invitation sans engagement, adhésion individuelle, conditions révisées exigeant un nouvel accord, partage facultatif de compteurs, rapport déclaré distinct de la relecture du coordinateur, sortie sans changer le plan privé. Rappels Inbox choisis : cibles et droits relus à l’ouverture, sans polling ou livraison externe garantie. Bilan Care limité aux dossiers autorisés et catégories déclarées.
+
+Préparation documentaire facultative en français et anglais dans le navigateur : PDF, images raster, texte ; pièces Word et pièces illisibles conservées pour transcription manuelle. Moteurs libres à versions et empreintes verrouillées, servis par Eco à la demande et exclus du précache initial. Les documents privés ne sont pas envoyés à un fournisseur OCR. Une préparation non certifiée ne rejoint la bibliothèque qu’après relecture et confirmations humaines des nombres et du contenu ; aucune règle ni opération financière appliquée.
+
+État : qualification et déploiement de v39 encore à établir ; les preuves v38 ne suffisent pas. `realMoneyEnabled=false` ; `FIELD_ACCEPTED=NOT_ACCEPTED`. Les prestations externes, paiements et résultats économiques ne sont pas déduits d’une interface ou d’un test synthétique. La consommation exacte de crédits n’est pas mesurable.
+
+## Historique conservé
+
+## Clôture vérifiée v38 — 24 octobre 2026
+
+Production **1.5.2.38-productive-continuity**, source `7eb2d1e499e3f0176da553999d68ca9c16bd8489`, arbre `cacff8923eaf88e4bcb8b813694c478b6cc807c5`, Worker `ce018f0b-2584-4977-90ff-4e78d9f35509`. Livraison et qualification indépendante sur la même source : [40121419255 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40121419255) ; [40121419469 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40121419469). **1040/1040 tests natifs, 73/73 Chromium, 11/11 WebKit**, zéro échec et zéro ignoré. Santé, catalogue de 164 capacités et **52 empreintes publiques** relus indépendamment à 2026-10-24T19:01:27.805996+00:00. Cette clôture documentaire est postérieure au code déployé ; son commit local n'est pas un autre SHA runtime.
+
+Ensemble commun A14/A15/A17/A19/I05/I20 : carnets à destinataires choisis, adaptations consenties des méthodes Foras entre groupes et exports privés d'échéances. Les propriétaires Discovery, KnowledgeAcademy et BusinessStudio sont réutilisés. Aucune nouvelle autorité financière, dépendance payante, migration, purge d'outbox ou tâche de polling. Le répertoire des groupes conserve la sélection du tenant courant et ajoute seulement les adhésions actives propres au compte dont le tenant correspond au groupe ; le changement de groupe ne confère aucun rôle.
+
+Carnets : chaque champ est privé, partagé au groupe ou adressé à des personnes choisies d'un groupe commun. Aperçu exact de la copie enregistrée, réception limitée aux champs autorisés, contrôle des adhésions actuelles, retrait effectif à la prochaine lecture. Les autres destinataires, coordonnées privées et champs non partagés ne sont pas transmis. Le carnet reste borné au tenant courant ; ce complément ne crée pas un annuaire public universel.
+
+Foras : l'auteur d'une solution validée consent à sa transmission vers un autre de ses groupes, y compris entre tenants. La cible conserve un pointeur sans message source brut ; l'accord dans la source reste la seule autorité. Un gestionnaire propose une adaptation avec ses propres conditions et résultat local, puis un tiers la relit. Retrait, source masquée ou auteur sorti du groupe : contenus dérivés masqués à la prochaine lecture. Les révisions concurrentes passent par CAS ; une autorisation ultérieure ne réactive pas une ancienne adaptation. Aucune fiche ne devient automatiquement une règle du groupe. Les copies déjà lues ou téléchargées ne sont pas rétractables à distance.
+
+Calendrier : bouton explicite sur les emplois et plans personnels, relecture autorisée du dossier au clic, export des seuls entretiens attribués et dates futures utiles. Le fichier .ics emploie UTC, identifiants opaques, texte échappé, lignes UTF-8 bornées et alarmes locales. Aucun autre candidat ni contact n'est exporté. Un plan archivé ou un droit retiré refuse l'export ; une erreur conserve le parcours. Le calendrier choisi décide de ses rappels. Cette copie datée ne se synchronise pas automatiquement et ne prouve ni réception de notification, ni recrutement, paiement ou financement.
+
+Accès : **Marketplace / Eco Business → Compétences · Opportunités · Data Room · Launch Boost** ; onglet **Mon carnet** pour les champs et destinataires, **Solutions du Fora** pour transmission et adaptation, **Emploi et missions** ou **Mon Launch Boost** pour le bouton calendrier. Les parcours navigateur couvrent deux comptes, deux tenants, le retrait des droits, l'adaptation et sa revue indépendante, le vrai téléchargement .ics, un refus après archivage, l'anglais en écran de 360 px, la déconnexion et l'absence de requêtes de fond. Les tests Memory et SQLite/D1 couvrent aussi les audiences non choisies, sorties du groupe, versions concurrentes et routes génériques interdites.
+
+Les répétitions acquises des prêts, Live et outbox restent vertes dans les suites du même SHA : perte d'accusé sans double effet Ledger, reprise de projection Live et six politiques de prêt. Le rejeu reste limité aux mécanismes d'incident connus et aux données synthétiques normalisées ; aucun incident personnel arbitraire n'est déclaré reproduit par ce complément.
+
+BIR+ : export D1 en lecture seule et restauration dans une copie vierge ; intégrité et clés étrangères vérifiées, 50 tables, 48 attendues. Archive privée R2 relue SHA256 `9746b2e29e0cfcdfd60577164312c0bd8de525d5e52a0050abcef41b0ec9f100`. Portée **D1_AND_EXACT_SOURCE_ONLY**, `completeApplicationBackup=false` : pièces R2, outbox/données d'appareil et états des fournisseurs exclus. Aucune restauration de production. Source exacte : 924 empreintes Git vérifiées, ZIP `Eco-System_1.5.2.38_Source_Verifiee_7eb2d1e4_2026-10-24.zip`, SHA256 `9ca3f07491b0826de1824ae7884cb26c681d7a6858e9c58bdb3673a68544f1f8`, 3358776 octets. Aucun miroir public ni téléchargement privé redondant.
+
+**ÉTAT DU PROJET APRÈS ÉTAPE** : v38 déployée et qualifiée automatiquement dans ce périmètre. Les 28 périmètres initiaux publiés et leurs compléments ne signifient pas que toutes les variantes des 92 propositions sont achevées ; les références outils/modèles ne sont pas des installations obligatoires. Aucun compte Delor utilisé pour une recette terrain : `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Aucun redémarrage de l'ordinateur. Consommation exacte de crédits non mesurable.
+
+Reprise : v38 livrée. Réutiliser les reçus de ce SHA ; ne pas republier ni recommencer les audits. Une recette terrain ou un nouveau défaut exige sa preuve propre.
+
+## Historique conservé
+
+## Publication v38 en qualification — source 7eb2d1e4
+
+Source déjà publiée sans force dans URAE privé : `7eb2d1e499e3f0176da553999d68ca9c16bd8489`, arbre `cacff8923eaf88e4bcb8b813694c478b6cc807c5`. Exécutions distantes sur cette source : 40121419469 in_progress, 40121419255 in_progress au dernier contrôle. Ne pas republier ni relancer la CI sans défaut identifié. La suite native locale 1040/1040 qualifie le code fonctionnel préparé ; les essais locaux et preuves de sources précédentes ne qualifient pas automatiquement cette source finale. Les échecs initiaux et le correctif de défilement/préparation sont consignés dans le CIR et le rappel. Les suites complètes sur CI restent obligatoires.
+
+Archive exacte créée et relue : `../Eco-System_1.5.2.38_Source_Verifiee_7eb2d1e4_2026-10-24.zip`, 924 fichiers, SHA256 `9ca3f07491b0826de1824ae7884cb26c681d7a6858e9c58bdb3673a68544f1f8`. Reçus et outils de poursuite : `../evidence/CONTINUITY_RELEASE.json`, `CONTINUITY_RUNS.json`, `CONTINUITY_JOB_SUMMARY.json`, `continuity-release-evidence.py`, `verify-continuity-public-curl.py`, `close-continuity-v38.py`. Le contrôle public des 52 empreintes et la sauvegarde de livraison restent à attester avant clôture. Réutiliser l'archive et les reçus. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED` ; aucune livraison v38 revendiquée par ce point de reprise.
+
+## Historique conservé
+
 ## Publication v38 en qualification — point de reprise du 24 octobre
 
 Source déjà publiée sans force dans URAE privé : `1f0448964a45f9bbbe857f3d6cb9eeb7b8a31af9`, arbre `55c1516b74a49bbce894e26dc374c5ee79e5bf8f`. Livraison `40116855456` et qualification indépendante `40116855500` sur cette même source, encore en cours au dernier contrôle. Ne pas republier ni relancer la CI sans défaut identifié. Les 1040 tests natifs locaux passent. Les trois nouveaux parcours Chromium ont chacun passé (2 au premier passage et le scénario inter-tenant dans un passage ciblé) ; ne pas transformer ce constat en une qualification globale 3/3 du dernier fichier de test. Qualification WebKit locale encore en cours, suites complètes sur CI obligatoires.

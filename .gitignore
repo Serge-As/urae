@@ -9,3 +9,4 @@ playwright-report/
 .wrangler/
 *.log
 workers/api/wrangler.ci.toml
+apps/web/vendor/documents/

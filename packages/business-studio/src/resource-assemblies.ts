@@ -10,7 +10,7 @@ const digest=async(value:unknown)=>Array.from(new Uint8Array(await crypto.subtle
 const unit=(value:unknown)=>clean(value,80).normalize('NFKC').toLowerCase();
 interface Line {id:string;name:string;shopId:string;stockItemId:string;ownerId:string;quantity:number;unit:string;startsAt:string;endsAt:string;conditions:string;offerFingerprint:string;decision:'REQUESTED'|'ACCEPTED'|'DECLINED'|'WITHDRAWN';decisionNote:string;decidedAt:string;orderId:string;}
 export interface ResourceAssemblyInput {title:string;groupId:string;consent:boolean;idempotencyKey:string;lines:Array<{name:string;shopId:string;stockItemId:string;quantity:number;unit:string;startsAt:string;endsAt:string;conditions:string}>;}
-export interface ResourceAssemblyCommand {expectedVersion:number;action:'ACCEPT'|'DECLINE'|'WITHDRAW'|'LINK_ORDER'|'ARCHIVE';lineId?:string;note?:string;orderId?:string;}
+export interface ResourceAssemblyCommand {expectedVersion:number;action:'ACCEPT'|'DECLINE'|'WITHDRAW'|'LINK_ORDER'|'RESERVE_TIME'|'CANCEL_TIME'|'ARCHIVE';lineId?:string;note?:string;orderId?:string;}
 const lines=(r:WorkspaceRecord)=>JSON.parse(String(r.data.linesJson)) as Line[];
 
 async function participants(repo:PlatformRepository,tenantId:string,groupId:string){
@@ -30,7 +30,7 @@ async function get(repo:PlatformRepository,kernel:PlatformKernel,id:string){
 async function marketForRecord(repo:PlatformRepository,kernel:PlatformKernel,id:string){const record=await repo.getMarketRecordById(id);if(!record)throw Error('MARKET_RECORD_NOT_FOUND');const k=new PlatformKernel();k.context.set({...kernel.context.get(),tenantId:record.tenantId});return new MarketService(repo,k);}
 async function offer(repo:PlatformRepository,kernel:PlatformKernel,shopId:string,stockItemId:string){
  const resource=await (await marketForRecord(repo,kernel,shopId)).resourceOfferProjection(shopId,stockItemId);
- return {...resource,fingerprint:await digest([resource.shopId,resource.stockItemId,resource.ownerId,resource.name,resource.unit,resource.unitPrice,resource.currency,resource.deliveryTerms,resource.availableAt,resource.availableUntil])};
+ return {...resource,fingerprint:await digest([resource.shopId,resource.stockItemId,resource.ownerId,resource.name,resource.unit,resource.unitPrice,resource.currency,resource.deliveryTerms,resource.availableAt,resource.availableUntil,resource.resourceCalendarEnabled,resource.resourceCapacity,resource.resourceTerms])};
 }
 async function allocationId(tenantId:string,orderId:string){return 'assembly_allocation_'+await digest([tenantId,orderId]);}
 async function orderProof(repo:PlatformRepository,kernel:PlatformKernel,r:WorkspaceRecord,line:Line){
@@ -48,10 +48,12 @@ async function view(repo:PlatformRepository,kernel:PlatformKernel,r:WorkspaceRec
   let current:Awaited<ReturnType<typeof offer>>|null=null;try{current=await offer(repo,kernel,line.shopId,line.stockItemId);}catch{}
   const sourceCurrent=Boolean(current&&current.ownerId===line.ownerId&&current.fingerprint===line.offerFingerprint&&members.has(line.ownerId));
   const proof=sourceCurrent&&line.decision==='ACCEPTED'?await orderProof(repo,kernel,r,line):null;
+   let reservation=null;try{reservation=await (await marketForRecord(repo,kernel,line.shopId)).resourceReservation(line.shopId,line.stockItemId,r.tenantId+':'+r.id+':'+line.id);}catch{}
+   const reserved=reservation?.state==='CONFIRMED';
   const ended=Date.parse(line.endsAt)<=Date.now();
-  result.push({...line,sourceCurrent,availableNow:current?.available??null,state:ended?'ENDED':line.decision==='WITHDRAWN'||line.decision==='DECLINED'?line.decision:!sourceCurrent?'SOURCE_NEEDS_REVIEW':proof?'CANONICAL_ORDER_LINKED':line.decision==='ACCEPTED'?'ACCEPTED_NOT_RESERVED':'PROVISIONAL',proof});
+  result.push({...line,sourceCurrent,calendarEnabled:current?.resourceCalendarEnabled??false,reservation,availableNow:current?.available??null,state:reserved?(ended?'BOOKING_ENDED':'TIME_RESERVED'):ended?'ENDED':line.decision==='WITHDRAWN'||line.decision==='DECLINED'?line.decision:!sourceCurrent?'SOURCE_NEEDS_REVIEW':proof?'CANONICAL_ORDER_LINKED':line.decision==='ACCEPTED'?'ACCEPTED_NOT_RESERVED':'PROVISIONAL',proof});
  }
- return {id:r.id,title:own?r.title:'Resource request',groupId:r.groupId,plannerId:r.createdBy,own,version:Number(r.data.version),state:r.data.planState,lines:result,privatePlan:true,sourcesRevalidated:revalidate,automaticReservation:false,financialWrites:false,reservationOwner:'MARKETPLACE.CORE',allocationLimit:'one canonical order per plan line; no calendar overbooking engine'};
+ return {id:r.id,title:own?r.title:'Resource request',groupId:r.groupId,plannerId:r.createdBy,own,version:Number(r.data.version),state:r.data.planState,lines:result,privatePlan:true,sourcesRevalidated:revalidate,automaticReservation:false,financialWrites:false,reservationOwner:'MARKETPLACE.CORE',allocationLimit:'one canonical order per plan line; resource time owned and checked by Market'};
 }
 export async function createResourceAssembly(repo:PlatformRepository,kernel:PlatformKernel,input:ResourceAssemblyInput){
  const c=await actor(repo,kernel),title=clean(input.title,180),groupId=clean(input.groupId,180);
@@ -82,14 +84,20 @@ export async function resourceAssemblies(repo:PlatformRepository,kernel:Platform
 export async function readResourceAssembly(repo:PlatformRepository,kernel:PlatformKernel,id:string){const {r,members}=await get(repo,kernel,id);return view(repo,kernel,r,members);}
 export async function updateResourceAssembly(repo:PlatformRepository,kernel:PlatformKernel,id:string,input:ResourceAssemblyCommand){
  const {c,r,members}=await get(repo,kernel,id),version=Number(r.data.version),own=r.createdBy===c.actorId,note=clean(input.note),all=lines(r),at=new Date().toISOString(),history=JSON.parse(String(r.data.eventsJson)) as unknown[];
- if(input.expectedVersion!==version)throw Error('RESOURCE_ASSEMBLY_VERSION_CONFLICT');if(r.data.planState==='ARCHIVED')throw Error('RESOURCE_ASSEMBLY_ARCHIVED');
+ if(input.expectedVersion!==version)throw Error('RESOURCE_ASSEMBLY_VERSION_CONFLICT');if(r.data.planState==='ARCHIVED'&&input.action!=='CANCEL_TIME')throw Error('RESOURCE_ASSEMBLY_ARCHIVED');
  if(history.length>=200)throw Error('RESOURCE_ASSEMBLY_HISTORY_FULL');
  let planState=String(r.data.planState);
  if(input.action==='ARCHIVE'){if(!own)throw Error('FORBIDDEN_SCOPE');planState='ARCHIVED';}
  else{
   const line=all.find(x=>x.id===input.lineId);if(!line||(!own&&line.ownerId!==c.actorId))throw Error('RESOURCE_ASSEMBLY_LINE_NOT_FOUND');
   if(!note)throw Error('RESOURCE_ASSEMBLY_REASON_REQUIRED');
-  if(['ACCEPT','DECLINE'].includes(input.action)){
+  if(input.action==='RESERVE_TIME'){
+    if(c.actorId!==line.ownerId||!['REQUESTED','ACCEPTED'].includes(line.decision)||!members.has(r.createdBy))throw Error('RESOURCE_OWNER_REQUIRED');
+    const current=await offer(repo,kernel,line.shopId,line.stockItemId);if(current.fingerprint!==line.offerFingerprint)throw Error('RESOURCE_ASSEMBLY_SOURCE_CHANGED');
+    await (await marketForRecord(repo,kernel,line.shopId)).reserveResourceSlot(line.shopId,line.stockItemId,{buyerId:r.createdBy,startsAt:line.startsAt,endsAt:line.endsAt,quantity:line.quantity,reference:r.tenantId+':'+r.id+':'+line.id,idempotencyKey:'assembly_'+r.id+'_'+line.id});line.decision='ACCEPTED';
+   }else if(input.action==='CANCEL_TIME'){
+    const market=await marketForRecord(repo,kernel,line.shopId),slot=await market.resourceReservation(line.shopId,line.stockItemId,r.tenantId+':'+r.id+':'+line.id);if(!slot)throw Error('RESOURCE_SLOT_NOT_FOUND');await market.cancelResourceSlot(line.shopId,line.stockItemId,slot.id,note);
+   }else if(['ACCEPT','DECLINE'].includes(input.action)){
    if(c.actorId!==line.ownerId||line.decision==='WITHDRAWN')throw Error('RESOURCE_OWNER_REQUIRED');
    const current=await offer(repo,kernel,line.shopId,line.stockItemId);if(current.ownerId!==c.actorId||current.fingerprint!==line.offerFingerprint)throw Error('RESOURCE_ASSEMBLY_SOURCE_CHANGED');
    if(Date.parse(line.endsAt)<=Date.now())throw Error('RESOURCE_ASSEMBLY_ENDED');line.decision=input.action==='ACCEPT'?'ACCEPTED':'DECLINED';

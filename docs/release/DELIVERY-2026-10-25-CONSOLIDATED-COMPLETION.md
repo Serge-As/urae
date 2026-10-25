@@ -1,0 +1,11 @@
+## Finalisation consolidée v39 — candidat en qualification
+
+Base de production vérifiée : v38, source `7eb2d1e499e3f0176da553999d68ca9c16bd8489`. Cette livraison regroupe les derniers compléments d’acceptation du programme A01–A28 et I01–I20. Elle conserve les propriétaires métier existants, la finance Ledger/D1, le Live, les prêts et l’outbox. Aucun abonnement payant, encaissement réel, migration ou redémarrage.
+
+Market détient les créneaux explicites des ressources réutilisables : capacité, concurrence, période, reprise après interruption et annulation tracée. L’archivage d’un plan n’annule pas un créneau ; sa confirmation demeure visible et son annulation reste explicite. Le carnet peut publier seulement les champs choisis, avec nom volontaire et consentement, aperçu identique à la page anonyme et retrait à la prochaine lecture. Aucun profil privé ni donnée de groupe publié. La recherche publique relit au plus 50 pointeurs actuels par demande et présente au plus 20 résultats.
+
+Launch Boost collectif : invitation sans engagement, adhésion individuelle, conditions révisées exigeant un nouvel accord, partage facultatif de compteurs, rapport déclaré distinct de la relecture du coordinateur, sortie sans changer le plan privé. Rappels Inbox choisis : cibles et droits relus à l’ouverture, sans polling ou livraison externe garantie. Bilan Care limité aux dossiers autorisés et catégories déclarées.
+
+Préparation documentaire facultative en français et anglais dans le navigateur : PDF, images raster, texte ; pièces Word et pièces illisibles conservées pour transcription manuelle. Moteurs libres à versions et empreintes verrouillées, servis par Eco à la demande et exclus du précache initial. Les documents privés ne sont pas envoyés à un fournisseur OCR. Une préparation non certifiée ne rejoint la bibliothèque qu’après relecture et confirmations humaines des nombres et du contenu ; aucune règle ni opération financière appliquée.
+
+État : qualification et déploiement de v39 encore à établir ; les preuves v38 ne suffisent pas. `realMoneyEnabled=false` ; `FIELD_ACCEPTED=NOT_ACCEPTED`. Les prestations externes, paiements et résultats économiques ne sont pas déduits d’une interface ou d’un test synthétique. La consommation exacte de crédits n’est pas mesurable.

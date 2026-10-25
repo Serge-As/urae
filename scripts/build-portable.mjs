@@ -11,7 +11,7 @@ await rm(output,{recursive:true,force:true});
 async function compile(dir){
  for(const e of await readdir(path.join(root,dir),{withFileTypes:true})){
   const relative=path.join(dir,e.name);
-  if(e.isDirectory()) await compile(relative);
+   if(e.isDirectory()&&relative!==path.join('apps','web','vendor')) await compile(relative);
   else if(e.name.endsWith('.ts') && !e.name.endsWith('.d.ts')){
    const source=await readFile(path.join(root,relative),'utf8');
    const result=stripTypeScriptTypes(source,{mode:'transform',sourceUrl:relative});
@@ -24,11 +24,13 @@ async function compile(dir){
  }
 }
 for(const dir of ['apps','packages','workers'])await compile(dir);
-for(const f of ['index.html','external-ad.html','styles.css','manifest.webmanifest','sw.js']){
+await import('./prepare-local-document-engines.mjs');
+for(const f of ['index.html','external-ad.html','public-notebook.html','styles.css','manifest.webmanifest','sw.js']){
  await cp(path.join(root,'apps/web',f),path.join(output,'apps/web',f));
  await cp(path.join(root,'apps/web',f),path.join(output,f));
 }
 await cp(path.join(output,'apps/web/src'),path.join(output,'src'),{recursive:true});
+await cp(path.join(root,'apps/web/vendor/documents'),path.join(output,'vendor/documents'),{recursive:true});
 console.log('Portable build OK — Node type transformation; TypeScript typecheck remains a separate check.');
 
 await import('./pwa-shell-closure.mjs');

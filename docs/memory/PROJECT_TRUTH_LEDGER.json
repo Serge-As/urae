@@ -1683,15 +1683,33 @@
     {
       "id": "productive-continuity-20261024",
       "scope": "A14/A15/A17/A19/I05/I20 consented productive continuity",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-10-24",
-      "statement": "v38 candidate: selected notebook audiences, source-authorized cross-tenant method transmissions and independent local adaptations, voluntary calendar snapshots after current access reread. No financial effects, guaranteed external reminders or field acceptance.",
+      "statement": "v38 exact-source delivery verified: chosen common-group notebook recipients, consented cross-tenant forum-method adaptations with independent local review and revocation, and voluntary freshly authorized private calendar snapshots. Canonical finance/Live/outbox rehearsals remain qualified. No universal capability completion or real-account field acceptance inferred.",
       "evidence": [
         "docs/change-impact/CIR-2026-10-24-PRODUCTIVE-CONTINUITY.md",
         "tests/productive-continuity-20261024.test.mjs",
-        "tests/browser/productive-continuity-20261024.spec.mjs"
+        "tests/browser/productive-continuity-20261024.spec.mjs",
+        "source:7eb2d1e499e3f0176da553999d68ca9c16bd8489",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-BACKUP-SOURCE-2026-10-24.json"
       ],
-      "next": "Complete exact-source qualification, backup, deployment and independent public proof."
+      "next": "Preserve exact source and receipts; use the verified access paths. Do not repeat source audits or reopen bounded delivered scopes without a concrete defect. Unknown incidents and remaining advanced variants retain their documented limits.",
+      "workerVersionId": "ce018f0b-2584-4977-90ff-4e78d9f35509"
+    },
+    {
+      "id": "consolidated-completion-20261025",
+      "scope": "Final consolidated acceptance of A01-A28 and I01-I20 under existing canonical owners",
+      "status": "IN_PROGRESS",
+      "observedOn": "2026-10-25",
+      "statement": "v39 candidate: canonical timed resource reservations, consented public notebook projection, voluntary collective Launch programmes, current-rights private reminders, optional same-origin document extraction with mandatory human review. No financial engine replacement or field acceptance.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-25-CONSOLIDATED-COMPLETION.md",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs"
+      ],
+      "next": "Complete integrated same-source release gates, independent qualification, readonly backup and public deployment proof."
     }
   ]
 }

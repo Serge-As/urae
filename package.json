@@ -1,9 +1,9 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-38",
+  "version": "1.5.2-39",
   "private": true,
   "type": "module",
-  "description": "Eco-System: consented productive continuity, chosen notebook recipients, contextual forum adaptations and voluntary private calendars.",
+  "description": "Eco-System: consolidated productive journeys, canonical resource calendars, consented public notebooks, collective launch programmes, private reminders and local reviewed document preparation.",
   "engines": {
     "node": ">=24"
   },

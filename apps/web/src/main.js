@@ -194,7 +194,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.38-productive-continuity';
+const CAHIER_VERSION = '1.5.2.39-consolidated-completion';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -312,7 +312,7 @@ const openAuthorizedNotice=async notice=>{
     if(!(verified.action.view==='trash'&&verified.action.entityKind==='GROUP')&&app.activeGroup()!==notice.groupId){app.selectGroup(notice.groupId);await refreshGroupContext();}
     if(actor===app.currentActor()&&tenant===app.currentTenant())openNoticeAction(verified.action);
 };
-const notificationCenterUI=mountNotificationCenterUI({app,loadNotices:()=>app.notificationsAcrossGroups(),openNotice:openAuthorizedNotice,openWaiting:async item=>{const actor=app.currentActor(),tenant=app.currentTenant();await renderInbox(item.id);if(actor===app.currentActor()&&tenant===app.currentTenant()){go('inbox',{anchor:'eco-inbox-item-'+item.id,force:true});if(item.kind==='case')await ecoCareUI.open(item.id);}},showError:fail,notify:toast,date});
+const notificationCenterUI=mountNotificationCenterUI({app,loadNotices:()=>app.notificationsAcrossGroups(),openNotice:openAuthorizedNotice,openReminder:async item=>{const context=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]),fresh=(await app.personalReminders()).items.find(r=>r.id===item.id&&r.action);if(!fresh)throw Error('REMINDER_SOURCE_UNAVAILABLE');if(context!==JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]))return;if(fresh.target.kind==='CARE'){go('inbox',{force:true});await renderInbox();if(context===JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]))await ecoCareUI.open(fresh.target.id);}else{go('ecosystem',{anchor:'productiveCommunityCenter',force:true});await productiveCommunityUI.open(fresh.target.kind==='PLAN_STEP'?'plans':'jobs');if(context===JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]))document.querySelector('[data-'+(fresh.target.kind==='PLAN_STEP'?'plan':'job')+'-id="'+CSS.escape(fresh.target.id)+'"]')?.scrollIntoView({block:'start',behavior:'instant'});}},openWaiting:async item=>{const actor=app.currentActor(),tenant=app.currentTenant();await renderInbox(item.id);if(actor===app.currentActor()&&tenant===app.currentTenant()){go('inbox',{anchor:'eco-inbox-item-'+item.id,force:true});if(item.kind==='case')await ecoCareUI.open(item.id);}},showError:fail,notify:toast,date});
 let careErrorMessage='';
 const ecoCareUI=mountEcoCareUI({app,showError:error=>{careErrorMessage=error.message;fail(error);},clearError:()=>{if(careErrorMessage&&$('#errorBox .error-message')?.textContent.includes(careErrorMessage))hideError();careErrorMessage='';},notify:toast,changed:()=>renderInbox(),date});
 

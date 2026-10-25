@@ -365,9 +365,12 @@
         "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. Original method sharing requires validated readable sources and author consent. Target adaptations require local conditions/results and independent review; source revocation invalidates derived visibility. No raw messages or automatic group rules."
     },
     {
       "id": "A15",
@@ -393,9 +396,15 @@
         "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Consolidated v39 candidate. Explicit PUBLIC field consent and chosen alias, same projection for preview and anonymous page, fresh canonical withdrawal. Private/group/chosen-contact audiences preserved. Bounded directory rereads at most 50 current pointers per request, at most20 results; no public personal contacts or universal full-text index. Already downloaded copies cannot be remotely recalled."
     },
     {
       "id": "A16",
@@ -449,9 +458,15 @@
         "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Consolidated v39 candidate. Existing exclusive interviews and authorized applications preserved. Voluntary private calendar snapshot plus a chosen internal Inbox reminder, freshly authorized. No guaranteed external transport, employment contract, payment or automatic calendar sync."
     },
     {
       "id": "A18",
@@ -505,9 +520,15 @@
         "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Consolidated v39 candidate. Private plans preserved; voluntary group programmes add independent invitations, individual consent, versioned reciprocal conditions, optional progress counters, reported versus independently reviewed results, reasoned amendment/exit/closure. No automatic funding, guaranteed turnover or transfer of external commitments."
     },
     {
       "id": "A20",
@@ -623,9 +644,12 @@
       ],
       "evidence": [
         "docs/release/evidence/LOT24-NOTIFICATION-INBOX-PUBLIC-2026-10-21.json",
-        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md"
+        "docs/release/DELIVERY-2026-10-21-LOT24-NOTIFICATION-INBOX.md",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Same-source Linux qualification/delivery and31 hashes pass; Windows failures retained. No guaranteed external transport, automatic business completion, new polling or server pagination claim. Unknown waiting party remains explicit. Transversal SAV is L25; FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "limits": "Consolidated v39 candidate. Stable notification events and read/transport/business states preserved. Chosen reminders are revalidated when Inbox is read; completed/inaccessible sources stop reminding, changed sources require a new choice. No background polling, guaranteed external transport or business completion inferred from a click.",
       "ownerLot": 24,
       "acceptanceCriteria": [
         "Le même événement reçu plusieurs fois n’apparaît qu’une fois ; deux révisions distinctes restent distinguables.",
@@ -649,9 +673,12 @@
       ],
       "evidence": [
         "docs/release/evidence/LOT25-ECO-CARE-PUBLIC-2026-10-21.json",
-        "docs/release/DELIVERY-2026-10-21-LOT25-ECO-CARE.md"
+        "docs/release/DELIVERY-2026-10-21-LOT25-ECO-CARE.md",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Same-source qualification/delivery and33 public hashes passed. Group two-party prevention agreement is a standalone reference; no universal checkout insertion, guaranteed staffing, automatic reminder, recurring-causes analytics, binary evidence host, implicit financial correction or constant-cost server pagination. FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "limits": "Consolidated v39 candidate. Existing case rights, assignments, indicative dates, mediation and reopening preserved. Voluntary internal reminders and patterns within the authorized list (100maximum); declared categories and reopening counts do not establish root cause, staffing or guaranteed response. Financial corrections remain canonical.",
       "ownerLot": 25,
       "acceptanceCriteria": [
         "Un dossier non affecté apparaît dans une file responsable, sans faux délai garanti.",
@@ -688,9 +715,12 @@
       "evidence": [
         "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
-        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json"
+        "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded scope only. Human review declaration not certified OCR. Backup excludes R2 objects/device outbox/external state. Minimal incident template does not yet reproduce actual fault. No automatic repair, legal verdict or financial write."
+      "limits": "Consolidated v39 candidate. Optional local image OCR and PDF text/scanned-page preparation; locked free libraries served by Eco on demand, outside the initial precache. Human source/content/numeric review required before library save. Old Word and unreadable/encrypted documents retain manual transcription. Limits10files25MBtotal15MBperfile10PDFpages; no certified OCR, legal verdict or financial write. Backups exclude R2objects/device outboxes/external state."
     },
     {
       "id": "A27",
@@ -858,9 +888,12 @@
         "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. Existing private productive plans enriched with voluntary future milestone calendar exports after fresh access checks. Reporting, evidence and actual results remain separate; no automated funding, outreach or multi-party programme."
     },
     {
       "id": "I06",
@@ -1110,9 +1143,12 @@
       "evidence": [
         "docs/release/DELIVERY-2026-10-23-COMMON-INNOVATIONS.md",
         "docs/release/evidence/COMMON-INNOVATIONS-PUBLIC-2026-10-24.json",
-        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json"
+        "docs/release/evidence/COMMON-INNOVATIONS-QUALIFICATION-2026-10-24.json",
+        "tests/consolidated-completion-20261025.test.mjs",
+        "tests/browser/consolidated-completion-20261025.spec.mjs",
+        "docs/implementation/CONSOLIDATED_ACCEPTANCE_2026-10-25.md"
       ],
-      "limits": "Bounded implementation published and automatically qualified at 93ed895af495425d7963dc4dbd8b9cf4dc7f123d; field acceptance pending. Four-resource plans, independent owner agreements and unique canonical order assignment across group tenants; no rental calendar, atomic multi-owner purchase, automatic release/cancellation/payment."
+      "limits": "Consolidated v39 candidate. Four-resource private plans, independent owner agreement and unique canonical order assignment preserved. Optional reusable-resource calendar is owned by Market: half-open intervals, capacity/CAS, stable retry, recoverable parent-write interruption and explicit cancellation. Archived plans do not release reservations; no atomic multi-owner purchase, inferred payment, automatic renewal or refund."
     },
     {
       "id": "I17",
@@ -1202,9 +1238,12 @@
         "docs/release/DELIVERY-2026-10-23-PRODUCTIVE-COMMUNITY.md",
         "docs/release/evidence/REVIEW-RECOVERY-PUBLIC-2026-10-23.json",
         "docs/release/evidence/REVIEW-RECOVERY-QUALIFICATION-2026-10-23.json",
-        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md"
+        "docs/release/DELIVERY-2026-10-23-REVIEW-RECOVERY.md",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-PUBLIC-2026-10-24.json",
+        "docs/release/evidence/PRODUCTIVE-CONTINUITY-QUALIFICATION-2026-10-24.json",
+        "docs/release/DELIVERY-2026-10-24-PRODUCTIVE-CONTINUITY.md"
       ],
-      "limits": "Published v35 source dd1e7388; automatic qualification only, field acceptance pending. Initial bounded implementation under same canonical owners. Same-source release verified; contact-specific notebooks, cross-group solution adaptation, automated employment reminders and multi-party launch programs remain future variants."
+      "limits": "Published and automatically qualified at 7eb2d1e499e3f0176da553999d68ca9c16bd8489; FIELD_ACCEPTED=NOT_ACCEPTED. A source solution remains independently reviewed in its original context. Cross-group adaptations preserve their own method, conditions and result; each needs local review and remains dependent on the original author grant and readable sources. No raw messages or automatic rule changes."
     },
     {
       "id": "T01",
@@ -2141,6 +2180,6 @@
     "finalCohort": "Remaining improvements and innovations of previously delivered lots; individual proof required",
     "requestedOn": "2026-10-22"
   },
-  "lastVerifiedSource": "a07f96edcc49b6132d00e292edf222d47034b12e",
+  "lastVerifiedSource": "7eb2d1e499e3f0176da553999d68ca9c16bd8489",
   "lastVerificationDate": "2026-10-24"
 }

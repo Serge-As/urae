@@ -43,7 +43,7 @@ export function authenticatedApi(repo:PlatformRepository,db:D1DatabaseLike,handl
  const sessions=new SessionService(db);
  return async (request:Request):Promise<Response>=>{
   const url=new URL(request.url);
-  if(request.method==='GET' && publicPaths.has(url.pathname))return handle(request);
+  if(request.method==='GET' && (publicPaths.has(url.pathname)||url.pathname==='/api/v1/discovery/notebooks/public'||/^\/api\/v1\/discovery\/notebooks\/public\/public_notebook_[a-f0-9]{64}$/.test(url.pathname)))return handle(request);
   // A verified, one-use external advertiser capability has no account session.
   // Never bypass auth for group endpoints, finance, Founder Control or any
   // non-invitation API. The service checks the token hash, tenant and group.

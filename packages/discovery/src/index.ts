@@ -69,6 +69,8 @@ export interface PublishGroupListingInput extends Omit<PublicGroupListing,'id'|'
 export class DiscoveryService {
   constructor(private readonly repo:PlatformRepository,private readonly kernel:PlatformKernel){}
   notebook(){return notebooks.notebook(this.repo,this.kernel);}
+  publicNotebook(id:string){return notebooks.publicNotebook(this.repo,id);}
+  searchPublicNotebooks(q:string){return notebooks.searchPublicNotebooks(this.repo,q);}
   saveNotebook(input:Parameters<typeof notebooks.saveNotebook>[2]){return notebooks.saveNotebook(this.repo,this.kernel,input);}
   notebookPreview(input:Parameters<typeof notebooks.notebookPreview>[2]){return notebooks.notebookPreview(this.repo,this.kernel,input);}
   searchNotebooks(groupId:string,q:string){return notebooks.searchNotebooks(this.repo,this.kernel,groupId,q);}

@@ -1959,3 +1959,13 @@ html:has(#view-ecosystem.active #productiveCommunityCenter){scroll-behavior:auto
 .document-review{min-width:0}.document-review textarea{width:100%;min-width:0;box-sizing:border-box}.document-review pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:18rem;overflow:auto}
 
 .safety-review{min-width:0}.safety-review .form-grid>*{min-width:0}.safety-review input,.safety-review select{max-width:100%;box-sizing:border-box}.safety-review .table-wrap{overflow:auto}.safety-review td,.safety-review th{padding:.5rem;white-space:nowrap}#recoveryReadOnlyPanel pre{white-space:pre-wrap;overflow-wrap:anywhere}
+/* Consolidated productive journeys: shared spacing, restrained density and
+   bounded previews. Optional document engines never enter the PWA precache. */
+.resource-calendar-control,.care-patterns{border:1px solid var(--border,#d3e3da);border-radius:12px;padding:12px;margin-block:12px;background:var(--panel,#fff)}
+.resource-calendar-control summary,.care-patterns summary{cursor:pointer;font-weight:650;padding:6px}
+.eco-reminder-choice{padding-block:8px;flex-wrap:wrap;align-items:end}.eco-reminder-choice label{min-width:150px;flex:1}
+.eco-reminder-choice small{flex-basis:100%}.eco-personal-reminders{margin-block:16px}.eco-personal-reminders .item{border-inline-start:3px solid #267a61}
+.local-document-previews{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(260px,100%),1fr));gap:12px;max-height:540px;overflow:auto}
+.local-document-previews figure{margin:0;border:1px solid #d3e3da;padding:8px;border-radius:8px;background:#fff}.local-document-previews img,.local-document-previews canvas{display:block;width:100%;height:auto;max-width:100%;object-fit:contain}.local-document-previews figcaption{overflow-wrap:anywhere;font-size:.85em;padding-top:6px}
+.public-notebook-main{max-width:860px;margin:32px auto;padding:24px}.public-notebook-main header{display:flex;justify-content:space-between;align-items:center;gap:16px}.public-notebook-main article{margin-block:24px;padding:24px;background:#fff;border:1px solid #d3e3da;border-radius:18px}.public-notebook-main p{overflow-wrap:anywhere}.public-notebook-main h1{font-size:clamp(1.5rem,4vw,2.4rem)}
+@media(max-width:600px){.public-notebook-main{margin:0;padding:16px}.public-notebook-main article{padding:16px}.eco-reminder-choice>button{width:100%}}

@@ -22,13 +22,13 @@ const localArtifacts={
 };
 const handleRequest = request => worker.fetch(request,{DB:db,ARTIFACTS:localArtifacts,AUTH_LIVE_SIGNING_SECRET:localSignedClockKey,GROUP_LIVE_HUB:liveNamespace,PREMIUM_LIVE_LEDGER:'true'});
 const mime = {
-  '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.css':'text/css; charset=utf-8',
+  '.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8','.mjs':'text/javascript; charset=utf-8','.wasm':'application/wasm','.css':'text/css; charset=utf-8',
   '.json':'application/json; charset=utf-8','.webmanifest':'application/manifest+json','.map':'application/json'
 };
 const securityHeaders = {
   'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-frame-options':'DENY',
   'permissions-policy':'camera=(self), microphone=(self), geolocation=(self), payment=(), usb=()',
-  'content-security-policy':"default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  'content-security-policy':"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 };
 
 try { await access(path.join(root, 'apps/web/index.html')); }

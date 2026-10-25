@@ -3,6 +3,8 @@ import type {PlatformKernel} from '../../platform-kernel/src/index.js';
 import type {Id,WorkspaceRecord} from '../../contracts/src/index.js';
 import {makeId} from '../../contracts/src/index.js';
 import {notificationIsQuiet} from './policy.js';
+import * as reminders from './reminders.js';
+export type {ReminderTarget,ReminderSource,ReminderResolver} from './reminders.js';
 
 export type NotifyChannel='IN_APP'|'WEB_PUSH'|'EMAIL'|'SMS'|'WHATSAPP'|'TELEGRAM';
 export interface NotificationPreferences {channels:Record<NotifyChannel,boolean>;quietHours?:{start:string;end:string;timezone?:string};snoozedUntil?:string;digest:'IMMEDIATE'|'DAILY'|'WEEKLY';updatedAt:string;}
@@ -21,6 +23,9 @@ const decode=(r:WorkspaceRecord):GroupNotice=>({id:r.id,groupId:r.groupId!,title
 
 export class NotificationService{
  constructor(public repo:PlatformRepository,public kernel:PlatformKernel){}
+  scheduleReminder(input:Parameters<typeof reminders.scheduleReminder>[2],resolve:reminders.ReminderResolver){return reminders.scheduleReminder(this.repo,this.kernel,input,resolve);}
+  reminderInbox(resolve:reminders.ReminderResolver){return reminders.reminderInbox(this.repo,this.kernel,resolve);}
+  dismissReminder(id:string,expectedVersion:number){return reminders.dismissReminder(this.repo,this.kernel,id,expectedVersion);}
  private async groupAccess(groupId:Id,manage=false){const ctx=this.kernel.context.get(),group=await this.repo.getGroup(ctx.tenantId,groupId);if(!group)throw Error('GROUP_NOT_FOUND');if(group.createdBy===ctx.actorId)return{group,membership:(await this.repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active')};const membership=(await this.repo.listMemberships(ctx.tenantId,groupId)).find(x=>x.userId===ctx.actorId&&x.status==='active');if(!membership||manage&&!membership.roles.some(r=>managerRoles.has(r)))throw Error('FORBIDDEN_SCOPE');return{group,membership};}
  private recipient(r:WorkspaceRecord,access:Awaited<ReturnType<NotificationService['groupAccess']>>){const ctx=this.kernel.context.get(),d=decode(r);if(d.audience==='ALL_MEMBERS')return true;if(d.audience==='MANAGERS')return access.group.createdBy===ctx.actorId||Boolean(access.membership?.roles.some(x=>managerRoles.has(x)));if(d.audience==='SELECTED_USERS')return d.selectedUserIds.includes(ctx.actorId);return Boolean(access.membership&&d.selectedMembershipIds.includes(access.membership.id));}
  private async noticeRecord(groupId:Id,id:Id){const access=await this.groupAccess(groupId),ctx=this.kernel.context.get(),r=await this.repo.getWorkspaceRecord(ctx.tenantId,id);if(!r||r.groupId!==groupId||r.moduleId!==NOTICE||r.status!=='ACTIVE')throw Error('NOTICE_NOT_FOUND');if(!this.recipient(r,access))throw Error('FORBIDDEN_SCOPE');return{r,access};}
