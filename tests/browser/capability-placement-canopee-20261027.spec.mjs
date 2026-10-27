@@ -75,6 +75,7 @@ test('catalogue financial, meeting, business, advertising and offline entries op
 test('Canopée table focus preserves critical conflict cues and a usable numeric editor on phone and senior mode',async({page})=>{
   await page.goto(base+'/health');
   await page.setContent('<!doctype html><html lang="fr"><head><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/canopee.css"></head><body class="eco-canopee eco-cockpit-shell ui-mode-visual"><main style="max-width:100%;padding:12px"><div class="canonical-financial-wrap"><table class="meeting-matrix canonical-financial-matrix"><thead><tr><th>Membre</th><th>Épargne</th></tr></thead><tbody><tr><th>Amina</th><td><div class="matrix-cell-entry is-critical-conflict" data-save-state="CONFLICT"><strong class="cell-current">1000</strong><input class="cell-target-input" type="number" value="3000"><button class="cell-validate">✓</button><span class="cell-save-state">Conflit à examiner</span></div></td></tr></tbody></table></div></main></body></html>');
+  await page.evaluate(()=>{const bar=document.createElement('div');bar.className='eco-work-toolbar';const title=document.createElement('strong');title.textContent='Mode à choisir · Live connecté';bar.append(title);for(const text of ['Vérifier le membre et terminer','Choisir le mode','S’entraîner sans toucher la caisse']){const b=document.createElement('button');b.textContent=text;bar.append(b);}document.querySelector('main').prepend(bar);});
   for(const mode of ['visual','senior']){
     await page.setViewportSize({width:390,height:844});
     await page.evaluate(mode=>document.body.className='eco-canopee eco-cockpit-shell ui-mode-'+mode,mode);
@@ -86,5 +87,6 @@ test('Canopée table focus preserves critical conflict cues and a usable numeric
     const state=await page.locator('.matrix-cell-entry').evaluate(cell=>{const cs=getComputedStyle(cell),button=cell.querySelector('button').getBoundingClientRect();return{outline:parseFloat(cs.outlineWidth),height:button.height,width:button.width,overflow:document.documentElement.scrollWidth>innerWidth};});
     expect(state.outline).toBeGreaterThanOrEqual(3);expect(state.height).toBeGreaterThanOrEqual(44);expect(state.width).toBeGreaterThanOrEqual(44);expect(state.overflow).toBe(false);
     await expect(page.locator('.cell-save-state')).toBeVisible();
+    expect(await page.locator('.eco-work-toolbar button').evaluateAll(nodes=>nodes.every(n=>n.getBoundingClientRect().width>=140))).toBe(true);
   }
 });

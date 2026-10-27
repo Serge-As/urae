@@ -219,6 +219,10 @@ body.eco-canopee .canonical-financial-matrix :is(.cell-validate,.cell-dictate):f
 body.eco-canopee .canonical-financial-matrix .matrix-cell-entry:focus-within:not(.is-conflict):not(.is-critical-conflict):not([data-save-state=CONFLICT]){box-shadow:inset 0 0 0 2px #b58a33}
 body.eco-canopee :is(.table-total-row,.table-row-total,.table-grand-total){font-variant-numeric:tabular-nums;font-weight:750}
 body.eco-canopee .eco-work-toolbar{background:#fbf8ed;border-color:#e0d6b7}
+@media(max-width:600px){
+  body.eco-canopee .eco-work-toolbar strong{flex:1 1 100%;min-width:0}
+  body.eco-canopee .eco-work-toolbar button{flex:1 1 140px;min-width:min(100%,140px);white-space:normal;word-break:normal;overflow-wrap:normal}
+}
 body.eco-canopee .empty-state{border-color:#e0dfce;background:#fcfcf7;color:#65715d}
 @media print{body.eco-canopee .meeting-matrix thead th{background:#fff;color:#162b20;box-shadow:none;border-bottom:2px solid #333}}
 @media(prefers-reduced-motion:reduce){body.eco-canopee *,body.eco-canopee *::before,body.eco-canopee *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

@@ -3,6 +3,12 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Votre carrefour de services':'Your service hub',
+  'Trouvez ce dont votre groupe a besoin':'Find what your group needs',
+  'Séances, finances, entraide, commerce et opportunités : ouvrez le service adapté. Les fonctions encore en préparation sont indiquées pour vous permettre de choisir en connaissance de cause.':'Meetings, finances, mutual support, commerce and opportunities: open the service you need. Features still in preparation are identified so you can make an informed choice.',
+  'capacités connues. Retrouvez un service ou préparez un dossier selon son état de disponibilité.':'known capabilities. Find a service or prepare a record according to its availability.',
+  'Rechercher une capacité':'Find a capability',
+  'Épargne, séance, boutique…':'Savings, meeting, shop…',
   'Connecter mon profil de préférences':'Connect my preference profile',
   'Ouvrir cette page ne crée aucun cookie commercial. Cette commande utilise les consentements existants ; un refus reste prioritaire.':'Opening this page creates no commercial cookie. This action uses existing consents; a refusal still takes priority.',
   'Lecture seule · connexion sur demande':'Read only · connect on request',

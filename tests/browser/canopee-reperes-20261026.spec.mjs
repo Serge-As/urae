@@ -2,6 +2,23 @@ import {test,expect} from '@playwright/test';
 const base='http://127.0.0.1:4173';
 test.setTimeout(120000);
 
+test('productive forms retain a pressed action when optional guidance panels expand',async({page})=>{
+  await page.setViewportSize({width:1280,height:720});await page.goto(base+'/health');
+  await page.setContent('<!doctype html><html lang="fr"><head><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/canopee.css"></head><body class="eco-canopee"><main><section class="view active"><header class="page-head"><h1>Communautés</h1></header><section class="panel"><div id="guidanceHub" style="min-height:80px"></div></section><div style="height:1000px"></div></section></main></body></html>');
+  await page.evaluate(async()=>{
+    const {mountProductiveCommunityUI}=await import('/src/productive-community-ui.js');window.__practiceWrites=[];
+    const app={currentActor:()=> 'learner',currentTenant:()=> 'synthetic',activeGroup:()=> 'group',academyPractices:async()=>({items:[]}),createAcademyPractice:async data=>window.__practiceWrites.push(data)};
+    window.__productive=mountProductiveCommunityUI({app});await window.__productive.open('practice');
+  });
+  const root=page.locator('#productiveCommunityCenter');await root.locator('[name=title]').fill('Réalisation synthétique');await root.locator('[name=criteria]').fill('Résultat observable');await root.locator('[name=mentorId]').fill('independent-mentor');await root.locator('[name=consent]').check();
+  const save=root.getByRole('button',{name:'Préparer la pratique',exact:true});await save.scrollIntoViewIfNeeded();
+  const before=await save.boundingBox();await page.mouse.move(before.x+before.width/2,before.y+before.height/2);await page.mouse.down();
+  await page.locator('#guidanceHub').evaluate(async n=>{n.style.height='1100px';await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));});
+  const during=await save.boundingBox();expect(Math.abs(during.y-before.y)).toBeLessThanOrEqual(1);await page.mouse.up();
+  await expect.poll(()=>page.evaluate(()=>window.__practiceWrites.length)).toBe(1);
+  expect(await page.evaluate(()=>window.__practiceWrites[0])).toMatchObject({title:'Réalisation synthétique',mentorId:'independent-mentor',consent:true});
+});
+
 async function projection(page,{manager=true,kind='association'}={}){
   await page.goto(base+'/health');
   await page.setContent('<!doctype html><html lang="fr"><head><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/canopee.css"></head><body class="eco-cockpit-shell eco-canopee ui-mode-visual"><main style="max-width:1280px;padding:24px;margin:auto"><section id="groupHomePanel"><div id="groupHomeContent"></div></section></main></body></html>');
