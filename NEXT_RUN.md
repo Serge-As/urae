@@ -1,3 +1,12 @@
+## Reprise après livraison Canopée v42 vérifiée — 27 octobre 2026
+
+La refonte est publiée et vérifiée : source runtime `1d6d2767e208b240d40f5fdd578f11e2582a8c8f`, livraison 40545875828, qualification indépendante 40545876173, toutes deux SUCCESS. 1062 natifs / 99 Chromium / 37 WebKit, sans échec ni ignoré. 81 hashes publics relus. Ne pas relancer ni refaire cette livraison. La clôture documentaire ultérieure n’est pas une nouvelle source runtime.
+
+Réutiliser les preuves de `docs/release/evidence/CANOPEE-DELIVERY-QUALIFICATION-2026-10-27.json` et la matrice des 164 capacités. Garder Ledger/D1, rôles, Live/outbox, historique et les deux feuilles. Les 17 dossiers préparatoires ne sont pas promus en fonctions achevées ; les contrats externes restent distincts. Pour la prochaine demande fonctionnelle, partir de la branche distante actuelle et du reçu de santé, préserver la filiation et qualifier tout nouveau changement de produit.
+
+FIELD_ACCEPTED=NOT_ACCEPTED ; argent réel désactivé. La prochaine recette avec un groupe, un compte et un appareil physiques doit être explicitement tracée, sans purge du profil ni de l’outbox. Hors ligne : données autorisées déjà stockées seulement ; synchronisation/confirmation et services externes nécessitent une connexion. Crédits exacts non mesurables.
+
+## Historique de reprise — consignes antérieures à la livraison vérifiée
 ## Livraison Canopée autorisée — 27 octobre 2026
 
 Le fondateur autorise la publication de Canopée + Repères et confirme URAE public par son propre choix. Le lot de livraison part du parent distant `35f4ff6774685a6a06058093ca30f5165551f312` et conserve ses différences historiques. Il complète la refonte locale par les accès directs aux propriétaires déjà existants depuis le catalogue, son accès au clavier et la finition des tableaux et de la saisie. Les 164 capacités et leurs maturités restent conservées ; dossier préparatoire, service externe et fonction opérationnelle restent distincts. Voir `docs/change-impact/CIR-2026-10-27-CANOPEE-DELIVERY.md` et la matrice de placement.

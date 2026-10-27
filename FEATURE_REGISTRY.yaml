@@ -1,3 +1,5 @@
+# CURRENT 2026-10-27 VERIFIED_REMOTE: v42/1d6d2767e208b240d40f5fdd578f11e2582a8c8f; delivery40545875828 and independent40545876173 SUCCESS;1062native/99Chromium/37WebKit;81CIandIndependentPublicHashes;164cards/147owners/17preparatory;977sourceBlobsVerified;D1_AND_EXACT_SOURCE_ONLY;realMoney=false;FIELD_ACCEPTED=NOT_ACCEPTED.
+# Earlier CURRENT lines below are historical checkpoints, superseded by this verified release.
 # CURRENT 2026-10-27: Canopée deployment authorized, URAE public confirmed by founder; canonical placement/table qualification pending, no maturity promotion.
 # CURRENT 2026-10-27 VERIFIED_LOCAL: v42 Canopée + Repères / 0b0836ee007254074c57916cd866c1f5e8828b98;1062native/40Chromium/20passed/2failedWebKit;WebRTCWindowsLimit;0skipped;offline origin shutdown verified;NOT_DEPLOYED;FIELD_ACCEPTED=NOT_ACCEPTED.
 # CURRENT 2026-10-25 VERIFIED_REMOTE: v41/6d3264bd7f345d808fb8cbfcc618d99c274d3891;1061native/82Chromium/20WebKit; stable recovery controls, strict proposal proofs; FIELD_ACCEPTED=NOT_ACCEPTED.

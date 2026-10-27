@@ -28,14 +28,18 @@
     {
       "id": "visual.canopee-deployment.20261027",
       "scope": "Same-source publication, business placement and financial table presentation",
-      "status": "IN_PROGRESS",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-10-27",
-      "statement": "Founder explicitly authorizes deployment and confirms URAE public. Preserves remote parent35f4ff67. Canonical presentation handoffs and table finishing, no engine/schema/financial mutation. Exact-source CI, production backup and public verification must complete before VERIFIED_REMOTE.",
+      "statement": "Canopée v42 deployed from 1d6d2767e208b240d40f5fdd578f11e2582a8c8f; same-source delivery and independent CI pass1062 native,99 Chromium,37 WebKit,0 failed/skipped/flaky. Anonymous health/catalog and 81 asset hashes independently verified.164 cards:147 existing owner handoffs,17 preparatory.114 engine/schema files identical to v41;250 historical test files retained. Read-only D1/source backup restored to fresh copy and private R2 readback verified. No migration, financial data rewrite or key rotation. URAE public per founder. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
       "evidence": [
-        "docs/change-impact/CIR-2026-10-27-CANOPEE-DELIVERY.md",
-        "tests/browser/capability-placement-canopee-20261027.spec.mjs"
+        "docs/release/evidence/CANOPEE-DELIVERY-QUALIFICATION-2026-10-27.json",
+        "https://github.com/Serge-As/urae/actions/runs/40545875828",
+        "https://github.com/Serge-As/urae/actions/runs/40545876173",
+        "https://eco-system.sergemimf.workers.dev/health",
+        "docs/implementation/CANOPEE_CAPABILITY_PLACEMENT_2026-10-27.json",
+        "docs/change-impact/CIR-2026-10-27-CANOPEE-DELIVERY.md"
       ],
-      "next": "Wait complete delivery and independent qualifications on exact SHA, verify live identity and public assets, document bounded backup and field status."
+      "next": "Preserve verified deployment and canonical owners. Physical acceptance on real groups/devices remains distinct; preparatory and external integrations remain bounded. Do not repeat this completed publication."
     },
     {
       "id": "visual.canopee-reperes.20261026",
