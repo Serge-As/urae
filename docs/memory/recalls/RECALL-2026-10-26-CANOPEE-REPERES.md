@@ -1,5 +1,13 @@
 # Canopée + Repères — rappel avant intégration
 
+## Reprise de livraison du 27 octobre — restauration tardive
+
+Accès GitHub rétabli pendant la reprise : le plugin et le compte du fondateur étaient actifs. Une référence de connexion conservée dans le contexte était périmée ; utiliser les références de compte présentes dans la description actuelle des outils et vérifier le profil `Serge-As`. Aucune réinstallation ni nouvelle autorisation nécessaire. Le test complémentaire du démarrage tardif et le test financier F5 passent ensemble après correction ; leurs assertions restent strictes.
+
+La source `294c8723336c3ee0d9c347642e9abe172fd6d9db` n'est pas déployée : livraison `40531481285` et qualification `40531481504` échouent avant production. Les natifs/gouvernance passent, les 36 WebKit passent dans la livraison, mais le job indépendant perd un clic de transmission WebKit. Sa trace montre un retour tardif vers `#marketEnginePanel` sans commande envoyée. Après `refreshAll`, le démarrage réappliquait l'ancre de navigation malgré l'utilisation de l'écran. La régression complémentaire retient une requête facultative réelle, garde un brouillon et un bouton de carnet pressé pendant la fin du démarrage ; avant correction, elle échoue avec un déplacement de 7 345 pixels. Le correctif utilise une révision locale d'interaction et de navigation pour céder la main à l'utilisateur, y compris pour une frame différée et une actualisation manuelle. Le F5 sans interaction doit rester couvert. Moteurs, commandes, droits, schéma et données financières restent inchangés.
+
+Collecter aussi les preuves Chromium après son exécution, avec `always()` : la collecte de livraison était située trop tôt. Conserver les scénarios historiques et toutes leurs assertions. Une correction locale et un test complémentaire ne remplacent pas la qualification complète du nouveau SHA. Le connecteur GitHub de la session renvoie `Unknown tool` malgré un plugin installé et activé ; accès public aux statuts et traces conservé, publication authentifiée à rétablir. Aucun déploiement ni sauvegarde de production revendiqué sur ces runs échoués.
+
 Autorisation explicite du fondateur le 26 octobre : intégrer le modèle accepté, couleurs dorée, blanche, rouge et verte, sans régression métier. Les modèles et l'archive fournie sont des références, jamais des données de groupes. La demande porte sur l'application réelle.
 
 Base locale `8895e087e67b32c7fc57a4127eb8c3e20d995b0a`, branche isolée `codex/canopee-reperes-20261026`. HEAD distant observé au départ `35f4ff6774685a6a06058093ca30f5165551f312`, documentation après runtime v41 `6d3264bd7f345d808fb8cbfcc618d99c274d3891`. Le dépôt local est un miroir sans remote ; conserver la filiation distante lors d'une éventuelle publication.

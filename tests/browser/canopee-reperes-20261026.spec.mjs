@@ -209,6 +209,31 @@ test.describe('financial startup presentation',()=>{
 // Control API latency in this fixture. Installed PWA recovery is exercised by
 // the separate real-origin-shutdown scenario below.
 test.use({serviceWorkers:'block'});
+test('late startup does not reclaim the viewport or a pressed notebook action after the user navigates',async({page})=>{
+  await page.setViewportSize({width:1280,height:720});await page.goto(base);
+  await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);
+  await api(page,'/api/v1/auth/register','POST',{username:'canopee_startup_'+Date.now(),password:'Synthetic-canopee-startup-20261027!',displayName:'Démarrage synthétique'});
+  const project=await api(page,'/api/v1/group-projects','POST',{name:'Groupe synthétique de navigation',kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:1,nominalContribution:0,currency:'XAF'});
+  const group=await api(page,'/api/v1/group-projects/'+project.id+'/convert','POST',{}),path='/api/v1/groups/'+group.id;
+  await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),group.id);await page.reload();await expect(page.locator('#authScreen')).toBeHidden();await page.waitForLoadState('networkidle');
+  let releaseOptional,blocked=false;const gate=new Promise(resolve=>releaseOptional=resolve);
+  await page.route('**'+path+'/trash',async route=>{blocked=true;await gate;await route.continue();});
+  try{
+    await page.reload({waitUntil:'domcontentloaded'});await expect.poll(()=>blocked,{timeout:35000}).toBe(true);
+    await page.locator('#mainNav [data-module-open="MARKETPLACE.CORE"]').click();
+    const root=page.locator('#productiveCommunityCenter');if(!await root.evaluate(n=>n.open))await root.locator(':scope > summary').click();
+    await root.locator('[data-productive-tab=notebook]').click();const add=root.getByRole('button',{name:'Ajouter un champ',exact:true});await add.click();
+    const first=root.locator('.productive-notebook-row').first().locator('input[type=text]');await first.fill('Brouillon conservé pendant le démarrage');
+    await add.scrollIntoViewIfNeeded();const before=await add.boundingBox();await page.mouse.move(before.x+before.width/2,before.y+before.height/2);await page.mouse.down();
+    await page.locator('#workspaceRecords').evaluate(n=>n.textContent='startup-verification-pending');
+    releaseOptional();await page.unrouteAll({behavior:'wait'});
+    await expect(page.locator('#workspaceRecords')).not.toHaveText('startup-verification-pending',{timeout:35000});await page.waitForLoadState('networkidle');
+    const after=await add.boundingBox();expect(Math.abs(after.y-before.y)).toBeLessThanOrEqual(1);await expect(first).toHaveValue('Brouillon conservé pendant le démarrage');
+    await page.mouse.up();await expect(root.locator('.productive-notebook-row')).toHaveCount(2);
+    await expect(page.locator('#view-ecosystem')).toBeVisible();
+  }finally{releaseOptional();await page.mouse.up();await page.unrouteAll({behavior:'wait'});}
+});
+
 test('financial F5 restores the saved column as soon as the sheet is ready, while an optional panel is still loading',async({page})=>{
   await page.setViewportSize({width:390,height:820});await page.goto(base);
   await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);

@@ -360,17 +360,22 @@ const resolveRequestedNavState=()=>{
     return saved??captureNavState();
 };
 let startupNavState=resolveRequestedNavState();
-let cancelNavigationRestoration=()=>{},navigationRestorationId=0;
+let cancelNavigationRestoration=()=>{},navigationRestorationId=0,navigationInteractionRevision=0;
+// A late startup/read must yield to the user's current gesture and destination.
+// Keep the initial F5 restoration when the page has not been used yet.
+for(const type of ['pointerdown','keydown','wheel','touchstart'])window.addEventListener(type,()=>{
+    navigationInteractionRevision++;cancelNavigationRestoration();
+},{capture:true,passive:true});
 const restoreNavState=state=>{
     if(!state)return;
-    cancelNavigationRestoration();const restorationId=++navigationRestorationId;
+    cancelNavigationRestoration();const restorationId=++navigationRestorationId,interactionRevision=navigationInteractionRevision;
     const restorationCleanups=[];
     cancelNavigationRestoration=()=>{for(const cleanup of restorationCleanups)cleanup();};
     if(state.meetingId){const pick=document.querySelector('#sessionsMeetingSelect');if(pick&&[...pick.options].some(o=>o.value===state.meetingId)){pick.value=state.meetingId;pick.dispatchEvent(new Event('change',{bubbles:true}));}}
     if(state.sessionTab){const tab=document.querySelector(`#sessionsTabs [data-session-tab="${state.sessionTab}"]`);if(tab&&!tab.classList.contains('active'))tab.click();}
     for(const id of state.openDetails??[]){const node=document.getElementById(id);if(node?.tagName==='DETAILS')node.open=true;}
     requestAnimationFrame(()=>{
-        if(restorationId!==navigationRestorationId)return;
+        if(restorationId!==navigationRestorationId||interactionRevision!==navigationInteractionRevision)return;
         if(state.openTarget){const node=document.getElementById(state.openTarget);if(node){if(node.tagName==='DETAILS')node.open=true;node.hidden=false;node.setAttribute('aria-hidden','false');}}
         if(state.sheetMode||state.matrixMeetingId||state.membershipId||state.rubricId)window.dispatchEvent(new CustomEvent('eco:restore-financial-sheet',{detail:{sheetMode:state.sheetMode,matrixMeetingId:state.matrixMeetingId,membershipId:state.membershipId,rubricId:state.rubricId}}));
         const anchor=state.anchor?document.getElementById(state.anchor):undefined;
@@ -458,6 +463,7 @@ const showView=(name,state)=>{
 const go=(name,options={})=>{
     const current=captureNavState(),sameDestination=name===current.view&&!options.anchor&&!options.force&&!options.sheetMode&&!options.openTarget;
     if(sameDestination)return;
+    navigationInteractionRevision++;
     window.dispatchEvent(new CustomEvent('eco:navigation-leaving',{detail:{state:current}}));
     try{history.replaceState({ecoNav:current,ecoDepth:navDepth},'',`#${current.view}`);}catch{}
     navDepth+=1;
@@ -3120,14 +3126,14 @@ const refreshVisibleBusinessSurface=async preserved=>{
 };
 $('#refreshBtn').addEventListener('click', async () => { try {
     clearFail();
-    const preserved=captureNavState();persistNavState(preserved);
+    const preserved=captureNavState(),preservedRevision=navigationInteractionRevision;persistNavState(preserved);
     // Manual refresh may clear a short transport breaker, but must never bypass
     // a known Cloudflare/D1 quota guard and recreate the former request storm.
     app.forceTransportRetry?.();
     renderConnectivity();
     if(navigator.onLine!==false&&(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??''))))await resumeOnline();
     await refreshVisibleBusinessSurface(preserved);
-    showView(preserved.view,preserved);
+    if(preservedRevision===navigationInteractionRevision)showView(preserved.view,preserved);
     toast(tx('Données utiles actualisées sans perdre votre position.','Visible data refreshed without losing your position.'));
 }
 catch (e) {
@@ -3332,6 +3338,7 @@ async function ensureCurrentServiceWorker(){
 }
 
 async function start() {
+    const startupInteractionRevision=navigationInteractionRevision;
     document.body.classList.add('auth-restoring');
     renderConnectivity();
     renderKernel();
@@ -3368,7 +3375,7 @@ async function start() {
         settleStartup();
         await refreshAll();
         const requested=history.state?.ecoNav?.view?history.state.ecoNav:startupNavState??readPersistedNavState();
-        if(requested?.view)showView(requested.view,requested);
+        if(requested?.view&&startupInteractionRevision===navigationInteractionRevision)showView(requested.view,requested);
         renderPersistedFinancialConflicts();startupNavState=null;
         if(shareIntent)await refreshOptionalOfflineSafe('share-intent',()=>openEcoShareIntent(shareIntent));
         governedGroupUI.openLinkIfPresent?.();
@@ -3387,7 +3394,7 @@ async function start() {
                   try{renderMeetingMatrix();renderIndividualSheetMatrix();}catch(error){console.info('Offline financial matrix render skipped',error);}
                 }
                 try{renderOutbox();renderCompatibility();renderKernel();renderModules();renderEcosystemHighlights();renderDomainHubs();}catch{}
-                const requested=history.state?.ecoNav?.view?history.state.ecoNav:startupNavState??readPersistedNavState();if(requested?.view)showView(requested.view,requested);renderPersistedFinancialConflicts();startupNavState=null;
+                const requested=history.state?.ecoNav?.view?history.state.ecoNav:startupNavState??readPersistedNavState();if(requested?.view&&startupInteractionRevision===navigationInteractionRevision)showView(requested.view,requested);renderPersistedFinancialConflicts();startupNavState=null;
                 toast(tx('Mode hors ligne : le noyau local synchronisé a été restauré. Les sections secondaires non disponibles restent différées.','Offline mode: the synchronized local core was restored. Unavailable secondary sections are deferred.'));
                 return;
             }

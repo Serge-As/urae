@@ -1,5 +1,13 @@
 # Canopée + Repères — livraison et place des capacités
 
+## Restauration tardive après une interaction — complément du 27 octobre
+
+Les runs `40531481285` et `40531481504` de `294c8723336c3ee0d9c347642e9abe172fd6d9db` s'arrêtent avant toute mutation de production : natifs et gouvernance passent, la livraison passe les 36 WebKit puis échoue dans Chromium ; la qualification indépendante échoue dans la transmission de solution WebKit. La trace de ce second échec montre un bouton pressé, aucune commande de transmission envoyée, puis un retour du viewport vers `#marketEnginePanel` pendant le geste. Le démarrage rappelle encore `showView` après le chargement séquentiel des projections facultatives, même si l'utilisateur a déjà navigué et saisi des données.
+
+Le propriétaire de navigation conserve désormais une révision locale d'interaction. Une restauration de démarrage, une frame différée ou un retour après actualisation attendue ne reprend pas la main après un nouveau geste ou une navigation. La restauration F5 sans interaction reste conservée. Aucun champ, droit, commande, calcul, donnée, moteur financier ou schéma ne change. Une régression navigateur retient une vraie requête facultative au démarrage, prépare un carnet dans l'interface existante et maintient le bouton pressé pendant la fin du chargement ; position, brouillon et action unique doivent rester utilisables. Le test financier F5 et le scénario inter-comptes d'origine restent obligatoires.
+
+Les artefacts du job de livraison étaient collectés avant Chromium ; leur collecte `always()` passe après les deux navigateurs pour conserver aussi la preuve du dernier scénario en cas d'échec. Aucun contrôle, assertion ni navigateur n'est supprimé. La publication demeure non qualifiée tant que les deux workflows complets et les vérifications publiques du nouveau SHA n'ont pas réussi.
+
 Le 27 octobre 2026, le fondateur autorise explicitement le déploiement et demande de vérifier la présence des capacités métier à leur place. Il confirme avoir lui-même rendu **Serge-As/urae public** et demande de conserver ce choix. Cette instruction directe prévaut sur la désignation « privé » du 24 octobre. Secrets, sessions, pièces et données financières réelles restent exclus de Git, des artefacts publics et des fixtures.
 
 ## Source et conservation
