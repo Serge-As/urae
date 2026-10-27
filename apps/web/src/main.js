@@ -2088,9 +2088,10 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DASHBOARDS.ALL'){go('dashboard',{anchor:'roleDashboardsCenter',force:true});roleDashboardsUI.open();return;}
     const destination=m.status==='FOUNDATION_ACTIVE'?canonicalCapabilityDestination(id):null;
     if(destination){
-        const {view,preset,...options}=destination;
+        const {view,preset,registryTab,...options}=destination;
         await go(view,{...options,force:true});
         if(preset)window.dispatchEvent(new CustomEvent('eco:value-network-preset',{detail:{kind:preset}}));
+        if(registryTab)operationalRegistryUI.open(registryTab);
         return;
     }
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;

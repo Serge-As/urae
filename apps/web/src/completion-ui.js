@@ -284,13 +284,20 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
     const close=document.createElement('button');close.type='button';close.textContent=tr('Fermer','Close');close.onclick=()=>dialog.close();dialog.append(close);document.body.append(dialog);dialog.showModal();
   };
 
+  const loanPortfolioViews=new WeakMap();
   const renderLoans=async()=>{
     if(!app.activeGroup()){loans=[];decisions=[];return;}
     [loans,decisions]=await Promise.all([app.listCompletion('LOAN'),app.listCompletion('GOVERNANCE_DECISION')]);
     const currentPolicy=hydrateLoanPolicy().policy;
     refill(byId('loanBorrower'),getMembers().map(x=>({id:x.id,label:x.displayName})),tr('Choisir un membre','Choose a member'));
     refill(byId('obligationMember'),getMembers().map(x=>({id:x.id,label:x.displayName})),tr('Choisir un membre','Choose a member'));
-    const root=byId('loanList');if(root){root.replaceChildren();
+    const root=byId('loanList');
+    // Identical read projections must not detach a focused/pressed table cell.
+    // Scope and every displayed source participate; actual changes still render.
+    const projection=JSON.stringify([app.currentActor?.(),app.currentTenant?.(),app.activeGroup(),locale(),loans,currentPolicy,getMembers(),getMeetings()]);
+    if(root&&(loanPortfolioViews.get(root)!==projection||!root.firstElementChild)){
+      const selectedPart=root.querySelector('.debt-table-view-controls select')?.value??'all';
+      root.replaceChildren();
       if(!loans.length)root.append(article(tr('Aucun prêt','No loan'),'',''));
       else{
         const wrap=document.createElement('div');wrap.className='matrix-wrap loan-portfolio-wrap';const table=document.createElement('table');table.className='meeting-matrix loan-portfolio-table';
@@ -311,9 +318,11 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
         const view=document.createElement('div');view.className='debt-table-view-controls actions';view.setAttribute('aria-label',tr('Affichage du portefeuille','Portfolio display'));
         const selector=document.createElement('select');selector.setAttribute('aria-label',tr('Partie du portefeuille de prêts','Loan portfolio section'));
         for(const [id,label] of [['all',tr('Vue intégrale','Complete view')],['1',tr('Partie 1 / 2 · identification et accord','Part 1 / 2 · identity and approval')],['2',tr('Partie 2 / 2 · dette et actions','Part 2 / 2 · debt and actions')]])selector.append(option(id,label));
+        selector.value=['all','1','2'].includes(selectedPart)?selectedPart:'all';wrap.dataset.debtPart=selector.value;
         selector.onchange=()=>{wrap.dataset.debtPart=selector.value;};view.append(selector);root.append(view,wrap);
       }
     }
+    if(root)loanPortfolioViews.set(root,projection);
     await renderLoanDebtRecap();
     const decisionsRoot=byId('decisionList');if(decisionsRoot){decisionsRoot.replaceChildren();
       for(const d of decisions){

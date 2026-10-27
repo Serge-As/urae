@@ -50,7 +50,7 @@ test('catalogue financial, meeting, business, advertising and offline entries op
   // Existing anonymous pulse telemetry is observed separately from business
   // mutations; rubric creation and every financial write remain disallowed.
   const mutations=[];page.on('request',r=>{if(['POST','PUT','PATCH','DELETE'].includes(r.method())&&r.url().includes('/api/v1/')&&!r.url().includes('/auth/')&&!r.url().includes('/live/')&&new URL(r.url()).pathname!=='/api/v1/pulse/events')mutations.push({method:r.method(),path:new URL(r.url()).pathname});});
-  for(const [id,view,anchor,tab]of[
+  for(const [id,view,anchor,tab,registryTab]of[
     ['MEETING.ATTENDANCE','sessions','sessionsWorkspace','attendance'],
     ['MEETING.MEMBER_MATRIX','sessions','sessionsWorkspace','sheet'],
     ['FINANCE.LEDGER','finance','financeLedgerPanel'],
@@ -59,7 +59,8 @@ test('catalogue financial, meeting, business, advertising and offline entries op
     ['ADS.CAMPAIGNS','ecosystem','adManagerPanel'],
     ['MARKETPLACE.SUPPLIERS','ecosystem','marketEnginePanel'],
     ['MARKETPLACE.ECO_NOW','ecosystem','valueNetworkOperational'],
-    ['RELAY.COMMUNITY','relay','ecoRelayPanel']
+    ['RELAY.COMMUNITY','relay','ecoRelayPanel'],
+    ['SUCCESSION.NEXT_OF_KIN','settings','operationalRegistryCenter',undefined,'succession']
   ]){
     await page.locator('#mainNav [data-view=services]').click();
     const card=page.locator('#moduleCatalog [data-capability-id="'+id+'"]');
@@ -67,6 +68,7 @@ test('catalogue financial, meeting, business, advertising and offline entries op
     await expect(page.locator('#view-'+view)).toHaveClass(/active/);
     await expect(page.locator('#'+anchor)).toBeVisible();
     if(tab)await expect(page.locator('#sessionsTabs [data-session-tab="'+tab+'"]')).toHaveClass(/active/);
+    if(registryTab){await expect(page.locator('[data-op-registry-tab="'+registryTab+'"]')).toHaveClass(/active/);await expect(page.locator('#operationalRegistryCenter form [name=contactAlias]')).toBeVisible();}
   }
   expect(errors).toEqual([]);
   expect(mutations).toEqual([]);

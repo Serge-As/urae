@@ -7,6 +7,7 @@ const add=(ids,view,anchor,options)=>{for(const id of ids.split(' '))destination
 add('CORE.IDENTITY CORE.IDENTITY.PROJECTIONS CORE.IDENTITY.CLAIM CORE.IDENTITY.MULTIGROUP','dashboard','personalCockpitPanel');
 add('DISCOVERY.PROXIMITY GEO.DIRECTORY','discovery','geoDirectoryCenter');
 add('MEMBERSHIP.RECONCILIATION','settings','identityVerificationCenter');
+add('SUCCESSION.NEXT_OF_KIN','settings','operationalRegistryCenter',{registryTab:'succession'});
 add('CORE.ASSOCIATIONS CORE.ROTATING_TONTINE CORE.IN_KIND_TONTINE CORE.HYBRID_GROUP GROUP.LAUNCH_STUDIO GROUP.LAUNCH.SIMULATION','launch');
 add('MEMBERSHIP.RUBRIC_PARTICIPATION CORE.RUBRICS RUBRIC.LIVING_RULES RUBRIC.WRITTEN_RULE RUBRIC.OBSERVED_PRACTICE RUBRIC.EFFECTIVE_POLICY RUBRIC.EXCEPTIONS RUBRIC.COLLATION RUBRIC.ASSISTANCE RUBRIC.SAVINGS RUBRIC.LOANS','operations','rubricsManagementPanel');
 add('MEMBER.DIGITAL_NOTEBOOK','operations','twoSheetWorkspace',{sheetMode:'individual'});

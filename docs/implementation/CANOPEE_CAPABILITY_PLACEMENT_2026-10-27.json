@@ -1,26 +1,26 @@
 {
   "observedAt": "2026-10-27T08:32:18.988Z",
-  "recheckedAt": "2026-10-27T08:51:34.485Z",
+  "recheckedAt": "2026-10-27T15:11:37.838Z",
   "sourceParent": "35f4ff6774685a6a06058093ca30f5165551f312",
   "sourceState": "PRE_PUBLICATION_WORKING_TREE",
   "provenance": {
-    "apps/web/canopee.css": "e2b7cfa508ce51211875f9e78dab938502d703a1b8b1168857fc130ecad0b851",
+    "apps/web/canopee.css": "79e6cbdf0e863bcd25a00cf39e41b9f602a9cfef9fd3d07a893699ef24ab6256",
     "apps/web/index.html": "f7acd0d126e6ab733a25ca90eeed0ec1662aef4a6208f257ecd888bd4f01d991",
-    "apps/web/src/main.js": "45a8fee940f4009be659b0c0cc09b3edd00cd345678c0cb8e98c3bbacf1ec013",
-    "apps/web/src/capability-navigation.js": "6a6b33cfa8f14a8456fea0ad31d83510509f26be8df9c10e8a2790b4ebd96b1e"
+    "apps/web/src/main.js": "c12bb9b2a775715eeb70f10167d113e67c04ff8b9542c4f5c380163398c58efb",
+    "apps/web/src/capability-navigation.js": "e20853e2e4cedf9fcbd2e790ca176c6815aa94a392476e1cd968614a9c26aed1"
   },
   "catalogCount": 164,
   "visited": 164,
   "summary": {
-    "EXISTING_OWNER_HANDOFF": 146,
-    "PREPARATORY_RECORD": 18
+    "EXISTING_OWNER_HANDOFF": 147,
+    "PREPARATORY_RECORD": 17
   },
   "missingDestinations": 0,
   "pageErrors": 0,
   "financialOrBusinessWritesDuringNavigation": 0,
   "readOnlyPreviewRequests": 2,
   "existingTelemetryRequests": 1,
-  "scope": "Parcours réel des 164 cartes sur un compte local entièrement synthétique, puis nouvelle vérification des sept dernières destinations modifiées. La présence et la navigation ne constituent pas une recette complète des règles métier ni une acceptation terrain.",
+  "scope": "Parcours réel des 164 cartes sur un compte local entièrement synthétique, puis nouvelle vérification des huit dernières destinations modifiées. La présence et la navigation ne constituent pas une recette complète des règles métier ni une acceptation terrain.",
   "rows": [
     {
       "id": "CORE.IDENTITY",
@@ -2132,14 +2132,14 @@
       "id": "SUCCESSION.NEXT_OF_KIN",
       "label": "Succession et ayants droit",
       "maturity": "FOUNDATION_ACTIVE",
-      "view": "services",
-      "anchor": null,
+      "view": "settings",
+      "anchor": "operationalRegistryCenter",
       "sessionTab": null,
       "sheetMode": null,
       "openedDetails": null,
       "mounted": true,
-      "workspaceModule": "SUCCESSION.NEXT_OF_KIN",
-      "placement": "PREPARATORY_RECORD"
+      "workspaceModule": "",
+      "placement": "EXISTING_OWNER_HANDOFF"
     },
     {
       "id": "FEDERATION.GROUP_NETWORK",

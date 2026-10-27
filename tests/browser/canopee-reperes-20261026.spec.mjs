@@ -2,6 +2,21 @@ import {test,expect} from '@playwright/test';
 const base='http://127.0.0.1:4173';
 test.setTimeout(120000);
 
+test('unchanged loan projections retain the actual cell and selected part; changed values and actors refresh the view',async({page})=>{
+  await page.goto(base+'/health');await page.setContent('<!doctype html><html lang="fr"><head><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/canopee.css"></head><body class="eco-canopee"><section id="view-finance" class="view active"><section id="loanCompletionPanel"><div id="loanList"></div></section></section></body></html>');
+  await page.evaluate(async()=>{
+    const {mountCompletionUI}=await import('/src/completion-ui.js');window.__loanActor='manager';window.__loanVersion=1;window.__loanAmount=10000;
+    const app={activeGroup:()=> 'group',currentActor:()=>window.__loanActor,currentTenant:()=> 'synthetic',completionWorkflows:async()=>({workflows:{LOAN:{}}}),listCompletion:async kind=>kind==='LOAN'?[{id:'loan',title:'Prêt synthétique',createdAt:'2026-10-01T12:00:00Z',data:{borrowerMembershipId:'member',principal:10000,outstandingPrincipal:window.__loanAmount,unpaidInterest:0,completionState:'DISBURSED',completionVersion:window.__loanVersion,paymentPriority:'CAPITAL_FIRST'}}]:[]};
+    window.__loans=mountCompletionUI({app,getMembers:()=>[{id:'member',displayName:'Membre synthétique'}],getMeetings:()=>[],getRubrics:()=>[],getLocale:()=>document.documentElement.lang,fmt:n=>String(n),date:n=>n,notify:()=>{},showError:e=>{throw e;}});await window.__loans.refresh();
+  });
+  const part=page.getByRole('combobox',{name:'Partie du portefeuille de prêts',exact:true});await part.selectOption('2');
+  await page.evaluate(()=>{window.__firstLoanCell=document.querySelector('.loan-portfolio-table tbody td');window.__firstLoanTable=document.querySelector('.loan-portfolio-table');return Promise.all([window.__loans.refresh(),window.__loans.refresh(),window.__loans.refresh()]);});
+  expect(await page.evaluate(()=>window.__firstLoanCell.isConnected&&window.__firstLoanTable===document.querySelector('.loan-portfolio-table'))).toBe(true);await expect(part).toHaveValue('2');
+  expect(await page.locator('.loan-portfolio-table tbody td').first().evaluate(n=>n.getBoundingClientRect().width)).toBeGreaterThanOrEqual(140);
+  await page.evaluate(async()=>{window.__loanAmount=9000;window.__loanVersion++;await window.__loans.refresh();});await expect(page.locator('.loan-portfolio-table tbody td').nth(5)).toHaveText('9000');await expect(part).toHaveValue('2');expect(await page.evaluate(()=>window.__firstLoanCell.isConnected)).toBe(false);
+  await page.evaluate(async()=>{window.__actorLoanCell=document.querySelector('.loan-portfolio-table tbody td');window.__loanActor='another-manager';await window.__loans.refresh();});expect(await page.evaluate(()=>window.__actorLoanCell.isConnected)).toBe(false);await expect(part).toHaveValue('2');
+});
+
 test('productive forms retain a pressed action when optional guidance panels expand',async({page})=>{
   await page.setViewportSize({width:1280,height:720});await page.goto(base+'/health');
   await page.setContent('<!doctype html><html lang="fr"><head><link rel="stylesheet" href="/styles.css"><link rel="stylesheet" href="/canopee.css"></head><body class="eco-canopee"><main><section class="view active"><header class="page-head"><h1>Communautés</h1></header><section class="panel"><div id="guidanceHub" style="min-height:80px"></div></section><div style="height:1000px"></div></section></main></body></html>');

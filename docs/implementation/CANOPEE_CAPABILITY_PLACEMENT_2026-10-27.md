@@ -1,8 +1,8 @@
 # Canopée + Repères — emplacement des 164 capacités
 
-Audit du 27 octobre 2026. Les cartes sont ouvertes dans la véritable application locale avec des données fictives, sans compte réel. Les sept dernières destinations modifiées sont parcourues une seconde fois. Les empreintes des quatre fichiers de présentation fixent la provenance avant publication ; le reçu de livraison atteste ensuite le commit publié.
+Audit du 27 octobre 2026. Les cartes sont ouvertes dans la véritable application locale avec des données fictives, sans compte réel. Les huit dernières destinations modifiées sont parcourues une seconde fois. Les empreintes des quatre fichiers de présentation fixent la provenance avant publication ; le reçu de livraison atteste ensuite le commit publié.
 
-Résultat : **164 / 164 cartes présentes et parcourues**, **146 ouvertures vers un écran existant**, **18 dossiers préparatoires**, aucune destination absente, aucune erreur JavaScript, aucune écriture financière ou métier pendant la navigation. Les requêtes de prévisualisation de séance et la télémétrie déjà existante sont comptées séparément dans le JSON.
+Résultat : **164 / 164 cartes présentes et parcourues**, **147 ouvertures vers un écran existant**, **17 dossiers préparatoires**, aucune destination absente, aucune erreur JavaScript, aucune écriture financière ou métier pendant la navigation. Les requêtes de prévisualisation de séance et la télémétrie déjà existante sont comptées séparément dans le JSON.
 
 Les niveaux déclarés du registre sont conservés : 155 FOUNDATION_ACTIVE, 4 STRUCTURAL_V1, 5 PLANNED_DOMAIN. FOUNDATION_ACTIVE ne signifie pas que toutes les intégrations ou toutes les fonctions d’un domaine sont achevées. Les dossiers ci-dessous sont des limites existantes explicites ; ils ne sont pas annoncés comme des moteurs finalisés.
 
@@ -26,7 +26,6 @@ Les niveaux déclarés du registre sont conservés : 155 FOUNDATION_ACTIVE, 4 ST
 | INTEGRATION.EMAIL | Email adapter | STRUCTURAL_V1 |
 | SECURITY.MFA | MFA rôles sensibles | PLANNED_DOMAIN |
 | BACKUP.D1_RESTORE | Backup/restauration D1 | FOUNDATION_ACTIVE |
-| SUCCESSION.NEXT_OF_KIN | Succession et ayants droit | FOUNDATION_ACTIVE |
 | FEDERATION.GROUP_NETWORK | Fédérations de groupes | PLANNED_DOMAIN |
 
 ## Tableaux et saisie financière
@@ -221,7 +220,7 @@ Inventaire statique des constructions de tableaux ; les modèles d’impression 
 | BACKUP.D1_RESTORE | FOUNDATION_ACTIVE | services | — | Dossier préparatoire conservé |
 | OBSERVABILITY.HEALTH | FOUNDATION_ACTIVE | settings | — | Écran propriétaire existant |
 | COMPATIBILITY.LEGACY | FOUNDATION_ACTIVE | settings | — | Écran propriétaire existant |
-| SUCCESSION.NEXT_OF_KIN | FOUNDATION_ACTIVE | services | — | Dossier préparatoire conservé |
+| SUCCESSION.NEXT_OF_KIN | FOUNDATION_ACTIVE | settings | operationalRegistryCenter | Écran propriétaire existant |
 | FEDERATION.GROUP_NETWORK | PLANNED_DOMAIN | services | — | Dossier préparatoire conservé |
 
 ## Limites de la preuve
