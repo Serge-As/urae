@@ -10,4 +10,4 @@ backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 public_verification: health, catalogue, shell assets and locked optional document engines
-trigger_nonce: 2026-10-27-canopee-final-succession-owner-handoff
+trigger_nonce: 2026-10-27-canopee-final-interaction-preserving-startup
