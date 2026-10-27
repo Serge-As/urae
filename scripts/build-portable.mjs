@@ -25,7 +25,7 @@ async function compile(dir){
 }
 for(const dir of ['apps','packages','workers'])await compile(dir);
 await import('./prepare-local-document-engines.mjs');
-for(const f of ['index.html','external-ad.html','public-notebook.html','styles.css','manifest.webmanifest','sw.js']){
+for(const f of ['index.html','external-ad.html','public-notebook.html','styles.css','canopee.css','manifest.webmanifest','sw.js']){
  await cp(path.join(root,'apps/web',f),path.join(output,'apps/web',f));
  await cp(path.join(root,'apps/web',f),path.join(output,f));
 }

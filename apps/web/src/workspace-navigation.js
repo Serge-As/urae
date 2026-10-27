@@ -3,7 +3,7 @@ export function mountWorkspaceNavigation({getScope=()=>'',navigate=()=>{}}={}){
   const dashboard=document.getElementById('view-dashboard');if(!dashboard)return;
   const el=(tag,text,cls)=>{const e=document.createElement(tag);if(text)e.textContent=text;if(cls)e.className=cls;return e;};
   const nav=el('nav',null,'workspace-tabs');nav.setAttribute('aria-label','Espaces de mon cockpit');nav.setAttribute('role','tablist');
-  const definitions=[['overview','Vue d’ensemble','Overview'],['groups','Mes groupes','My groups'],['opportunities','Échanger & entreprendre','Connect & trade'],['services','Services & confort','Services & comfort']];
+  const definitions=[['overview','Mon Eco','My Eco'],['groups','Accueil du groupe','Group home'],['opportunities','Échanger & entreprendre','Connect & trade'],['services','Services & confort','Services & comfort']];
   const panels=new Map(),buttons=new Map();let active='overview';
   for(const [key,fr,en] of definitions){
     const button=el('button',fr);button.type='button';button.dataset.workspaceTab=key;button.id='cockpit-tab-'+key;button.setAttribute('role','tab');button.setAttribute('aria-controls','cockpit-panel-'+key);button.dataset.labelFr=fr;button.dataset.labelEn=en;
@@ -24,7 +24,7 @@ export function mountWorkspaceNavigation({getScope=()=>'',navigate=()=>{}}={}){
     select(keys[event.key==='Home'?0:event.key==='End'?keys.length-1:(i+(event.key==='ArrowRight'?1:-1)+keys.length)%keys.length],{focus:true});
   });
   const classify=node=>{
-    if(!(node instanceof Element)||node===nav||node.dataset.cockpitPanel||node.classList.contains('cockpit-welcome'))return;
+    if(!(node instanceof Element)||node===nav||node.dataset.cockpitPanel||node.classList.contains('cockpit-welcome')||node.dataset.ecoVisualMedia==='HOME_HERO')return;
     const id=node.id;
     const key=['groupHomePanel','roleDashboardsCenter'].includes(id)?'groups'
       :['ecoPulsePanel','anticipationCenter','anticipationPanel'].includes(id)?'opportunities'

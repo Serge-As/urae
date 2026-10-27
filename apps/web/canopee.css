@@ -1,0 +1,224 @@
+/* Canopée + Repères. Presentation only; financial editors keep their own sizing. */
+/* App navigation and F5 must capture the visible place, without a pending page animation. */
+html:has(body.eco-canopee){scroll-behavior:auto}
+body.eco-canopee{
+  --bg:#f6f5f0;--surface:#fff;--surface-2:#f4f5ef;--ink:#203b30;--muted:#607065;
+  --brand:#175840;--brand-2:#26744f;--brand-soft:#ecf3ed;--accent:#a77c27;--accent-soft:#fbf4e4;
+  --gold:#b58a33;--danger:#a83936;--warning:#8b641d;--line:#e0e5db;
+  --eco-ink:#203b30;--eco-muted:#607065;--eco-line:#e0e5db;--eco-accent:#175840;
+  background:var(--bg);color:var(--ink);
+}
+body.eco-canopee .topbar{border-top:3px solid var(--gold);background:#fffdf8}
+body.eco-canopee .logo{background:#174b39;color:#edd494;border:1px solid #c4a35d;border-radius:12px}
+body.eco-canopee .version-badge{color:#775b20;background:#f6efd9}
+body.eco-canopee .content{padding:24px 32px;max-width:1760px}
+body.eco-canopee .side-nav{background:#173e30;border-color:#173e30;padding:16px 12px 28px}
+body.eco-canopee .nav-caption{color:#c4cfb4;font-size:10px;letter-spacing:.14em;margin-top:20px}
+body.eco-canopee .nav-btn{color:#e6eee4;border-radius:8px;min-height:43px}
+body.eco-canopee .nav-btn>span{color:#dfce9f;background:#ffffff0a}
+body.eco-canopee .nav-btn:hover{color:#fff;background:#ffffff10}
+body.eco-canopee .nav-btn.active{color:#243a29;background:#ead59b;border-color:#ead59b;box-shadow:none}
+body.eco-canopee .nav-btn.active,body.eco-canopee .nav-btn.active b{background-color:#ead59b!important;color:#243a29!important}
+body.eco-canopee .nav-btn.active>span{color:#344628;background:#fff5d7}
+body.eco-canopee #groupHomeNavBtn{border-block-start:1px solid #ffffff1c;margin-top:3px}
+body.eco-canopee .panel{border-radius:13px;box-shadow:0 3px 14px #203b3003}
+body.eco-canopee .panel-head h2{font-weight:650}
+body.eco-canopee .primary{background:#175840;border-color:#175840;color:#fff;box-shadow:none}
+body.eco-canopee .primary:hover{background:#104530}
+body.eco-canopee .secondary{color:#28523a;border-color:#cdd9ce;background:#fff}
+body.eco-canopee .eyebrow{color:#866522;letter-spacing:.13em}
+body.eco-canopee .cockpit-welcome{margin-bottom:20px;gap:18px}
+body.eco-canopee #view-dashboard:has([data-cockpit-panel=groups]:not([hidden]))>.cockpit-welcome{display:none}
+body.eco-canopee #view-dashboard:has([data-cockpit-panel]:not([data-cockpit-panel=overview]):not([hidden]))>[data-eco-visual-media=HOME_HERO]{display:none}
+body.eco-canopee .cockpit-welcome h1{font-family:Georgia,"Times New Roman",serif;font-size:clamp(30px,3vw,42px);font-weight:500;letter-spacing:-.045em}
+body.eco-canopee .cockpit-welcome .cahier-code{display:block;margin-top:9px;color:#7a6a45;letter-spacing:.02em;font-size:10px}
+body.eco-canopee .cockpit-focus{background:#1a4c39;border-radius:13px;border-bottom:3px solid #c7a65b}
+body.eco-canopee .cockpit-focus .eyebrow{color:#eddba4}
+body.eco-canopee .cockpit-focus .primary{background:#ead59b;color:#223d2d;border-color:#ead59b}
+body.eco-canopee .cockpit-focus .secondary{color:#fff;background:#ffffff08;border-color:#ffffff50}
+body.eco-canopee .cockpit-launchpad span{background:#edf3eb;color:#396344;border-radius:9px}
+body.eco-canopee .cockpit-launchpad button:nth-child(3n+2) span{background:#fbf3de;color:#846222}
+body.eco-canopee .cockpit-launchpad button:nth-child(3n) span{background:#f8ebe8;color:#8f4540}
+body.eco-canopee .workspace-tabs{gap:8px;border-color:#dddccf;padding-bottom:9px;scroll-padding-inline:12px}
+body.eco-canopee .workspace-tabs button{white-space:nowrap;border-radius:8px;font-weight:600;color:#667163;background:transparent;border:1px solid transparent;min-height:42px}
+body.eco-canopee .workspace-tabs button.active{background:#fffdf8;color:#4d492e;border-color:#d9c595;box-shadow:0 2px 8px #56451c06}
+body.eco-canopee .eco-navigation-context{border-radius:10px;box-shadow:none;border-color:#dfdfd2;background:#fffefb;gap:8px 14px}
+body.eco-canopee .eco-navigation-context .eco-navigation-open{background:#175840;border-color:#175840}
+body.eco-canopee .eco-navigation-role{color:#715b25;background:#f8f1df}
+.eco-navigation-group-spaces{display:flex;flex-wrap:wrap;grid-column:1/-1;gap:4px;padding-top:7px;border-top:1px solid #ecebdf}
+.eco-navigation-group-spaces[hidden]{display:none}
+body.eco-canopee .eco-navigation-group-spaces button{background:transparent;border-color:transparent;min-height:36px;font-size:12px;padding:6px 11px;border-radius:6px;color:#536850}
+body.eco-canopee .eco-navigation-group-spaces button:hover{background:#f4f2e8}
+body.eco-canopee .eco-navigation-group-spaces button.active{background:#edf2e8;color:#234d34;border-color:#d4decc}
+body.eco-canopee #groupHomePanel{padding:0;background:transparent;border:0;box-shadow:none}
+body.eco-canopee #groupHomePanel{scroll-margin-top:calc(var(--eco-header-height,76px) + var(--eco-navigation-height,118px) + 20px)}
+body.eco-canopee #groupHomePanel>.panel-head{display:none}
+body.eco-canopee #groupHomePanel>.panel-head h2{font-size:13px;color:#466043;margin:0}
+body.eco-canopee #groupHomePanel>.panel-head .eyebrow{display:none}
+body.eco-canopee #groupHomePanel>.panel-head p{margin:3px 0;font-size:11px}
+.group-home-surface{min-width:0;display:grid;gap:20px}
+.group-home-masthead{display:flex;align-items:center;justify-content:space-between;gap:24px;padding:18px 0 0}
+.group-home-heading{min-width:0}
+body.eco-canopee .group-home-title{font-family:Georgia,"Times New Roman",serif;font-size:clamp(28px,2.8vw,40px);font-weight:500;letter-spacing:-.035em;line-height:1.15;margin:9px 0;overflow-wrap:anywhere}
+.group-home-heading p{font-size:13px;color:#61725f;margin:0}
+.group-home-stamps{display:flex;flex-wrap:wrap;gap:6px;max-width:38%;justify-content:flex-end}
+.group-home-stamps .pill{background:#fffdf5;border:1px solid #ded7bb;color:#796235;font-size:10px;overflow-wrap:anywhere;white-space:normal}
+.group-home-shortcuts{display:flex;gap:8px;flex-wrap:wrap;padding-bottom:2px}
+body.eco-canopee .group-home-shortcuts button{font-size:12px;padding:8px 14px}
+body.eco-canopee .group-home-shortcuts button:last-child{color:#70541d;background:#fcf7e9;border-color:#dccc9f}
+.group-home-main{display:grid;grid-template-columns:minmax(0,1fr) minmax(230px,.33fr);gap:20px;align-items:start}
+body.eco-canopee .group-home-block{background:#fff;border:1px solid #dfe3d8;border-radius:12px;padding:22px;min-width:0}
+.group-home-finance{border-top:3px solid #b68d3d!important}
+.group-home-finance>h3{font-size:18px;margin:6px 0 18px;line-height:1.4}
+body.eco-canopee .group-home-metrics{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:12px 0}
+body.eco-canopee .group-home-metrics .metric{padding:14px 16px;border-radius:8px;min-width:0;background:#fbfcf8}
+body.eco-canopee .metric::before{display:none}
+body.eco-canopee .group-home-metrics .metric span{display:block;color:#697661;font-size:11px}
+body.eco-canopee .group-home-metrics .metric strong{display:block;font-size:21px;letter-spacing:-.03em;margin:7px 0;overflow-wrap:anywhere;line-height:1.2;font-variant-numeric:tabular-nums}
+body.eco-canopee .group-home-metrics .metric small{font-size:10px;color:#6b755f}
+body.eco-canopee .group-home-metrics .group-home-cash{grid-column:1/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;background:#f5f2e6;border-color:#e0d5b3;padding:18px 20px}
+body.eco-canopee .group-home-cash span{font-size:12px;color:#69582f;grid-column:1/-1}
+body.eco-canopee .group-home-cash strong{font-size:clamp(26px,2.4vw,36px);font-weight:600;color:#285137}
+body.eco-canopee .group-home-cash strong.error{color:#a83936}
+.group-home-next{min-width:0;padding:24px 22px;background:#1b4b37;border-radius:12px;color:#f8f9ec;position:sticky;top:240px;border-bottom:3px solid #c5a55b}
+body.eco-canopee .group-home-next .eyebrow{color:#e6d3a0;font-size:9px}
+body.eco-canopee .group-home-next h3{font-family:Georgia,"Times New Roman",serif;font-size:24px;line-height:1.3;font-weight:400;margin:16px 0;color:#fff9e8}
+.group-home-next p{font-size:12px;color:#e6ecdf;overflow-wrap:anywhere}
+.group-home-next small{display:block;color:#c6d4bf;font-size:10px;border-top:1px solid #ffffff26;padding-top:14px;line-height:1.6;margin-top:20px}
+.group-home-session-state{display:inline-block;font-size:10px;background:#ffffff15;color:#f7e8b7;padding:4px 8px;border:1px solid #ffffff20;border-radius:5px}
+body.eco-canopee .group-home-next button{display:block;margin-top:22px;max-width:100%;white-space:normal;font-size:12px;background:#efddab;border-color:#efddab;color:#24452d;min-height:42px}
+.group-home-recap,.group-home-rounds{border-top:1px solid #e4e7dc;margin-top:20px;padding-top:16px;min-width:0}
+.group-home-recap h4,.group-home-rounds h4{font-size:14px;font-weight:650;margin:0}
+.group-home-recap .panel-head,.group-home-rounds .panel-head{align-items:center;margin-bottom:10px}
+body.eco-canopee .group-home-recap .panel-head button,body.eco-canopee .group-home-rounds .panel-head button{border:0;padding:6px 0;min-height:36px;font-size:11px;background:transparent}
+.group-home-table{border:1px solid #e2e5d8;border-radius:7px;max-width:100%;overflow:auto;overscroll-behavior-inline:contain}
+.group-home-table .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+body.eco-canopee .group-home-table table{min-width:560px;margin:0;width:100%;font-variant-numeric:tabular-nums}
+body.eco-canopee .group-home-table th,body.eco-canopee .group-home-table td{padding:10px 12px;white-space:nowrap;font-size:11px;text-align:right}
+body.eco-canopee .group-home-table th:first-child,body.eco-canopee .group-home-table td:first-child{text-align:left}
+body.eco-canopee .group-home-table th{background:#f4f5ed;color:#59704f}
+body.eco-canopee .group-home-table button{font-size:11px;min-height:36px;text-align:left;padding:2px 0}
+body.eco-canopee .group-home-table tbody th{background:#fff}
+body.eco-canopee .group-home-table [data-round-state=SERVED] td:last-child{color:#226c3f}
+body.eco-canopee .group-home-table [data-round-state=SCHEDULED] td:last-child{color:#86621d}
+.group-home-finance>.stack{margin-top:20px;border-top:1px solid #e7e8de;padding-top:16px}
+.group-home-finance>.stack>h4{font-size:14px;margin:0 0 8px}
+.group-home-doors{min-width:0;padding:4px 0}
+.group-home-doors>h3{font-size:20px;letter-spacing:-.025em;margin:6px 0 16px;font-weight:600}
+.group-home-door-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+body.eco-canopee .group-home-door{position:relative;display:flex;flex-direction:column;gap:6px;align-items:flex-start;text-align:left;min-width:0;min-height:104px;border-radius:10px;border:1px solid #dfe3d6;padding:18px 36px 18px 18px;background:#fff;color:#2d4d36}
+.group-home-door strong{font-size:13px;font-weight:650}
+.group-home-door span{font-size:11px;color:#6c7863;line-height:1.5}
+.group-home-door .group-home-door-arrow{position:absolute;right:16px;top:16px;color:#a3833c;font-size:16px}
+body.eco-canopee .group-home-door:hover{background:#fffdf6;border-color:#c6ac6a}
+body.eco-canopee .group-home-identity,body.eco-canopee .group-home-kit{background:#fcfcf8;padding:16px 20px}
+.group-home-identity>summary,.group-home-kit>summary{font-weight:600;color:#5e6b51;font-size:13px;cursor:pointer;min-height:30px;align-content:center}
+.group-home-identity[open]>summary,.group-home-kit[open]>summary{margin-bottom:16px}
+.group-home-identity .metrics{grid-template-columns:repeat(3,minmax(0,1fr))}
+.group-home-identity .metric strong{font-size:13px;overflow-wrap:anywhere}
+.group-home-asof{font-size:10px;color:#77816d;margin:0;text-align:right}
+.group-home-sync{padding:10px 12px;border-inline-start:3px solid #b58a33;background:#faf7ed;line-height:1.6;font-size:11px;color:#6c5c33}
+.group-home-sync p{margin:3px 0}
+body.eco-canopee .group-home-surface[data-group-kind=rotating_tontine] .group-home-finance{border-top-color:#23764d!important}
+body.eco-canopee .group-home-surface[data-group-kind=rotating_tontine] .group-home-rounds{background:#f5f8ef;padding:16px;border:1px solid #dbe5cb;border-radius:9px}
+/* Existing workspaces share the palette while retaining their native controls. */
+body.eco-canopee :is(#marketEnginePanel,#communityEnginePanel,#adManagerPanel,#ecoVisualMediaStudio){border-color:#d9dfcf}
+body.eco-canopee :is(#marketEnginePanel,#communityEnginePanel,#adManagerPanel,#ecoVisualMediaStudio,#valueNetworkOperational){scroll-margin-top:calc(var(--eco-header-height,76px) + var(--eco-navigation-height,118px) + 20px)}
+body.eco-canopee :is(#marketEnginePanel,#communityEnginePanel,#adManagerPanel,#ecoVisualMediaStudio)>:is(summary,.panel-head,.section-kicker){border-bottom:1px solid #e6e4d6;padding-bottom:12px}
+body.eco-canopee #recapContent .metric{border-top:2px solid #c8b16f;background:#fffdf7}
+body.eco-canopee #recapFinance .debt-summary-card{border-left:3px solid #ac443d;background:#fffaf7}
+body.eco-canopee .eco-navigation-context :focus-visible,body.eco-canopee .group-home-surface :focus-visible{outline:3px solid #a87a22;outline-offset:3px}
+body.eco-canopee.ui-mode-senior .group-home-surface :is(button,p,span,small,td,th,summary){font-size:17px;line-height:1.6}
+body.eco-canopee.ui-mode-senior .group-home-surface :is(button,summary){min-height:48px}
+body.eco-canopee.ui-mode-assisted .group-home-surface :is(button,p,span,small,td,th,summary){font-size:15px;line-height:1.6}
+body.eco-canopee.ui-mode-assisted .group-home-surface button{min-height:46px}
+body.eco-canopee:is(.ui-mode-senior,.ui-mode-assisted) .group-home-main{grid-template-columns:minmax(0,1fr)}
+body.eco-canopee:is(.ui-mode-senior,.ui-mode-assisted) .group-home-next{position:static}
+body.eco-canopee.ui-mode-senior .eco-navigation-group-spaces button{font-size:17px;min-height:48px}
+body.eco-canopee.ui-mode-assisted .eco-navigation-group-spaces button{font-size:15px;min-height:46px}
+@media(min-width:1450px){body.eco-canopee .group-home-metrics{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(max-width:1180px){.group-home-main{grid-template-columns:minmax(0,1fr)}.group-home-next{position:static;display:block}.group-home-next h3{margin:10px 0}.group-home-next button{display:inline-block;margin-top:12px}.group-home-next small{margin-top:16px}.group-home-door-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:860px){
+  body.eco-canopee .content{padding:18px 14px}
+  body.eco-canopee .side-nav{padding:8px;background:#173e30;border-color:#173e30}
+  body.eco-canopee .nav-btn{color:#e6eee4}
+  body.eco-canopee #groupHomeNavBtn{margin:0;border-color:transparent}
+  body.eco-canopee .eco-navigation-context{padding:10px;gap:8px}
+  body.eco-canopee #groupHomePanel{scroll-margin-top:calc(var(--eco-header-height,76px) + 20px)}
+  body.eco-canopee :is(#marketEnginePanel,#communityEnginePanel,#adManagerPanel,#ecoVisualMediaStudio,#valueNetworkOperational){scroll-margin-top:calc(var(--eco-header-height,76px) + 20px)}
+  .eco-navigation-group-spaces{flex-wrap:nowrap;overflow:auto;scrollbar-width:thin;padding-bottom:4px}
+  body.eco-canopee .eco-navigation-group-spaces button{flex-shrink:0}
+  .group-home-masthead{align-items:flex-start;flex-direction:column;gap:12px}
+  .group-home-stamps{max-width:100%;justify-content:flex-start}
+  .group-home-surface{gap:16px}
+  body.eco-canopee .group-home-block{padding:18px}
+}
+@media(max-width:540px){
+  body.eco-canopee.ui-mode-visual .topbar{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) auto;gap:6px 8px;padding:8px 12px}
+  body.eco-canopee.ui-mode-visual .topbar .brand{grid-area:1/1;gap:7px;min-width:0}
+  body.eco-canopee.ui-mode-visual .topbar .logo{width:30px;height:34px;flex-shrink:0;border-radius:9px;font-size:17px}
+  body.eco-canopee.ui-mode-visual .topbar .brand strong{font-size:12px}
+  body.eco-canopee.ui-mode-visual .topbar .version-badge{font-size:8px;padding:2px 4px}
+  body.eco-canopee.ui-mode-visual .topbar .top-actions{display:contents}
+  body.eco-canopee.ui-mode-visual .topbar .top-context{grid-area:1/2;width:auto;min-width:0;margin:0}
+  /* WebKit can expose the native option's intrinsic width beyond the select. */
+  body.eco-canopee.ui-mode-visual .topbar #activeGroupSelect{min-width:0;width:100%;max-width:100%;font-size:12px;min-height:42px;padding:7px;contain:layout paint}
+  body.eco-canopee.ui-mode-visual .topbar .eco-top-language{grid-area:1/3;margin:0;justify-self:end}
+  body.eco-canopee.ui-mode-visual .topbar #topLanguageSelect{font-size:12px;min-width:52px;min-height:42px;padding:6px}
+  body.eco-canopee.ui-mode-visual .topbar .workspace-mode-picker{grid-area:2/1;margin:0;min-width:0}
+  body.eco-canopee.ui-mode-visual .topbar #workspaceUiMode{font-size:11px;min-height:42px;width:100%;min-width:0;padding:6px}
+  body.eco-canopee.ui-mode-visual .topbar #connectivity{grid-area:2/2;justify-self:start;max-width:100%;min-width:0;font-size:10px;white-space:normal;padding:6px 8px}
+  body.eco-canopee.ui-mode-visual .topbar #logoutBtn{grid-area:2/3;font-size:10px;min-height:42px;padding:6px}
+  body.eco-canopee.ui-mode-visual .topbar #claimLocalAccountBtn{grid-column:1/-1}
+  body.eco-canopee.ui-mode-visual .eco-navigation-context{grid-template-columns:minmax(0,1fr) auto;gap:6px;margin-bottom:10px}
+  body.eco-canopee.ui-mode-visual .eco-navigation-context :is(.eco-navigation-home,.eco-navigation-current){display:none}
+  body.eco-canopee.ui-mode-visual .eco-navigation-trail{flex-wrap:nowrap;gap:4px;font-size:10px}
+  body.eco-canopee.ui-mode-visual .eco-navigation-group{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  body.eco-canopee.ui-mode-visual .eco-navigation-group::before{content:none}
+  body.eco-canopee.ui-mode-visual .eco-navigation-role{flex-shrink:0}
+  body.eco-canopee.ui-mode-visual .eco-navigation-actions{flex-wrap:wrap;gap:4px;max-width:174px}
+  body.eco-canopee.ui-mode-visual .eco-navigation-context .eco-navigation-open{font-size:10px;padding-inline:7px}
+  body.eco-canopee.ui-mode-visual .eco-navigation-context .eco-navigation-pin{padding-inline:9px}
+  body.eco-canopee.ui-mode-visual .group-home-masthead{padding-top:4px;gap:8px}
+  body.eco-canopee.ui-mode-visual .group-home-surface{gap:12px}
+  body.eco-canopee .content{padding:16px 12px}
+  body.eco-canopee .group-home-title{font-size:30px}
+  body.eco-canopee .group-home-block{padding:16px 12px}
+  .group-home-heading p{font-size:12px}
+  .group-home-shortcuts{gap:6px}
+  body.eco-canopee .group-home-shortcuts button{font-size:11px;padding:8px 10px;flex:1 1 auto}
+  body.eco-canopee .group-home-metrics .metric{padding:12px 10px}
+  body.eco-canopee .group-home-metrics .metric strong{font-size:20px}
+  body.eco-canopee .group-home-metrics .group-home-cash{padding:16px}
+  body.eco-canopee .group-home-cash strong{font-size:30px}
+  .group-home-door-grid{gap:8px}
+  body.eco-canopee .group-home-door{padding:14px 26px 14px 12px;min-height:116px}
+  .group-home-door strong{font-size:12px}
+  .group-home-door span{font-size:10px}
+  .group-home-door .group-home-door-arrow{right:10px;top:12px}
+  .group-home-identity .metrics{grid-template-columns:minmax(0,1fr)}
+  .group-home-next{padding:22px 18px}
+  body.eco-canopee .group-home-surface .three-col{grid-template-columns:minmax(0,1fr)}
+}
+/* Shared table finish. Keep measured column widths, sticky offsets, input
+   sizes, save states and the original event handlers owned by each table. */
+body.eco-canopee :is(.matrix-wrap,.canonical-financial-wrap,.group-home-table){border-color:#d9dfd1;scrollbar-color:#9ba98b #f3f4ec;scrollbar-width:thin}
+body.eco-canopee :is(.meeting-matrix,.group-home-table table){font-variant-numeric:tabular-nums lining-nums;color:#203b30}
+body.eco-canopee .meeting-matrix thead th{background:#f6f2e5;color:#4c4e31;box-shadow:inset 0 -2px 0 #cfb776}
+body.eco-canopee .meeting-matrix tbody tr:nth-child(even){background:#f8faf5}
+body.eco-canopee .meeting-matrix tbody tr:hover{background:#f0f5eb}
+body.eco-canopee .meeting-matrix tbody tr:focus-within{background:#edf5e9}
+body.eco-canopee .canonical-financial-matrix tbody tr:nth-child(even)>th{background:#f7f9f1}
+body.eco-canopee .canonical-financial-matrix tbody tr:focus-within>th{background:#edf5e9}
+body.eco-canopee .meeting-matrix :is(td,th){border-right-color:#e5e8dd;border-bottom-color:#e2e7dc}
+body.eco-canopee .canonical-financial-matrix .cell-target-input{background:#fffef9;border-color:#cdd7c6;color:#203b30;caret-color:#175840}
+body.eco-canopee .canonical-financial-matrix .cell-target-input:focus-visible{outline:2px solid #9d7627;outline-offset:1px;border-color:#9d7627}
+body.eco-canopee .canonical-financial-matrix .cell-validate{background:#175840;border-color:#175840;color:#fff}
+body.eco-canopee .canonical-financial-matrix .cell-validate:hover:not(:disabled){background:#104530}
+body.eco-canopee .canonical-financial-matrix :is(.cell-validate,.cell-dictate):focus-visible{outline:3px solid #b58a33;outline-offset:2px}
+body.eco-canopee .canonical-financial-matrix .matrix-cell-entry:focus-within:not(.is-conflict):not(.is-critical-conflict):not([data-save-state=CONFLICT]){box-shadow:inset 0 0 0 2px #b58a33}
+body.eco-canopee :is(.table-total-row,.table-row-total,.table-grand-total){font-variant-numeric:tabular-nums;font-weight:750}
+body.eco-canopee .eco-work-toolbar{background:#fbf8ed;border-color:#e0d6b7}
+body.eco-canopee .empty-state{border-color:#e0dfce;background:#fcfcf7;color:#65715d}
+@media print{body.eco-canopee .meeting-matrix thead th{background:#fff;color:#162b20;box-shadow:none;border-bottom:2px solid #333}}
+@media(prefers-reduced-motion:reduce){body.eco-canopee *,body.eco-canopee *::before,body.eco-canopee *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important}}

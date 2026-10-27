@@ -5,6 +5,7 @@ import {mountEcoCareUI} from './eco-care-ui.js';
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
 import {mountWorkspaceNavigation} from './workspace-navigation.js';
 import {mountShellNavigation} from './shell-navigation.js';
+import {canonicalCapabilityDestination} from './capability-navigation.js';
 import {mountRequestBudgetUI} from './request-budget-ui.js';
 import {createCellDictationButton,speech} from './voice-entry-ui.js';
 import {createFinancialWorkUI} from './financial-work-ui.js';
@@ -101,6 +102,8 @@ installRuntimeI18nObserver(()=>uiLocale);
 let groups = [];
 let members = [];
 let meetings = [];
+const dashboardScope=()=>JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);
+let hydratedDashboardScope='';
 let rubrics = [];
 let receiptPositions = [];
 let financialSheetEvents = [];
@@ -194,7 +197,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.41-programme-audit';
+const CAHIER_VERSION = '1.5.2.42-canopee-reperes';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -361,6 +364,8 @@ let cancelNavigationRestoration=()=>{},navigationRestorationId=0;
 const restoreNavState=state=>{
     if(!state)return;
     cancelNavigationRestoration();const restorationId=++navigationRestorationId;
+    const restorationCleanups=[];
+    cancelNavigationRestoration=()=>{for(const cleanup of restorationCleanups)cleanup();};
     if(state.meetingId){const pick=document.querySelector('#sessionsMeetingSelect');if(pick&&[...pick.options].some(o=>o.value===state.meetingId)){pick.value=state.meetingId;pick.dispatchEvent(new Event('change',{bubbles:true}));}}
     if(state.sessionTab){const tab=document.querySelector(`#sessionsTabs [data-session-tab="${state.sessionTab}"]`);if(tab&&!tab.classList.contains('active'))tab.click();}
     for(const id of state.openDetails??[]){const node=document.getElementById(id);if(node?.tagName==='DETAILS')node.open=true;}
@@ -377,13 +382,33 @@ const restoreNavState=state=>{
           anchor.scrollIntoView({behavior:'instant',block:'start'});
         }else window.scrollTo({top:Number(state.scrollY)||0,behavior:'instant'});
         const restoredWrappers=new WeakSet();
-        const restoreOne=(wrap,left,top)=>{if(!wrap||wrap.clientWidth===0||restoredWrappers.has(wrap))return;if(wrap.scrollLeft!==0||wrap.scrollTop!==0){restoredWrappers.add(wrap);return;}wrap.scrollLeft=left;wrap.scrollTop=top;restoredWrappers.add(wrap);};
+        const restoreOne=(wrap,left,top)=>{if(!wrap||wrap.clientWidth===0||restoredWrappers.has(wrap))return;if(left>0&&wrap.scrollWidth<=wrap.clientWidth)return;if(wrap.scrollLeft!==0||wrap.scrollTop!==0){restoredWrappers.add(wrap);return;}wrap.scrollLeft=left;wrap.scrollTop=top;restoredWrappers.add(wrap);};
+        let matrixRestorationStopped=false,matrixFrame=0,matrixMutations,matrixSizes;
+        const pendingMatrixRoots=[
+          [document.querySelector('#meetingMatrix'),Number(state.matrixScrollLeft)||0,Number(state.matrixScrollTop)||0],
+          [document.querySelector('#individualSheetMatrix'),Number(state.individualScrollLeft)||0,Number(state.individualScrollTop)||0]
+        ].filter(([root,left,top])=>root&&(left>0||top>0));
+        const stopMatrixRestoration=()=>{if(matrixRestorationStopped)return;matrixRestorationStopped=true;matrixMutations?.disconnect();matrixSizes?.disconnect();cancelAnimationFrame(matrixFrame);for(const type of ['pointerdown','keydown','wheel','touchstart'])window.removeEventListener(type,stopMatrixRestoration,true);};
         const restoreMatrixScroll=()=>{
+          if(matrixRestorationStopped||restorationId!==navigationRestorationId)return;
           const meetingWrap=document.querySelector('#meetingMatrix .canonical-financial-wrap')??document.querySelector('#meetingMatrix');
           const individualWrap=document.querySelector('#individualSheetMatrix .canonical-financial-wrap')??document.querySelector('#individualSheetMatrix');
           restoreOne(meetingWrap,Number(state.matrixScrollLeft)||0,Number(state.matrixScrollTop)||0);
           restoreOne(individualWrap,Number(state.individualScrollLeft)||0,Number(state.individualScrollTop)||0);
+          if(pendingMatrixRoots.length&&pendingMatrixRoots.every(([root])=>restoredWrappers.has(root.querySelector('.canonical-financial-wrap'))))stopMatrixRestoration();
         };
+        // On F5, the table may arrive after the first animation frames while
+        // optional panels are still loading. Restore its saved column when its
+        // existing renderer supplies a visible wrapper, without waiting for all
+        // modules or keeping control after the user's first interaction.
+        if(pendingMatrixRoots.length){
+          const schedule=()=>{cancelAnimationFrame(matrixFrame);matrixFrame=requestAnimationFrame(restoreMatrixScroll);};
+          matrixMutations=new MutationObserver(schedule);
+          if(typeof ResizeObserver==='function')matrixSizes=new ResizeObserver(schedule);
+          for(const [root]of pendingMatrixRoots){matrixMutations.observe(root,{childList:true});matrixSizes?.observe(root);}
+          for(const type of ['pointerdown','keydown','wheel','touchstart'])window.addEventListener(type,stopMatrixRestoration,{capture:true,passive:true});
+          restorationCleanups.push(stopMatrixRestoration);
+        }
         restoreMatrixScroll();setTimeout(restoreMatrixScroll,60);setTimeout(restoreMatrixScroll,220);
         if(state.focusId)document.getElementById(state.focusId)?.focus?.({preventScroll:true});
         if(state.financialFocus){
@@ -391,17 +416,26 @@ const restoreNavState=state=>{
           const selector=`.matrix-cell-entry[data-meeting-id="${CSS.escape(String(f.meetingId??''))}"][data-membership-id="${CSS.escape(String(f.membershipId??''))}"][data-rubric-id="${CSS.escape(String(f.rubricId??''))}"] .cell-target-input`;
           host?.querySelector(selector)?.focus({preventScroll:true});
         }
-        // Initial financial panels can settle after the first frame. Preserve
-        // the requested viewport during that bounded layout phase, and yield
-        // immediately to the user's next navigation, wheel, pointer or key.
-        if(!anchor&&typeof ResizeObserver==='function'){
-          let stopped=false,frame=0,timer=0;
-          const restoreViewport=()=>{if(!stopped&&restorationId===navigationRestorationId)window.scrollTo({top:Number(state.scrollY)||0,behavior:'instant'});};
-          const observer=new ResizeObserver(()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(restoreViewport);});
-          const stop=()=>{if(stopped)return;stopped=true;observer.disconnect();cancelAnimationFrame(frame);clearTimeout(timer);for(const type of ['pointerdown','keydown','wheel','touchstart'])window.removeEventListener(type,stop,true);};
-          const view=document.getElementById('view-'+state.view);if(view)observer.observe(view);
+        // Preserve an explicit workspace destination through asynchronous layout
+        // changes until the user interacts or navigates. Financial viewport
+        // restoration keeps its existing bounded lifetime.
+        const stableWorkspaceAnchor=anchor&&['marketEnginePanel','communityEnginePanel','adManagerPanel','ecoVisualMediaStudio','valueNetworkOperational'].includes(state.anchor);
+        if((!anchor||stableWorkspaceAnchor)&&typeof ResizeObserver==='function'){
+          let stopped=false,frame=0,timer=0,mutations;
+          const restoreViewport=()=>{if(stopped||restorationId!==navigationRestorationId)return;if(stableWorkspaceAnchor){if(anchor.isConnected&&Math.abs(anchor.getBoundingClientRect().top-(parseFloat(getComputedStyle(anchor).scrollMarginTop)||0))>1)anchor.scrollIntoView({behavior:'instant',block:'start'});}else window.scrollTo({top:Number(state.scrollY)||0,behavior:'instant'});};
+          const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(restoreViewport);};
+          const observer=new ResizeObserver(schedule);
+          const stop=()=>{if(stopped)return;stopped=true;observer.disconnect();mutations?.disconnect();cancelAnimationFrame(frame);clearTimeout(timer);for(const type of ['pointerdown','keydown','wheel','touchstart'])window.removeEventListener(type,stop,true);};
+          const view=document.getElementById('view-'+state.view);
+          if(view){
+            observer.observe(view);
+            if(stableWorkspaceAnchor){
+              const observed=new WeakSet(),observePanels=()=>{for(const panel of view.children)if(!observed.has(panel)){observed.add(panel);observer.observe(panel);}};
+              observePanels();mutations=new MutationObserver(()=>{observePanels();schedule();});mutations.observe(view,{childList:true,subtree:true});
+            }
+          }
           for(const type of ['pointerdown','keydown','wheel','touchstart'])window.addEventListener(type,stop,{capture:true,passive:true});
-          timer=setTimeout(stop,1500);cancelNavigationRestoration=stop;
+          if(!stableWorkspaceAnchor)timer=setTimeout(stop,1500);restorationCleanups.push(stop);
         }
     });
 };
@@ -557,7 +591,7 @@ const temporalCommerceUI=mountTemporalCommerceUI({app,isManager,notify:toast});
 const financialExplanationsUI=mountFinancialExplanationsUI({app,isManager});
 const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: fail });
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
-const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt });
+const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt, showError:fail });
 const sessionsUI = mountSessionsUI({
     app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,navigate:go,
     openDetail:(type,id)=>detailUI.open(type,id),showError:fail,notify:toast,
@@ -1948,6 +1982,8 @@ const renderModules = () => {
     for (const m of chosen) {
         const a = document.createElement('article');
         a.className = 'module-card';
+        a.dataset.capabilityId=m.id;a.tabIndex=0;a.setAttribute('role','button');
+        a.onkeydown=event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();a.click();}};
         a.innerHTML = html`<span class="module-status ${m.status.toLowerCase()}">${statusCopy(m.status)}</span><strong>${moduleLabel(m)}</strong><small>${m.id} · ${tx('Lot','Lot')} ${m.lot} · ${m.workspace === 'SPECIALIZED' ? tx('moteur spécialisé','specialized engine') : tx('workspace universel','universal workspace')}</small>`;
         a.onclick = () => void openModule(m.id);
         root.append(a);
@@ -2012,6 +2048,14 @@ const openModule = async (id) => {
         if(id==='MARKETPLACE.CORE')await personalShopsUI.open();
         await advancedUI.openMarket();return;
     }
+    if(m.status==='FOUNDATION_ACTIVE'&&['COMMUNITY.FORUM','COMMUNITY.PRO_HUBS'].includes(id)){
+        go('ecosystem',{anchor:'communityEnginePanel',force:true});
+        await communityShopUI.refresh();return;
+    }
+    if(m.status==='FOUNDATION_ACTIVE'&&id==='ADS.MANAGER'){
+        go('ecosystem',{anchor:'adManagerPanel',force:true});
+        await adManagerUI.refresh();return;
+    }
     if(m.status==='FOUNDATION_ACTIVE'&&id==='SEARCH.UNIVERSAL'){await go('ecosystem',{anchor:'universalSearchPanel',force:true});const panel=document.getElementById('universalSearchPanel');if(panel?.tagName==='DETAILS')panel.open=true;return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'CALENDAR.UNIFIED'){go('ecosystem',{anchor:'unifiedCalendarPanel',force:true});const panel=document.querySelector('#unifiedCalendarPanel');if(panel?.tagName==='DETAILS')panel.open=true;void renderUnifiedCalendar();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'GOVERNANCE.DOCUMENT_STUDIO'){go('documents',{force:true});void documentsUI.refresh();return;}
@@ -2042,6 +2086,13 @@ const openModule = async (id) => {
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'SAFETY.QUIET_WATCH'){go('dashboard',{anchor:'quietWatchCenter',force:true});quietWatchUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'AI.FOUNDER'){go('control',{anchor:'founderAICenter',force:true});founderAIUI.open();return;}
     if(m.status === 'FOUNDATION_ACTIVE' && id === 'DASHBOARDS.ALL'){go('dashboard',{anchor:'roleDashboardsCenter',force:true});roleDashboardsUI.open();return;}
+    const destination=m.status==='FOUNDATION_ACTIVE'?canonicalCapabilityDestination(id):null;
+    if(destination){
+        const {view,preset,...options}=destination;
+        await go(view,{...options,force:true});
+        if(preset)window.dispatchEvent(new CustomEvent('eco:value-network-preset',{detail:{kind:preset}}));
+        return;
+    }
     const route = m.workspace === 'SPECIALIZED' && m.status === 'FOUNDATION_ACTIVE' ? specializedRoute(id) : undefined;
     if (route) {
         go(route);
@@ -2240,6 +2291,12 @@ const refreshOptionalOfflineSafe=async(label,fn)=>{
         throw error;
     }
 };
+window.addEventListener('eco:view-changed',event=>{
+    if(event.detail?.view!=='dashboard'||hydratedDashboardScope!==dashboardScope())return;
+    // Refresh the existing projections when the user returns or refreshes Home.
+    // Context hydration owns the initial load; there is no background polling.
+    void Promise.all([groupHomeUI.refresh(),roleDashboardsUI.refresh()]).catch(fail);
+});
 const openNoticeAction=action=>{
     if(!action?.view)return;
     go(action.view,{anchor:action.anchor,meetingId:action.meetingId,matrixMeetingId:action.meetingId,sheetMode:action.membershipId&&action.rubricId?'meeting':undefined,membershipId:action.membershipId,rubricId:action.rubricId,force:true});
@@ -2517,7 +2574,10 @@ window.addEventListener('eco:financial-live-update',event=>{
 });
 
 const refreshGroupContext = async () => {
-    const requestedGroup=app.activeGroup();
+    const requestedGroup=app.activeGroup(),requestedDashboardScope=dashboardScope();
+    hydratedDashboardScope='';
+    groupHomeUI.clearForContext();
+    roleDashboardsUI.clearForContext?.();
     personalCockpitUI.clearForContext?.();
     personalShopsUI.clearForContext?.();
     const refreshPersonalShops=personalShopsUI.captureRefresh?.();
@@ -2578,6 +2638,9 @@ const refreshGroupContext = async () => {
         if(manage)await renderLedger();
         else{receiptPositions=[];financialSheetEvents=[];financialPendingSheetEntries=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
+    if(requestedDashboardScope!==dashboardScope())return;
+    hydratedDashboardScope=requestedDashboardScope;
+    await refreshOptionalOfflineSafe('role-dashboards',()=>roleDashboardsUI.refresh());
     if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications);else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
     await refreshOptionalOfflineSafe('universe',renderUniverse);
     await refreshOptionalOfflineSafe('inbox',renderInbox);
@@ -3295,6 +3358,9 @@ async function start() {
             console.info('Offline product catalog snapshot unavailable; core group workspace remains usable.');
         }
         populateWorkspaceModules();
+        // The catalogue is independent of optional group projections. Make its
+        // existing destinations available as soon as the catalogue is loaded.
+        renderModules();
         renderLotFilters();
         renderEcosystemHighlights();
         renderDomainHubs();

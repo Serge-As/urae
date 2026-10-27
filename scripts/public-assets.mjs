@@ -2,7 +2,7 @@ import {cp,mkdir} from 'node:fs/promises';
 import path from 'node:path';
 const base=path.resolve('.build'),publicRoot=path.join(base,'public');
 await mkdir(publicRoot,{recursive:true});
-for(const name of ['apps','packages','src','vendor','public-notebook.html','index.html','external-ad.html','styles.css','manifest.webmanifest','sw.js','eco-shell-manifest.json']){
+for(const name of ['apps','packages','src','vendor','public-notebook.html','index.html','external-ad.html','styles.css','canopee.css','manifest.webmanifest','sw.js','eco-shell-manifest.json']){
  await cp(path.join(base,name),path.join(publicRoot,name),{recursive:true,filter:source=>{
   const relative=path.relative(base,source).replaceAll('\\','/');
   return !relative.startsWith('packages/auth');

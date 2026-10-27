@@ -62,7 +62,7 @@ test('Accueil and Séances implement the minimum frame with non-destructive mana
     readFile('apps/web/src/detail-ui.js','utf8'),
     readFile('apps/web/index.html','utf8')
   ]);
-  for(const phrase of ['Groupe + code','Déclaration','Mandat du Bureau','Recettes depuis exercice','Dépenses depuis exercice','Solde caisse à ce jour','Membres redevables / impayés / amendes','Classement Tontines','Ma situation Tontines','Mes dettes / échéances'])assert.ok(home.includes(phrase),phrase);
+  for(const phrase of ['Groupe + code','Déclaration','Mandat du Bureau','Entrées du Récap','Sorties du Récap','Solde de caisse · Ledger','Membres redevables / impayés / amendes','Le cycle, tour après tour','Ma situation Tontines','Mes dettes / échéances'])assert.ok(home.includes(phrase),phrase);
   for(const phrase of ['Finances de la séance','Gestion des dettes à ce jour','Caisses / dépenses du Back-office comprises','Présence et émargement','Bénéficiaires et preuves de réception','Liste des séances / précédentes séances','Lieu / canal','Thème','Tenue / code vestimentaire'])assert.ok(detail.includes(phrase),phrase);
   assert.ok(home.includes('Gérer / archiver les rubriques'));
   assert.ok(!home.includes('Supprimer définitivement les rubriques'));

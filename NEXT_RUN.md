@@ -1,3 +1,19 @@
+## Livraison Canopée autorisée — 27 octobre 2026
+
+Le fondateur autorise la publication de Canopée + Repères et confirme URAE public par son propre choix. Le lot de livraison part du parent distant `35f4ff6774685a6a06058093ca30f5165551f312` et conserve ses différences historiques. Il complète la refonte locale par les accès directs aux propriétaires déjà existants depuis le catalogue, son accès au clavier et la finition des tableaux et de la saisie. Les 164 capacités et leurs maturités restent conservées ; dossier préparatoire, service externe et fonction opérationnelle restent distincts. Voir `docs/change-impact/CIR-2026-10-27-CANOPEE-DELIVERY.md` et la matrice de placement.
+
+Qualification du SHA final et publication en cours : ne pas déduire un déploiement des preuves locales antérieures. La CI complète doit passer Chromium et WebKit Linux sans skip, puis réaliser le BIR D1/source et le contrôle public. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables.
+
+## Canopée + Repères — intégration locale qualifiée, 27 octobre 2026
+
+Candidate **1.5.2.42-canopee-reperes**, code qualifié `0b0836ee007254074c57916cd866c1f5e8828b98`, branche `codex/canopee-reperes-20261026`. **VERIFIED_LOCAL pour la refonte : 1062/1062 natifs, 40/40 Chromium et 16/16 scénarios WebKit de présentation/navigation/contexte**. Dans la suite WebKit élargie : 20/22, dont deux échecs Local Room liés à l’absence de WebRTC dans WebKit Windows 26.0 ; aucun test ignoré ou instable. Le contrôle sans chargement de l’app confirme cette limite du runtime ; les 6/6 scénarios souverains passent dans Chromium. La qualification complète de tous les navigateurs reste incomplète. Compilation, cache PWA complet et tests de packaging réussis. Les reçus détaillent les fichiers testés ; les résultats historiques v41 restent distincts.
+
+Accueil de groupe financier, ouverture/report d’exercice, aperçu des fiches du Récap, dettes, cycle des tontines, rendez-vous et accès aux propriétaires existants Boutiques/Forum/AdManager/Médias. Palette dorée/blanche/rouge/verte, en-tête mobile compact, Senior/Assisté et FR/EN conservés. Date de dernière synchronisation, opérations locales en attente et données indisponibles explicites. Après arrêt réel du serveur, le groupe et son solde enregistré sont retrouvés. Réponses et formulaires obsolètes invalidés par compte/tenant/groupe.
+
+**Aucune publication v42 ni recette physique terrain.** Aucun changement de schéma/migration, moteur financier ou prestataire ; `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Preuves : `docs/release/evidence/CANOPEE-REPERES-QUALIFICATION-2026-10-26.json`, CIR et rappel du 26 octobre. Pour une future publication, conserver la filiation distante, qualifier la source exacte par la CI complète, puis BIR de production et vérifications publiques. Le miroir local ne possède pas de remote. Crédits exacts non mesurables.
+
+## Historique conservé
+
 ## Audit finalisé et livraison v41 vérifiée — 25 octobre 2026
 
 Production **1.5.2.41-programme-audit**, source `6d3264bd7f345d808fb8cbfcc618d99c274d3891`, arbre `b2fc714baf776d0de9e36d542d1dd654e8aa5eea`, Worker `b426cd0c-af79-4d7b-9dfc-aed6333ad457`. Livraison et qualification indépendante du même SHA : [40235349803 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40235349803) ; [40235349738 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40235349738). **1061/1061 natifs, 82/82 Chromium et 20/20 WebKit**, zéro échec et zéro ignoré. Santé, catalogue de **164 capacités** et 76 empreintes publiques vérifiés lors de la livraison ; **13 fichiers publics relus indépendamment**, dont le correctif `data-quality-ui.js`, CSS et PWA. Pas d’écriture de recette en production.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-25",
+  "generatedOn": "2026-10-27",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -25,6 +25,33 @@
     "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
   ],
   "records": [
+    {
+      "id": "visual.canopee-deployment.20261027",
+      "scope": "Same-source publication, business placement and financial table presentation",
+      "status": "IN_PROGRESS",
+      "observedOn": "2026-10-27",
+      "statement": "Founder explicitly authorizes deployment and confirms URAE public. Preserves remote parent35f4ff67. Canonical presentation handoffs and table finishing, no engine/schema/financial mutation. Exact-source CI, production backup and public verification must complete before VERIFIED_REMOTE.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-27-CANOPEE-DELIVERY.md",
+        "tests/browser/capability-placement-canopee-20261027.spec.mjs"
+      ],
+      "next": "Wait complete delivery and independent qualifications on exact SHA, verify live identity and public assets, document bounded backup and field status."
+    },
+    {
+      "id": "visual.canopee-reperes.20261026",
+      "scope": "Group-first presentation and navigation, existing owners preserved",
+      "status": "VERIFIED_LOCAL",
+      "statement": "Local v42 presentation qualified at 0b0836ee007254074c57916cd866c1f5e8828b98;1062/1062 native and 40/40 Chromium pass. WebKit: 16/16 visual/navigation/context pass, total 20/22; 2 Local Room failures because WebRTC is absent in WebKit Windows 26.0. Zero skipped/flaky; full browser qualification remains incomplete. Real offline origin shutdown and canonical saved cash verified. Existing business owners preserved. NOT_DEPLOYED, real money disabled, physical field acceptance pending.",
+      "observedOn": "2026-10-26",
+      "evidence": [
+        "docs/change-impact/CIR-2026-10-26-CANOPEE-REPERES.md",
+        "docs/memory/recalls/RECALL-2026-10-26-CANOPEE-REPERES.md",
+        "docs/release/evidence/CANOPEE-REPERES-QUALIFICATION-2026-10-26.json",
+        "tests/browser/canopee-reperes-20261026.spec.mjs",
+        "tests/canopee-packaging-20261026.test.mjs"
+      ],
+      "next": "Local implementation is reviewable. A future release requires full exact-SHA remote qualification, production backup and public runtime verification; preserve the remote lineage."
+    },
     {
       "id": "business-value-network-20261022",
       "scope": "L11/L12 grouped business experiments and consented pooled needs",

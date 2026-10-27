@@ -4,7 +4,7 @@
  * as all other calls, never a public /media URL or externally supplied remote origin.
  */
 const locations=[
-  ['HOME_HERO','#view-dashboard > .hero','eco-home-visual'],
+  ['HOME_HERO','#view-dashboard > .cockpit-welcome, #view-dashboard > .hero','eco-home-visual'],
   ['GROUP_COVER','#groupHomePanel > .panel-head','eco-group-visual'],
   ['GROUP_LOGO','#activeGroupCard','eco-logo-visual'],
   ['MARKET_HERO','#marketEnginePanel','eco-market-visual'],

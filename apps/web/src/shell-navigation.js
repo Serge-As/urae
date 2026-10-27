@@ -60,7 +60,13 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
   open.setAttribute('aria-haspopup','dialog');open.setAttribute('aria-controls','ecoNavigationDialog');open.setAttribute('aria-expanded','false');
   actions.append(resume,pin,open);const shortcut=el('span','eco-navigation-shortcut','Ctrl / ⌘ K');open.append(shortcut);
   const favoriteStrip=el('div','eco-navigation-favorites');favoriteStrip.id='ecoNavigationFavorites';
-  const guide=el('p','eco-navigation-guide');bar.append(trail,actions,favoriteStrip,guide);content.prepend(bar);
+  const groupSpaces=el('nav','eco-navigation-group-spaces');groupSpaces.id='ecoGroupSpaces';
+  const guide=el('p','eco-navigation-guide');bar.append(trail,actions,groupSpaces,favoriteStrip,guide);content.prepend(bar);
+  // Share the real, wrapping context height with presentation scroll margins.
+  // No viewport polling or financial-editor relocation is needed.
+  if(typeof ResizeObserver==='function')new ResizeObserver(()=>{
+    content.style.setProperty('--eco-navigation-height',Math.ceil(bar.getBoundingClientRect().height)+'px');
+  }).observe(bar);
   const skip=el('a','eco-skip-link','Aller au contenu');skip.href='#ecoMainContent';content.id='ecoMainContent';content.tabIndex=-1;document.body.prepend(skip);
   const dialog=el('dialog','eco-navigation-dialog');dialog.id='ecoNavigationDialog';dialog.setAttribute('aria-labelledby','ecoNavigationTitle');
   const header=el('div','eco-navigation-dialog-head'),title=el('h2',null);title.id='ecoNavigationTitle';const close=button('Fermer','ghost');header.append(title,close);
@@ -107,6 +113,16 @@ export function mountShellNavigation({getContext=()=>({}),getCurrentState=()=>({
     hint.textContent=tx('Les mêmes parcours, accessibles ici. Épinglez jusqu’à 8 favoris ; ils restent séparés par compte et groupe sur cet appareil pendant 30 jours.','The same journeys, available here. Pin up to 8 favorites; they stay separate by account and group on this device for 30 days.');
     clear.textContent=tx('Effacer mes favoris','Clear my favorites');guide.textContent=tx('Choisissez un espace ou recherchez une fonction. Votre saisie en cours reste conservée à l’ouverture du menu.','Choose a space or search for a function. Opening the menu preserves your current entry.');
     skip.textContent=tx('Aller au contenu','Skip to content');bar.setAttribute('aria-label',tx('Contexte de navigation','Navigation context'));
+    groupSpaces.replaceChildren();groupSpaces.hidden=!ctx.group;groupSpaces.setAttribute('aria-label',tx('Repères du groupe actif','Active group destinations'));
+    if(ctx.group)for(const [selector,fr,eng] of [
+      ['#groupHomeNavBtn','Accueil du groupe','Group home'],['#sessionsNavBtn','Séances','Sessions'],['#memberSheetsNavBtn','Fiches','Sheets'],['#recapNavBtn','Cockpit · Récap','Cockpit · Recap'],
+      ['[data-module-open="MARKETPLACE.CORE"]','Boutiques','Shops'],['[data-module-open="COMMUNITY.FORUM"]','Forum','Forum']
+    ]){
+      const row=all.find(x=>x.source.matches(selector));if(!row)continue;
+      const b=button(tx(fr,eng),'eco-navigation-group-space');b.onclick=()=>activate(row);
+      const state=getCurrentState(),active=state.view===row.view&&(row.anchor?state.anchor===row.anchor:!state.anchor);
+      if(active){b.classList.add('active');b.setAttribute('aria-current','page');}groupSpaces.append(b);
+    }
     favoriteStrip.replaceChildren();favoriteStrip.setAttribute('aria-label',tx('Mes favoris','My favorites'));
     const ids=new Set(favorites.ids());for(const row of all.filter(e=>ids.has(e.id))){const b=button(row.label,'eco-navigation-favorite');b.onclick=()=>activate(row);favoriteStrip.append(b);}favoriteStrip.hidden=!favoriteStrip.childElementCount;
     const pinned=Boolean(chosen&&ids.has(chosen.id));

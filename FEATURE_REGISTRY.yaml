@@ -1,3 +1,5 @@
+# CURRENT 2026-10-27: Canopée deployment authorized, URAE public confirmed by founder; canonical placement/table qualification pending, no maturity promotion.
+# CURRENT 2026-10-27 VERIFIED_LOCAL: v42 Canopée + Repères / 0b0836ee007254074c57916cd866c1f5e8828b98;1062native/40Chromium/20passed/2failedWebKit;WebRTCWindowsLimit;0skipped;offline origin shutdown verified;NOT_DEPLOYED;FIELD_ACCEPTED=NOT_ACCEPTED.
 # CURRENT 2026-10-25 VERIFIED_REMOTE: v41/6d3264bd7f345d808fb8cbfcc618d99c274d3891;1061native/82Chromium/20WebKit; stable recovery controls, strict proposal proofs; FIELD_ACCEPTED=NOT_ACCEPTED.
 # CURRENT 2026-10-25: v41 programme-audit candidate; reproduced recovery pointer loss, stable settings controls and strict proposal evidence; final qualification/deployment pending; production remains v40/67095d43.
 # CURRENT 2026-10-25 VERIFIED_REMOTE: v40/67095d43701c3fcfb51461f8b5e7ac0ca3d4e71f;1058native/81Chromium/19WebKit;76 CI/13 independent public hashes;FIELD_ACCEPTED=NOT_ACCEPTED.

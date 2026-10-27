@@ -3,6 +3,10 @@
 ## Mission
 Continuer Eco-System sans recommencer, simplifier ou remplacer silencieusement les acquis.
 
+## Décision directe du fondateur — 27 octobre 2026
+
+Le fondateur confirme : « C'est moi qui ai rendu Urae public, ne t'inquiète plus pour cela. » Conserver URAE public selon son choix ; cette décision remplace la désignation « privé » du 24 octobre ci-dessous. Le code du produit continue dans URAE et les sources publiques auxiliaires dans UTRAE. Secrets, cookies, sessions, données financières/personnelles réelles et sauvegardes D1 restent privés et exclus de tout Git ou artefact public. Déploiement Canopée explicitement autorisé ; voir `docs/change-impact/CIR-2026-10-27-CANOPEE-DELIVERY.md`.
+
 ## Vérité de reprise au 8 octobre 2026
 - production attestée : `1.5.2.14-live-sync`, SHA `d027f09a1382cd29054b33e274f3fd3bf9f8d9f3`, livraison GitHub Actions `37765653486 SUCCESS` ;
 - branche de livraison active : `fix/1.5.2.10-offline-conflicts-loans-20261003` ;
