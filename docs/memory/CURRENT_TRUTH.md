@@ -1,3 +1,11 @@
+## Huit lots Canopée — candidat v43, 30 octobre 2026
+
+Les huit lots / 32 critères autorisés sont intégrés sur la base v42 `1d6d2767e208b240d40f5fdd578f11e2582a8c8f`, sans migration ni mutation de données réelles. Matrice et limites : `docs/implementation/EIGHT_LOTS_2026-10-30.md`. Qualification locale ciblée : 4/4 Chromium (démarrage partiel, récupération, deux gestionnaires, clôture périmée), 7/7 tests ciblés de versions, voix et brouillons. La projection de synthèse est bornée au membre ; les révisions de brouillon sont rejouées dans l’ordre avec comparaison de contenu. Le téléchargement de la dictée française locale reste explicite et ses données sont isolées des finances.
+
+Les suites complètes du SHA final, Chromium/WebKit Linux, BIR D1/source et preuve publique restent à terminer. La production attestée reste v42 ; aucun résultat local ne vaut déploiement ou acceptation terrain. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables. Ne pas recommencer les 28 lots/92 propositions ni effacer les stockages d’appareil.
+
+## Historique conservé
+
 ## Canopée + Repères v42 — livraison vérifiée le 27 octobre 2026
 
 Production **1.5.2.42-canopee-reperes**, source **`1d6d2767e208b240d40f5fdd578f11e2582a8c8f`**, Worker `cad0eb3d-47bc-4c9f-b072-851f91ced816`. [Livraison 40545875828 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40545875828) et [qualification indépendante 40545876173 SUCCESS](https://github.com/Serge-As/urae/actions/runs/40545876173) du même SHA : **1062/1062 natifs, 99/99 Chromium et 37/37 WebKit Linux**, zéro échec, ignoré ou instable. Santé, catalogue et **81 fichiers publics** relus indépendamment par SHA256. Identités source/build/cache cohérentes ; argent réel désactivé.

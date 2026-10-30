@@ -163,7 +163,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
     openWorkspaceBtn.onclick=()=>void Promise.resolve(openGroupWorkspace?.(groupPicker.value)).catch(showError);
     associations.append(groupPicker,openWorkspaceBtn);
     if(forumsUnavailable)associations.append(el('p',tr('Répertoire temporairement indisponible : vos autres groupes ne sont pas supprimés.','Directory temporarily unavailable: your other groups have not been deleted.'),'truth-notice'));
-    spaces.append(associations);
+    spaces.prepend(associations);
     const rotatingGroups=forumGroups.filter(g=>g.kind==='rotating_tontine'||g.kind==='in_kind_tontine');
     const rotatingNav=document.getElementById('myRotatingTontinesNavBtn');
     if(rotatingNav&&!forumsUnavailable)rotatingNav.hidden=!rotatingGroups.length;
@@ -171,7 +171,7 @@ export function mountPersonalCockpitUI({app,getGroups,getMembers,getMeetings,nav
       const directory=el('section',undefined,'item personal-group-directory');directory.id='personalRotatingTontines';
       directory.append(el('strong',tr('Mes tontines rotatives · '+rotatingGroups.length,'My rotating tontines · '+rotatingGroups.length)),el('p',tr('Retrouvez ici toutes vos tontines, comme membre ou gestionnaire. Ouvrir une tontine conserve ses rubriques, ses cycles, ses parts et son historique.','Find all your tontines as a member or manager. Opening one preserves its categories, cycles, shares and history.'),'hint'));
       for(const group of rotatingGroups){const button=el('button',String(group.name),'secondary');button.type='button';button.dataset.rotatingGroup=group.id;button.onclick=()=>void Promise.resolve(openGroupWorkspace?.(group.id)).catch(showError);directory.append(button);}
-      spaces.append(directory);
+      associations.insertAdjacentElement('afterend',directory);
     }
     void renderPulse();
     if(!groupId){

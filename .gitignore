@@ -10,3 +10,5 @@ playwright-report/
 *.log
 workers/api/wrangler.ci.toml
 apps/web/vendor/documents/
+apps/web/vendor/voice/
+.cache/optional-voice/

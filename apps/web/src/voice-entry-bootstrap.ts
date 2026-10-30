@@ -1,13 +1,11 @@
 import {mountVoiceEntryUI} from './voice-entry-ui.js';
-import {mountExpenseRecapUI} from './expense-recap-ui.js';
-import {mountMemberDossierUI} from './member-dossier-ui.js';
-import {mountDocumentsUI} from './documents-ui.js';
-import {mountContextualGroupUI} from './contextual-group-ui.js';
-import {mountMasterClosureUI} from './master-closure-ui.js';
-import {mountMasterGovernanceUI} from './master-governance-ui.js';
-
-// Voice and document styles live in styles.css, permitted by the production CSP.
-
-
-const start=()=>{mountVoiceEntryUI();mountExpenseRecapUI();mountMemberDossierUI();mountDocumentsUI();mountContextualGroupUI();mountMasterClosureUI();mountMasterGovernanceUI();};
+// Only the voice compatibility binding precedes main. Secondary controllers
+// mount after the authenticated core and cannot hold restoration indefinitely.
+const start=()=>{mountVoiceEntryUI();};
 if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',start,{once:true});else start();
+window.addEventListener('eco:core-ready',()=>{
+  void import('./expense-recap-ui.js').then(m=>m.mountExpenseRecapUI()).catch(()=>{});
+  void import('./contextual-group-ui.js').then(m=>m.mountContextualGroupUI()).catch(()=>{});
+  void import('./master-closure-ui.js').then(m=>m.mountMasterClosureUI()).catch(()=>{});
+  void import('./master-governance-ui.js').then(m=>m.mountMasterGovernanceUI()).catch(()=>{});
+},{once:true});

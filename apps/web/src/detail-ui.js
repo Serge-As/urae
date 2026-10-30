@@ -3,7 +3,7 @@ const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),docu
 const link=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
 const amountFor=(receipts,{meetingId,rubricId})=>receipts.filter(r=>(!meetingId||r.meetingId===meetingId)&&(!rubricId||r.rubricId===rubricId)).reduce((n,r)=>n+Number(r.netAmount??0),0);
 
-export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,getRubrics,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error}){
+export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,getRubrics,isManager=()=>false,fmt=n=>String(n),date=x=>String(x),showError=console.error,beforeOpen=async()=>true}){
   const title=document.getElementById('detailTitle'),subtitle=document.getElementById('detailSubtitle'),metrics=document.getElementById('detailMetrics'),body=document.getElementById('detailBody');
   if(!title||!subtitle||!metrics||!body)return{open:async()=>{}};
   let previous='dashboard',openedType='',openedId='';
@@ -59,7 +59,7 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     const renderHistory=()=>{
       historyList.replaceChildren();const grouped=new Map();
       for(const r of historyRows){const key=JSON.stringify([r.meetingId??'',r.rubricId??'']);if(!grouped.has(key))grouped.set(key,{label:(r.meetingTitle??'Sans séance')+' · '+(r.rubricName??'Sans rubrique'),rows:[]});grouped.get(key).rows.push(r);}
-      for(const g of grouped.values()){const d=document.createElement('details');d.open=true;d.append(el('summary',g.label+' · '+g.rows.length+' événement(s)'));for(const r of g.rows){const item=el('article',undefined,'item'),nature=r.financialNature==='LOAN_DEBT'?'Prêt / dette — exclu des cotisations nettes':r.isModified?'Contribution modifiée':'Contribution saisie';item.append(el('strong',nature+' · '+fmt(r.amount?.amount??r.netAmount)),row('Montant net',fmt(r.netAmount)),row('Date / heure',date(r.receivedAt)),row('Auteur',r.receivedByName??actorName(r.receivedBy)));if(r.corrections?.length){for(const c of r.corrections)item.append(row('Modification',date(c.at)+' · '+(c.authorName??c.authorId??'—')+' · Motif : '+(c.reason??'—')));}d.append(item);}historyList.append(d);}
+      for(const g of grouped.values()){const d=document.createElement('details');d.open=true;const summary=el('summary',g.label+' · '+g.rows.length+' événement(s)');d.append(summary);const source=g.rows[0];if(source?.meetingId)d.append(link(source.meetingTitle??'Voir la séance','meeting',source.meetingId));if(source?.rubricId)d.append(link(source.rubricName??'Voir la rubrique','rubric',source.rubricId));for(const r of g.rows){const item=el('article',undefined,'item'),nature=r.financialNature==='LOAN_DEBT'?'Prêt / dette — exclu des cotisations nettes':r.isModified?'Contribution modifiée':'Contribution saisie';item.append(el('strong',nature+' · '+fmt(r.amount?.amount??r.netAmount)),row('Montant net',fmt(r.netAmount)),row('Date / heure',date(r.receivedAt)),row('Auteur',r.receivedByName??actorName(r.receivedBy)));if(r.corrections?.length){for(const c of r.corrections)item.append(row('Modification',date(c.at)+' · '+(c.authorName??c.authorId??'—')+' · Motif : '+(c.reason??'—')));}d.append(item);}historyList.append(d);}
       if(!historyRows.length)historyList.append(el('p','Aucune contribution enregistrée.','hint'));
     };
     const loadHistory=async()=>{
@@ -229,7 +229,8 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
     else body.append(el('p','Le tableau global de cette rubrique et sa configuration sont réservés aux responsables habilités.','hint'));
   };
 
-  async function open(type,id,preservePrevious=false){
+  async function open(type,id,preservePrevious=false,reviewed=false){
+    if(!reviewed&&!await beforeOpen(type,id))return;
     try{openedType=type;openedId=id;const active=currentView();if(active!=='detail'&&!preservePrevious)previous=active;metrics.replaceChildren();body.replaceChildren(el('p','Chargement…','hint'));navigate('detail');
       if(type==='group')await groupDetail(id);else if(type==='member')await memberDetail(id);else if(type==='meeting')await meetingDetail(id);else if(type==='rubric')await rubricDetail(id);else throw Error('DETAIL_TYPE_UNSUPPORTED');
       try{history.replaceState(null,'','#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id));}catch{}

@@ -28,7 +28,7 @@ const mime = {
 const securityHeaders = {
   'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin','x-frame-options':'DENY',
   'permissions-policy':'camera=(self), microphone=(self), geolocation=(self), payment=(), usb=()',
-  'content-security-policy':"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+  'content-security-policy':"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self'; img-src 'self' data: blob:; media-src 'self' blob:; connect-src 'self' blob:; font-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 };
 
 try { await access(path.join(root, 'apps/web/index.html')); }
@@ -63,7 +63,8 @@ const requestHandler = async (req,res) => {
     const s=await stat(file); if(!s.isFile()) throw new Error('not file');
     const data=await readFile(file);
     const cacheControl = pathname === '/sw.js' ? 'no-cache' : 'no-store';
-    res.writeHead(200,{'content-type':mime[path.extname(file)]??'application/octet-stream','cache-control':cacheControl,...securityHeaders}); res.end(data);
+    const assetSecurity=pathname==='/vendor/voice/worker.js'?{...securityHeaders,'content-security-policy':"default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' blob:; worker-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"}:securityHeaders;
+    res.writeHead(200,{'content-type':mime[path.extname(file)]??'application/octet-stream','cache-control':cacheControl,...assetSecurity}); res.end(data);
   } catch { res.writeHead(404,{'content-type':'text/plain; charset=utf-8',...securityHeaders}); res.end('Not found'); }
 };
 

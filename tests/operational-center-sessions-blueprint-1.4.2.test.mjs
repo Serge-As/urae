@@ -107,13 +107,15 @@ test('PWA precaches all Blueprint UI modules',async()=>{
 });
 
 
-test('PWA shell refresh remains versioned without forced offline reload',async()=>{
+test('PWA shell refresh follows the usable workspace and remains versioned without forced offline reload',async()=>{
   const [main,sw,html]=await Promise.all([
     readFile('apps/web/src/main.js','utf8'),
     readFile('apps/web/sw.js','utf8'),
     readFile('apps/web/index.html','utf8')
   ]);
-  assert.match(main,/void ensureCurrentServiceWorker\(\);[\s\S]*?void start\(\);/);
+  // Shell downloads must not delay authentication on a cold mobile profile;
+  // finally still registers recovery support if startup reports an error.
+  assert.match(main,/void start\(\)\.finally\(\(\)=>void ensureCurrentServiceWorker\(\)\);/);
   const release=sw.match(/const CACHE = 'eco-system-v(\d+)-[^']+';/);
   assert.ok(release,'versioned service-worker cache');
   const shellVersion=release[1];

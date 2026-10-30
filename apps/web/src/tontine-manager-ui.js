@@ -1,3 +1,5 @@
+import {tontineTimeline}from'./tontine-timeline.js';
+import {contextLink}from'./context-link.js';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(className)n.className=className;return n;};
 const value=id=>String(document.getElementById(id)?.value??'').trim();
 const num=id=>Number(value(id));
@@ -64,11 +66,11 @@ export function mountTontineManagerUI({app,getRubrics,getMembers,notify=()=>{},s
     if(!cycles.length){root.append(el('p','Aucun cycle Tontine permanent enregistré. Créez-en un depuis une rubrique Tontine du groupe.','hint'));return;}
     for(const cycle of cycles){
       const card=el('article',undefined,'item'),data=cycle.data??{};
-      card.append(el('strong',cycle.title),el('p',(data.rounds??'—')+' tour(s) · '+(data.potsPerRound??'—')+' pot(s) par tour'+(data.nominalPotAmount?' · pot prévu '+fmt(Number(data.nominalPotAmount)):'') ));
+      card.append(el('strong',cycle.title),tontineTimeline(shares.filter(s=>s.data?.cycleId===cycle.id),getMembers()),el('p',(data.rounds??'—')+' tour(s) · '+(data.potsPerRound??'—')+' pot(s) par tour'+(data.nominalPotAmount?' · pot prévu '+fmt(Number(data.nominalPotAmount)):'') ));
       const list=el('div',undefined,'stack'),own=shares.filter(s=>s.data?.cycleId===cycle.id).sort((a,b)=>Number(a.data?.scheduledRound??999)-Number(b.data?.scheduledRound??999));
       for(const share of own){
         const row=el('article',undefined,'item'),m=getMembers().find(x=>x.id===share.data?.membershipId),state=String(share.data?.completionState??'REGISTERED');
-        row.append(el('strong',share.title),el('p',(m?.displayName??share.data?.membershipId??'Membre')+' · '+state+' · tour '+(share.data?.scheduledRound??'non programmé')));
+        row.append(el('strong',share.title),m?contextLink(m.displayName,'member',m.id):el('span','Membre'),el('p',(m?.displayName??share.data?.membershipId??'Membre')+' · '+state+' · tour '+(share.data?.scheduledRound??'non programmé')));
         if(isManager()){
           const actions=el('div',undefined,'actions');
           if(state!=='SERVED'&&state!=='CANCELLED'){

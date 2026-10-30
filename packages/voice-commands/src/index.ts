@@ -37,7 +37,7 @@ function parseFrenchWords(value:string):number|undefined{
     if(t==='cent'||t==='cents'){current=(current||1)*100;consumed++;continue;}
     if(t==='mille'||t==='milles'){total+=(current||1)*1000;current=0;consumed++;continue;}
     if(t==='million'||t==='millions'){total+=(current||1)*1_000_000;current=0;consumed++;continue;}
-    const compact=compactToken(t),n=FR_UNITS[t]??FR_UNITS[compact];if(n===undefined)return undefined;current+=n;consumed++;
+    const compact=compactToken(t),n=FR_UNITS[t]??FR_UNITS[compact]??(/^\d+$/.test(t)?Number(t):undefined);if(n===undefined)return undefined;current+=n;consumed++;
   }
   return consumed?total+current:undefined;
 }
@@ -51,16 +51,26 @@ function parseEnglishWords(value:string):number|undefined{
     if(t==='hundred'){current=(current||1)*100;consumed++;continue;}
     if(t==='thousand'){total+=(current||1)*1000;current=0;consumed++;continue;}
     if(t==='million'||t==='millions'){total+=(current||1)*1_000_000;current=0;consumed++;continue;}
-    const n=EN_UNITS[t];if(n===undefined)return undefined;current+=n;consumed++;
+    const n=EN_UNITS[t]??(/^\d+$/.test(t)?Number(t):undefined);if(n===undefined)return undefined;current+=n;consumed++;
   }
   return consumed?total+current:undefined;
 }
 
 export function parseVoiceAmount(value:string):number|undefined{
   const cleaned=normalizeVoiceText(value).replace(/\bfrancs?\b|\bcfa\b|\bxaf\b|\bfcfa\b/g,' ').trim();
-  const numeric=cleaned.replace(/(?<=\d)[\s.](?=\d{3}(?:\D|$))/g,'').replace(/,/g,'.');
+  // Group separators require complete groups of three; a bare "5" stays 5.
+  const grouped=/^\d{1,3}(?:[\s.,]\d{3})+$/.test(cleaned);
+  const numeric=grouped?cleaned.replace(/[\s.,]/g,''):cleaned.replace(/,/g,'.');
   if(/^\d+(?:\.0+)?$/.test(numeric)){const n=Number(numeric);return Number.isSafeInteger(n)&&n>=0?n:undefined;}
-  return parseFrenchWords(cleaned)??parseEnglishWords(cleaned);
+  if(/\d/.test(cleaned)&&! /\b(?:mille|milles|million|millions|cent|cents|hundred|thousand)\b/.test(cleaned))return undefined;
+  const n=parseFrenchWords(cleaned)??parseEnglishWords(cleaned);return n!==undefined&&Number.isSafeInteger(n)&&n>=0?n:undefined;
+}
+
+export function voiceAmountInWords(n:number,locale='fr'):string{
+  if(!Number.isSafeInteger(n)||n<0)return '';
+  const en=locale.startsWith('en'),fr=['zéro','un','deux','trois','quatre','cinq','six','sept','huit','neuf','dix','onze','douze','treize','quatorze','quinze','seize'],english=['zero','one','two','three','four','five','six','seven','eight','nine','ten','eleven','twelve','thirteen','fourteen','fifteen','sixteen','seventeen','eighteen','nineteen'];
+  const small=(v:number):string=>{if(en){if(v<20)return english[v]!;if(v<100)return ['','','twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'][Math.floor(v/10)]!+(v%10?'-'+small(v%10):'');return small(Math.floor(v/100))+' hundred'+(v%100?' '+small(v%100):'');}if(v<17)return fr[v]!;if(v<20)return 'dix-'+small(v-10);if(v<70){const unit=v%10;return ['','','vingt','trente','quarante','cinquante','soixante'][Math.floor(v/10)]!+(unit===1?' et un':unit?'-'+small(unit):'');}if(v<80)return 'soixante'+(v===71?' et ':'-')+small(v-60);if(v<100)return 'quatre-vingt'+(v===80?'s':'-'+small(v-80));const h=Math.floor(v/100);return(h===1?'':small(h)+' ')+'cent'+(v%100?' '+small(v%100):h>1?'s':'');};
+  if(n<1000)return small(n);const groups:Array<[number,string,string]> =en?[[1e15,'quadrillion','quadrillion'],[1e12,'trillion','trillion'],[1e9,'billion','billion'],[1e6,'million','million'],[1000,'thousand','thousand']]:[[1e15,'billiard','billiards'],[1e12,'billion','billions'],[1e9,'milliard','milliards'],[1e6,'million','millions'],[1000,'mille','mille']];let rest=n;const words:string[]=[];for(const [scale,singular,plural]of groups){const q=Math.floor(rest/scale);if(q){words.push(!en&&scale===1000&&q===1?'mille':small(q)+' '+(q>1?plural:singular));rest%=scale;}}if(rest)words.push(small(rest));return words.join(' ');
 }
 
 const ACTION_WORDS=/(?:remplis|remplir|mets|mettre|enregistre|enregistrer|saisis|saisir|ajoute|ajouter|fill|enter|record|add)\b/i;

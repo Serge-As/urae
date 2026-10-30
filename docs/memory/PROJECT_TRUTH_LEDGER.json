@@ -1780,6 +1780,19 @@
         "docs/implementation/PROGRAMME_AUDIT_2026-10-25.md"
       ],
       "next": "Use the existing final proof receipts. Physical field acceptance and external economic outcomes remain distinct; do not reopen completed lots without a new reproduced defect."
+    },
+    {
+      "id": "canopee-eight-lots-20261030",
+      "scope": "Eight authorized lots: startup, navigation, collective synthesis, voice, panoramas, tables, economic handoffs and offline recovery",
+      "status": "IN_PROGRESS",
+      "observedOn": "2026-10-30",
+      "statement": "All eight lots implemented; exact-source qualification and delivery pending. Four targeted Chromium and seven targeted native tests passed before final source consolidation. No financial data mutation or schema migration. Physical acceptance remains NOT_ACCEPTED.",
+      "evidence": [
+        "docs/implementation/EIGHT_LOTS_2026-10-30.md",
+        "tests/browser/eight-lots-20261029.spec.mjs",
+        "tests/forum-local-drafts-20261030.test.mjs"
+      ],
+      "next": "Complete final exact-source gates, readonly backup, deployment and public verification."
     }
   ]
 }

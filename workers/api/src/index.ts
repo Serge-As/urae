@@ -1,3 +1,4 @@
+import {validateSynthesis} from './synthesis-review.js';
 import { PlatformKernel } from '../../../packages/platform-kernel/src/index.js';
 import {caseCareAdapter} from './care.js';
 import {productiveReminderResolver} from './productive-reminders.js';
@@ -83,11 +84,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.42-canopee-reperes';
-const RELEASE_BUILD_ID='eco-system-1.5.2.42-20261026-canopee-reperes';
+const RELEASE_VERSION='1.5.2.43-canopee-collective';
+const RELEASE_BUILD_ID='eco-system-1.5.2.43-20261030-canopee-collective';
 const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15242-canopee-reperes-20261026';
+const RELEASE_PWA_CACHE='eco-system-v15243-canopee-collective-20261030';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -1082,19 +1083,29 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const records=await repo.listWorkspaceRecords(ctx.tenantId,'FINANCE.MEMBER_BUNDLE',groupId);
       return json({items:records.filter(x=>x.data.membershipId===membershipId&&x.data.userId===target.userId).sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,30).map(x=>({id:x.id,version:x.data.bundleVersion,partial:Boolean(x.data.partial),createdAt:x.createdAt,snapshot:JSON.parse(String(x.data.snapshotJson))}))},200,cors);
     }
+    const reviewSynthesis=async(groupId:string,meetingId:string,body:Record<string,unknown>)=>{
+      if(!Array.isArray(body.reviewedValues))return[];
+      const membershipId=String(body.membershipId??'');if(!await repo.getMembership(ctx.tenantId,groupId,membershipId))throw Error('MEMBERSHIP_NOT_FOUND');
+      const values=await validateSynthesis({snapshot:await memberEnvelopes.canonicalCells(groupId,{membershipId,meetingId}),meetingId,membershipId,values:body.reviewedValues});
+      const reviews:Record<string,unknown>[]=[];
+      if(body.approvePeers===true)for(const value of values){
+        if(!value.actorId||value.actorId===ctx.actorId||value.cellVersion===0){reviews.push({rubricId:value.rubricId,status:'OWN_OR_EMPTY',cellVersion:value.cellVersion});continue;}
+        if(value.reviewDecision==='RESERVE'){reviews.push({rubricId:value.rubricId,status:'RESERVE_RETAINED',cellVersion:value.cellVersion});continue;}
+        const result=await applyFinancialReview({groupId,meetingId,membershipId,rubricId:value.rubricId,amount:value.amount,cellVersion:value.cellVersion,decision:'APPROVE',reason:'Contrôle de la synthèse collective du membre'});
+        reviews.push({rubricId:value.rubricId,amount:value.amount,cellVersion:value.cellVersion,status:result.status});
+      }
+      return reviews;
+    };
     const workRoute=url.pathname.match(/^\/api\/v1\/groups\/([^/]+)\/meetings\/([^/]+)\/financial-work\/(context|mode|activity|close|pause|summary)$/);
     if(workRoute){
       const groupId=workRoute[1]!,meetingId=workRoute[2]!,action=workRoute[3]!;await requireGroup(groupId,action!=='summary');
       if(!await repo.getMeeting(ctx.tenantId,groupId,meetingId))throw Error('MEETING_NOT_FOUND');
-      if(action==='summary'&&request.method==='GET')return json(await memberEnvelopes.passageSummary(groupId,meetingId,String(url.searchParams.get('membershipId')??''),String(url.searchParams.get('rubricIds')??'').split(',').filter(Boolean)),200,cors);
+      if(action==='summary'&&request.method==='GET')return json(await memberEnvelopes.passageSummary(groupId,meetingId,String(url.searchParams.get('membershipId')??''),String(url.searchParams.get('rubricIds')??'').split(',').filter(Boolean),url.searchParams.get('collective')==='1'),200,cors);
       if(action==='context'&&request.method==='GET'){const {stub}=liveStubFor(groupId);return stub.fetch(new Request('https://group-live.internal/financial-work/context?meetingId='+encodeURIComponent(meetingId)));}
       if(request.method==='POST'){
         const body=await readJson<Record<string,unknown>>(request);
-        if(action==='close'&&Array.isArray(body.reviewedValues)){
-          const snapshot=await memberEnvelopes.canonicalCells(groupId);
-          for(const v of body.reviewedValues as any[]){const cell=snapshot.cells.find(x=>x.meetingId===meetingId&&x.membershipId===body.membershipId&&x.rubricId===v.rubricId);if(Math.abs(cell?.amount??0)!==Math.abs(Number(v.amount))||Number(cell?.cellVersion??0)!==Number(v.cellVersion??0))throw Error('SYNTHESIS_CHANGED_REVIEW_REQUIRED');}
-        }
-        return json(await workCall(groupId,action,{...body,meetingId}),200,cors);
+        const reviews=action==='close'?await reviewSynthesis(groupId,meetingId,body):[];
+        return json({...await workCall(groupId,action,{...body,meetingId}),reviews},200,cors);
       }
       return json({error:'METHOD_NOT_ALLOWED'},405,cors);
     }
@@ -3295,7 +3306,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(request.method==='POST'&&url.pathname==='/api/v1/outbox/apply'){
       const item=await readJson<OutboxItem<Record<string,unknown>>>(request); if(item.tenantId!==ctx.tenantId||item.actorId!==ctx.actorId) throw new Error('FORBIDDEN_SCOPE');
       financialWorkMetadata={...((item.payload.financialWork as Record<string,unknown>)??{}),commandId:item.id};
-      if(item.type==='FINANCIAL_WORK_V1'){const p=item.payload;await requireGroup(String(p.groupId),true);const action=String(p.action);if(!['mode','close','pause','activity'].includes(action))throw Error('FINANCIAL_WORK_ACTION_NOT_ALLOWED');if(!await repo.getMeeting(ctx.tenantId,String(p.groupId),String(p.meetingId)))throw Error('MEETING_NOT_FOUND');if(action==='close'&&Array.isArray(p.reviewedValues)){const snapshot=await memberEnvelopes.canonicalCells(String(p.groupId));for(const v of p.reviewedValues as any[]){const cell=snapshot.cells.find(x=>x.meetingId===p.meetingId&&x.membershipId===p.membershipId&&x.rubricId===v.rubricId);if(Math.abs(cell?.amount??0)!==Math.abs(Number(v.amount)))throw Error('SYNTHESIS_CHANGED_REVIEW_REQUIRED');}}return json({accepted:true,stored:true,result:await workCall(String(p.groupId),action,p)},200,cors);}
+
       const markerHash=await sha256Bytes(new TextEncoder().encode(JSON.stringify([ctx.tenantId,ctx.actorId,item.idempotencyKey])).buffer);
       const markerId='outbox_applied_'+markerHash,existingMarker=await repo.getWorkspaceRecord(ctx.tenantId,markerId);
       if(existingMarker&&existingMarker.status==='DONE'){
@@ -3311,6 +3322,18 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         return json({accepted:true,stored:true,replayed:true,type:item.type,idempotencyKey:item.idempotencyKey,...ack},200,cors);
       }
       const markApplied=async(result?:Record<string,unknown>)=>{const at=new Date().toISOString();await repo.saveWorkspaceRecord({id:markerId,tenantId:ctx.tenantId,groupId:(item.payload as any).groupId?String((item.payload as any).groupId):undefined,moduleId:'OFFLINE.OUTBOX_ACK',title:'Offline operation acknowledged',summary:undefined,status:'DONE',tags:['offline','idempotency','type:'+item.type],data:{type:item.type,idempotencyKey:item.idempotencyKey,businessStatus:String(result?.status??'')},createdBy:ctx.actorId,createdAt:at,updatedAt:at});};
+      if(item.type==='FINANCIAL_WORK_V1'){
+        const p=item.payload,groupId=String(p.groupId),meetingId=String(p.meetingId),action=String(p.action);await requireGroup(groupId,true);
+        if(!['mode','close','pause','activity'].includes(action))throw Error('FINANCIAL_WORK_ACTION_NOT_ALLOWED');
+        if(!await repo.getMeeting(ctx.tenantId,groupId,meetingId))throw Error('MEETING_NOT_FOUND');
+        const reviews=action==='close'?await reviewSynthesis(groupId,meetingId,p):[],result=await workCall(groupId,action,p);
+        await markApplied();return json({accepted:true,stored:true,result,reviews},200,cors);
+      }
+      if(item.type==='FORUM_DRAFT_V1'){
+        if(!options.communityRealtime)throw Error('COMMUNITY_REALTIME_UNAVAILABLE');const p=item.payload,groupId=String(p.groupId??''),hubId=String(p.hubId??'');await community.federationProfile(groupId,hubId);
+        if(typeof p.baselineTitle!=='string'||typeof p.baselineBody!=='string')throw Error('INVALID_DRAFT_BASELINE');
+        const state=await options.communityRealtime.saveDraft({tenantId:ctx.tenantId,groupId,hubId,userId:ctx.actorId,title:String(p.title??''),body:String(p.body??''),expectedTitle:p.baselineTitle,expectedBody:p.baselineBody});await markApplied();return json({accepted:true,stored:true,state},200,cors);
+      }
       if(item.type==='CONTRIBUTION_CASH_RECORDED'){
         const p=item.payload;const groupId=String(p.groupId??'');
         const receipt=await ledger.recordCashContribution({tenantId:ctx.tenantId,groupId,membershipId:String(p.membershipId??''),amount:finite(p.amount),currency:String(p.currency??'XAF'),meetingId:p.meetingId?String(p.meetingId):undefined,rubricId:p.rubricId?String(p.rubricId):undefined,lateReason:p.lateReason?String(p.lateReason):undefined,approverIds:strArray(p.approverIds),lateAuthorizationId:p.lateAuthorizationId?String(p.lateAuthorizationId):undefined,idempotencyKey:item.idempotencyKey});
@@ -3797,6 +3820,14 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     if(assetUrl.pathname==='/') assetUrl.pathname='/index.html';
     const assetRequest=assetUrl.href===request.url?request:new Request(assetUrl.href,request);
     const asset=await env.ASSETS.fetch(assetRequest);
+    // Emscripten bindings execute only in this optional ASR worker; the page
+    // and all other assets retain the existing strict document policy.
+    if(asset.ok&&url.pathname==='/vendor/voice/worker.js'){
+      if(!asset.headers.get('content-type')?.includes('javascript'))return new Response('Local voice worker unavailable',{status:503,headers:{'content-type':'text/plain; charset=utf-8','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; frame-ancestors 'none'"}});
+      const headers=new Headers(asset.headers);
+      headers.set('content-security-policy',"default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' blob:; worker-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+      return new Response(asset.body,{status:asset.status,statusText:asset.statusText,headers});
+    }
     if(asset.status!==404 || url.pathname==='/' || url.pathname==='/index.html') return asset;
   }
   if(!env.DB){

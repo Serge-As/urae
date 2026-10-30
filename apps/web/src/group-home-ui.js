@@ -1,3 +1,4 @@
+import {contextLink} from './context-link.js';
 const byId=id=>document.getElementById(id);
 const managerRoles=new Set(['founder','manager','admin','president','treasurer']);
 const humanDate=value=>{if(!value)return'À compléter';try{return new Intl.DateTimeFormat(document.documentElement.lang==='en'?'en-GB':'fr-FR',{dateStyle:'long'}).format(new Date(value));}catch{return String(value??'—');}};
@@ -55,6 +56,10 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
     const shortcuts=make('nav','group-home-shortcuts');shortcuts.setAttribute('aria-label',t('Agir dans ce groupe','Act in this group'));
     shortcuts.append(action(t('Séances & réunions','Sessions & meetings'),'sessions'),action(manage?t('Fiches des membres','Member sheets'):t('Ma fiche individuelle','My individual sheet'),'operations','twoSheetWorkspace',{sheetMode:'individual',membershipId:me?.membership?.id}),action(t('Approfondir · Récap','Explore · Recap'),'recap'));
     surface.append(shortcuts);
+    surface.dataset.composition='panorama';
+    const views=make('nav','eco-panorama-views');views.setAttribute('aria-label',t('Composition de l’accueil','Home composition'));
+    const compositionKey='eco.groupComposition.'+scope();let saved='panorama';try{saved=localStorage.getItem(compositionKey)||'panorama';}catch{}if(['panorama','journal'].includes(saved))surface.dataset.composition=saved;
+    for(const [mode,fr,en]of[['panorama','Panorama','Overview'],['atelier','Atelier de séance','Meeting workshop'],['journal','Journal du groupe','Group journal']]){const b=make('button','secondary',t(fr,en));b.type='button';b.setAttribute('aria-pressed',String(surface.dataset.composition===mode));b.onclick=()=>{if(mode==='atelier'){navigate('operations',{anchor:'twoSheetWorkspace',sheetMode:'meeting',force:true});return;}surface.dataset.composition=mode;try{localStorage.setItem(compositionKey,mode);}catch{}for(const other of views.querySelectorAll('button'))other.setAttribute('aria-pressed',String(other===b));};views.append(b);}surface.append(views);
 
     const identification=make('details','group-home-block group-home-identity');identification.append(make('summary','',t('Identité, Bureau et repères du groupe','Identity, office and group details')));
     const grid=make('div','metrics small'),groupLabel=passport?.publicCode?group.name+' · '+passport.publicCode:group.name;
@@ -137,7 +142,7 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
       next.append(action(t('Ouvrir la séance →','Open session →'),'sessions',undefined,{meetingId:current.id}));
     }else{next.append(make('p','',t('Aucune séance à venir enregistrée. Retrouvez l’historique ou préparez la prochaine.','No upcoming session recorded. Visit the history or prepare your next session.')),action(manage?t('Préparer une séance','Prepare a session'):t('Voir les séances','View sessions'),manage?'operations':'sessions',manage?'meetingForm':undefined));}
     next.append(make('small','',t('Une date programmée ou un bénéficiaire déclaré ne vaut pas preuve de paiement.','A scheduled date or declared beneficiary is not proof of payment.')));
-    const timeline=make('section','group-home-block');timeline.append(make('h3','',t('Classement / calendrier : séance précédente · actuelle · prochaines','Schedule: previous · current · upcoming')));
+    const timeline=make('section','group-home-block eco-group-journal');timeline.append(make('h3','',t('Classement / calendrier : séance précédente · actuelle · prochaines','Schedule: previous · current · upcoming')));
     const timeGrid=make('div','three-col'),temporal=[['Séance précédente',previous],['Séance actuelle / prochaine',current],['Séances suivantes',null]];
     for(const [label,m] of temporal){
       const card=make('article','item');card.append(make('strong','',t(label,label==='Séance précédente'?'Previous session':label==='Séance actuelle / prochaine'?'Current / next session':'Upcoming sessions')));
@@ -231,7 +236,10 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
       }catch{finance.append(make('div','empty-state',t('Votre dernière situation n’est pas disponible dans ce contexte.','Your latest situation is not available in this context.')));}
     }else finance.append(make('div','empty-state',t('Aucune adhésion active trouvée pour ce compte.','No active membership found for this account.')));
     if(!isCurrent())return;
-    const main=make('div','group-home-main');main.append(finance,next);surface.append(main);
+    const people=make('section','eco-group-people');people.append(make('span','eyebrow',t('UN GROUPE, DES PERSONNES','PEOPLE MAKE THE GROUP')),make('h3','',t('Participer, s’entraider, décider','Participate, support, decide')));
+    const figures=make('div','eco-people-figures');for(const [n,label]of [[members.filter(m=>m.status==='active').length,t('membres actifs','active members')],[office.length,t('responsables','managers')],[meetings.filter(m=>m.status==='open').length,t('séances ouvertes','open meetings')]]){const line=make('div');line.append(make('strong','',String(n)),make('span','',label));figures.append(line);}people.append(figures);
+    const faces=make('div','eco-member-landmarks');for(const member of members.filter(m=>m.status==='active').slice(0,6)){const a=contextLink(member.displayName,'member',member.id);a.classList.add('eco-member-landmark');faces.append(a);}people.append(faces,action(t('Retrouver tous les membres','Find all members'),'members'),action(t('Ouvrir le forum du groupe','Open group forum'),'ecosystem','communityEnginePanel'));
+    const main=make('div','group-home-main');main.append(finance,next,people);surface.append(main);
     const doors=make('section','group-home-doors');doors.append(make('span','eyebrow',t('FAIRE GRANDIR NOS POSSIBILITÉS','GROW OUR POSSIBILITIES')),make('h3','',t('Entreprendre, échanger, avancer ensemble','Trade, connect and move forward together')));
     const doorGrid=make('div','group-home-door-grid');
     for(const [fr,en,detailFr,detailEn,module,anchor] of [

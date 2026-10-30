@@ -1,10 +1,11 @@
 const norm=value=>String(value??'').normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase().trim();
-export async function authorizedSearchContext({app,context,getContext}){
+export async function authorizedSearchContext({app,context,getContext,allowCached=false}){
  const same=()=>JSON.stringify(context)===JSON.stringify(getContext());
  const requireSame=()=>{if(!same())throw Error('SEARCH_CONTEXT_CHANGED');};requireSame();
- const groups=await app.listMyGroups({requireServer:true});requireSame();
+ const groups=await app.listMyGroups({requireServer:!allowCached});requireSame();
  if(!context.group)return{groups,privateGroup:false};
- const access=await app.groupMe({requireServer:true});requireSame();
+ if(!groups.some(g=>g.id===context.group))throw Error('SEARCH_ACCESS_UNVERIFIED');
+ const access=await app.groupMe({requireServer:!allowCached});requireSame();
  if(!access?.isManager&&String(access?.membership?.status).toLowerCase()!=='active')throw Error('SEARCH_ACCESS_UNVERIFIED');
  return{groups,privateGroup:true};
 }

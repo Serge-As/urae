@@ -1,5 +1,12 @@
-import { mountTemporalCommerceUI } from './temporal-commerce-ui.js';
-import {mountFinancialExplanationsUI} from './financial-explanations-ui.js';
+import {mountRecoveryWorkspace} from './recovery-workspace.js';
+import {readTablePreferences,selectTableMembers,tablePreferenceControls} from './table-preferences.js';
+import {financialNumberButton} from './financial-number-ui.js';
+import {contextLink} from './context-link.js';
+import {deferredMount} from './deferred-ui.js';
+const bootStage=stage=>window.dispatchEvent(new CustomEvent('eco:boot-stage',{detail:{stage}}));
+bootStage('CORE_LOADED');
+const mountTemporalCommerceUI=deferredMount(()=>import('./temporal-commerce-ui.js'),'mountTemporalCommerceUI','Eco-System');
+const mountFinancialExplanationsUI=deferredMount(()=>import('./financial-explanations-ui.js'),'mountFinancialExplanationsUI','Eco-System');
 import {mountNotificationCenterUI} from './notification-center-ui.js';
 import {mountEcoCareUI} from './eco-care-ui.js';
 import {createJourneyContext,mountJourneyUI} from './journey-context.js';
@@ -26,66 +33,66 @@ import { captureRuntimeI18n, applyRuntimeLocale, installRuntimeI18nObserver, loc
 import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
 import { mountIdentityLiveUI } from './identity-live-ui.js';
-import { mountCommunityShopUI } from './community-shop-ui.js';
+const mountCommunityShopUI=deferredMount(()=>import('./community-shop-ui.js'),'mountCommunityShopUI','Eco-System');
 import {mountPersonalShopsUI} from './personal-shops-ui.js';
-import { mountMiscRubricUI } from './misc-rubrics-ui.js';
-import { mountPairingUI } from './pairing-ui.js';
+const mountMiscRubricUI=deferredMount(()=>import('./misc-rubrics-ui.js'),'mountMiscRubricUI','Eco-System');
+const mountPairingUI=deferredMount(()=>import('./pairing-ui.js'),'mountPairingUI','Eco-System');
 import { mountDetailUI } from './detail-ui.js';
 import { mountPersonalCockpitUI } from './personal-cockpit-ui.js';
 import { mountRecapUI } from './recap-ui.js';
 import { mountInterestCommunityUI } from './interest-community-ui.js';
-import { mountAdManagerUI } from './ad-manager-ui.js';
-import { mountVisualMediaStudio } from './visual-media-studio.js';
-import { mountPartnerAdsUI } from './partner-ad-ui.js';
-import { mountAdSurfacesUI } from './ad-surfaces-ui.js';
-import { mountVisualMediaPresenter } from './visual-media-presenter.js';
+const mountAdManagerUI=deferredMount(()=>import('./ad-manager-ui.js'),'mountAdManagerUI','Eco-System');
+const mountVisualMediaStudio=deferredMount(()=>import('./visual-media-studio.js'),'mountVisualMediaStudio','Eco-System');
+const mountPartnerAdsUI=deferredMount(()=>import('./partner-ad-ui.js'),'mountPartnerAdsUI','Eco-System');
+const mountAdSurfacesUI=deferredMount(()=>import('./ad-surfaces-ui.js'),'mountAdSurfacesUI','Eco-System');
+const mountVisualMediaPresenter=deferredMount(()=>import('./visual-media-presenter.js'),'mountVisualMediaPresenter','Eco-System');
 import { mountTontineManagerUI } from './tontine-manager-ui.js';
 import { mountSavingsYieldUI } from './savings-yield-ui.js';
-import { mountExternalProgramsUI } from './external-programs-ui.js';
-import { mountFounderControlUI } from './founder-control-ui.js';
-import { mountAssistanceRulebookUI } from './assistance-rulebook-ui.js';
+const mountExternalProgramsUI=deferredMount(()=>import('./external-programs-ui.js'),'mountExternalProgramsUI','Eco-System');
+const mountFounderControlUI=deferredMount(()=>import('./founder-control-ui.js'),'mountFounderControlUI','Eco-System');
+const mountAssistanceRulebookUI=deferredMount(()=>import('./assistance-rulebook-ui.js'),'mountAssistanceRulebookUI','Eco-System');
 import { mountGroupHomeUI } from './group-home-ui.js';
 import { mountSessionsUI } from './sessions-ui.js';
 import { splitFinancialRubrics, planFinancialRubricLayout } from './smart-grid-view.js';
-import { mountBlueprintExecutableUI } from './blueprint-executable-ui.js';
+const mountBlueprintExecutableUI=deferredMount(()=>import('./blueprint-executable-ui.js'),'mountBlueprintExecutableUI','Eco-System');
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
-import { mountFinancialLabUI } from './financial-lab-ui.js';
+const mountFinancialLabUI=deferredMount(()=>import('./financial-lab-ui.js'),'mountFinancialLabUI','Eco-System');
 import { mountSafetyReviewUI } from './safety-review-ui.js';
-import { mountBusinessStudioUI } from './business-studio-ui.js';
-import { mountEconomicExperimentsUI } from './economic-experiments-ui.js';
-import {mountResourceAssembliesUI} from './resource-assemblies-ui.js';
-import { mountCoreEconomicLearningUI } from './core-economic-learning-ui.js';
-import { mountResilienceUI } from './resilience-ui.js';
+const mountBusinessStudioUI=deferredMount(()=>import('./business-studio-ui.js'),'mountBusinessStudioUI','Eco-System');
+const mountEconomicExperimentsUI=deferredMount(()=>import('./economic-experiments-ui.js'),'mountEconomicExperimentsUI','Eco-System');
+const mountResourceAssembliesUI=deferredMount(()=>import('./resource-assemblies-ui.js'),'mountResourceAssembliesUI','Eco-System');
+const mountCoreEconomicLearningUI=deferredMount(()=>import('./core-economic-learning-ui.js'),'mountCoreEconomicLearningUI','Eco-System');
+const mountResilienceUI=deferredMount(()=>import('./resilience-ui.js'),'mountResilienceUI','Eco-System');
 import { parseEcoShareIntent } from './share-out.js';
 import { localUniversalSearch, remoteUniversalSearch, authorizedSearchContext } from './universal-search.js';
 import { buildUnifiedCalendar } from './unified-calendar.js';
-import { mountDocumentsUI } from './documents-ui.js';
-import { mountPrintCenterUI } from './print-center.js';
-import { mountMemberDossierUI } from './member-dossier-ui.js';
+const mountDocumentsUI=deferredMount(()=>import('./documents-ui.js'),'mountDocumentsUI','Documents');
+const mountPrintCenterUI=deferredMount(()=>import('./print-center.js'),'mountPrintCenterUI','Eco-System');
+const mountMemberDossierUI=deferredMount(()=>import('./member-dossier-ui.js'),'mountMemberDossierUI','Documents');
 import { mountIdentityVerificationUI } from './identity-verification-ui.js';
 import { mountDataQualityUI } from './data-quality-ui.js';
-import { mountOpportunityIntelligenceUI } from './opportunity-intelligence-ui.js';
-import { mountOperationalRegistryUI } from './operational-registry-ui.js';
-import { mountGroupLearningRegistryUI } from './group-learning-registry-ui.js';
+const mountOpportunityIntelligenceUI=deferredMount(()=>import('./opportunity-intelligence-ui.js'),'mountOpportunityIntelligenceUI','Eco-System');
+const mountOperationalRegistryUI=deferredMount(()=>import('./operational-registry-ui.js'),'mountOperationalRegistryUI','Eco-System');
+const mountGroupLearningRegistryUI=deferredMount(()=>import('./group-learning-registry-ui.js'),'mountGroupLearningRegistryUI','Eco-System');
 import { mountGeoDirectoryUI } from './role-directory-talent-ui.js';
 import { mountRoleDashboardsUI } from './role-dashboards-ui.js';
-import { mountCreatorTalentUI } from './creator-talent-ui.js';
-import {mountProductiveCommunityUI} from './productive-community-ui.js';
+const mountCreatorTalentUI=deferredMount(()=>import('./creator-talent-ui.js'),'mountCreatorTalentUI','Eco-System');
+const mountProductiveCommunityUI=deferredMount(()=>import('./productive-community-ui.js'),'mountProductiveCommunityUI','Eco-System');
 import { mountLocalAssistantUI } from './local-assistant.js';
-import { mountQuietWatchUI } from './quiet-watch-ui.js';
-import { mountFounderAIUI } from './founder-ai-ui.js';
-import { mountManagerPublicProfileUI } from './manager-public-profile-ui.js';
-import { mountTrustCenterUI } from './trust-center.js';
+const mountQuietWatchUI=deferredMount(()=>import('./quiet-watch-ui.js'),'mountQuietWatchUI','Eco-System');
+const mountFounderAIUI=deferredMount(()=>import('./founder-ai-ui.js'),'mountFounderAIUI','Eco-System');
+const mountManagerPublicProfileUI=deferredMount(()=>import('./manager-public-profile-ui.js'),'mountManagerPublicProfileUI','Eco-System');
+const mountTrustCenterUI=deferredMount(()=>import('./trust-center.js'),'mountTrustCenterUI','Eco-System');
 import { mountGovernedGroupUI } from './governed-group-ui.js';
-import { mountStarterKitUI } from './starter-kit-ui.js';
-import { mountMeetingFinanceGovernanceUI } from './meeting-finance-governance-ui.js';
-import { mountAnticipationUI } from './anticipation-ui.js';
-import { mountMicroAdsUI } from './micro-ads-ui.js';
-import { mountValueDiscoveryUI } from './value-discovery-ui.js';
-import { mountWalletUI } from './wallet-ui.js';
-import { mountMemberEnvelopeUI } from './member-envelope-ui.js';
+const mountStarterKitUI=deferredMount(()=>import('./starter-kit-ui.js'),'mountStarterKitUI','Eco-System');
+const mountMeetingFinanceGovernanceUI=deferredMount(()=>import('./meeting-finance-governance-ui.js'),'mountMeetingFinanceGovernanceUI','Eco-System');
+const mountAnticipationUI=deferredMount(()=>import('./anticipation-ui.js'),'mountAnticipationUI','Eco-System');
+const mountMicroAdsUI=deferredMount(()=>import('./micro-ads-ui.js'),'mountMicroAdsUI','Eco-System');
+const mountValueDiscoveryUI=deferredMount(()=>import('./value-discovery-ui.js'),'mountValueDiscoveryUI','Eco-System');
+const mountWalletUI=deferredMount(()=>import('./wallet-ui.js'),'mountWalletUI','Eco-System');
+const mountMemberEnvelopeUI=deferredMount(()=>import('./member-envelope-ui.js'),'mountMemberEnvelopeUI','Eco-System');
 import { mountSovereignOfflineUI } from './sovereign-offline-ui.js';
-import { mountOpportunityGraphUI } from './opportunity-graph-ui.js';
+const mountOpportunityGraphUI=deferredMount(()=>import('./opportunity-graph-ui.js'),'mountOpportunityGraphUI','Eco-System');
 let uiLocale = 'fr';
 try { uiLocale = localStorage.getItem('tontine.locale') === 'en' ? 'en' : 'fr'; } catch {}
 const tx = (fr,en) => runtimeTranslate(uiLocale,fr,en);
@@ -197,7 +204,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.42-canopee-reperes';
+const CAHIER_VERSION = '1.5.2.43-canopee-collective';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -555,7 +562,8 @@ try{
 }catch{}
 window.addEventListener('pagehide',()=>persistNavState(captureNavState()));
 updateBackButton();
-const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail });
+const detailUI = mountDetailUI({ app, navigate: go, getGroups: () => groups, getMembers: () => members, getMeetings: () => meetings, getRubrics: () => rubrics, isManager, fmt, date, showError: fail, beforeOpen:async(type,id)=>!financialWorkUI||await financialWorkUI.visit(type==='meeting'?id:ensureMatrixMeeting(),type==='member'?id:'') });
+const recoveryWorkspace=mountRecoveryWorkspace({app,getGroups:()=>groups,getModules:()=>modules,navigate:go,tx,showError:fail});
 const personalCockpitUI = mountPersonalCockpitUI({
   app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings,
   navigate:go, fmt, date, showError:fail, isManager, journey, openDetail:(type,id)=>detailUI.open(type,id),
@@ -1265,10 +1273,16 @@ let financialWorkUI;
 const financialLocalSubmissions=new Map();
 const ensureFinancialWorkUI=()=>financialWorkUI??=createFinancialWorkUI({app,tx,notify:toast,resume:()=>resumeOnline(),isLiveConnected:()=>liveChannelConnected,
   waitForEntries:async(meetingId,membershipId)=>{await Promise.all([...financialLocalSubmissions.values()].filter(x=>x.meetingId===meetingId&&x.membershipId===membershipId).map(x=>x.done));},
-  summary:async(meetingId,membershipId,ids)=>{
-    try{if(navigator.onLine===false)throw Error('LOCAL_SUMMARY_REQUIRED');const data=await app.financialPassageSummary(meetingId,membershipId,ids);if(data.projectionSource==='LOCAL_CACHE')throw Error('LOCAL_SUMMARY_REQUIRED');return data;}catch(e){if(e.message!=='LOCAL_SUMMARY_REQUIRED'&&navigator.onLine!==false&&!app.serverBudgetState?.().blocked)throw e;
+  memberName:id=>members.find(x=>x.id===id)?.displayName??id,
+  openDetail:target=>void detailUI.open(target.type,target.id,false,true),
+  summary:async(meetingId,membershipId,ids,options={})=>{
+    const local=()=>{
       const ordered=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),beforeIds=ordered.slice(0,ordered.findIndex(x=>x.id===meetingId)).map(x=>x.id);
-      const lines=ids.map(rubricId=>{const current=exactCellAmount(membershipId,rubricId,meetingId),before=beforeIds.reduce((n,id)=>n+exactCellAmount(membershipId,rubricId,id),0);return{rubricId,rubricName:rubrics.find(x=>x.id===rubricId)?.name??rubricId,before,current,total:before+current,cellVersion:exactCellVersion(membershipId,rubricId,meetingId)};});return{local:true,lines,totals:Object.fromEntries(['before','current','total'].map(k=>[k,lines.reduce((n,x)=>n+x[k],0)]))};}
+      const selected=[...new Set([...ids,...activeFinancialRubrics().filter(r=>exactCellVersion(membershipId,r.id,meetingId)>0||exactCellAmount(membershipId,r.id,meetingId)!==0).map(r=>r.id)])];
+      const lines=selected.map(rubricId=>{const current=exactCellAmount(membershipId,rubricId,meetingId),before=beforeIds.reduce((n,id)=>n+exactCellAmount(membershipId,rubricId,id),0),meta=financialCellMetadata.get(financialCellKey(membershipId,rubricId,meetingId));return{rubricId,rubricName:rubrics.find(x=>x.id===rubricId)?.name??rubricId,before,current,total:before+current,cellVersion:exactCellVersion(membershipId,rubricId,meetingId),authorId:meta?.actorId,authorName:meta?.actorId?actorDisplayName(meta.actorId):'',updatedAt:meta?.at};});return{local:true,generatedAt:new Date().toISOString(),lines,totals:Object.fromEntries(['before','current','total'].map(k=>[k,lines.reduce((n,x)=>n+x[k],0)]))};
+    };
+    if(options.local||navigator.onLine===false)return local();
+    const data=await app.financialPassageSummary(meetingId,membershipId,ids,true);if(data.projectionSource==='LOCAL_CACHE')return local();return data;
   },
   edit:(selection,rubricId)=>{const cell=[...document.querySelectorAll('.matrix-cell-entry')].find(x=>x.dataset.meetingId===selection.meetingId&&x.dataset.membershipId===selection.membershipId&&x.dataset.rubricId===rubricId);cell?.scrollIntoView({block:'center',inline:'nearest'});cell?.querySelector('input')?.focus();}
 });
@@ -1607,18 +1621,22 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     root.dataset.canonicalFinancialHost='1';root.dataset.canonicalFinancialOwner='main-v151';root.dataset.canonicalTableReady='0';root.dataset.financialMode=mode;root.dataset.meetingId=meetingId||'';root.dataset.membershipId=membershipId||'';root.dataset.showToolbar=showToolbar===false?'false':'true';root.dataset.editable=editable===false?'false':'true';
     root.replaceChildren();
     const activeRubrics=activeFinancialRubrics(),activeMembers=activeFinancialMembers();
+    const tableScope=JSON.stringify([app.currentTenant(),app.currentActor(),app.activeGroup(),mode]);
+    const preferences=readTablePreferences(tableScope),displayRubrics=preferences.columns?activeRubrics.filter(r=>preferences.columns.includes(r.id)):activeRubrics;
+    if(!displayRubrics.length)displayRubrics.push(...activeRubrics);
+    const displayMembers=selectTableMembers(activeMembers,preferences,m=>activeRubrics.reduce((n,r)=>n+exactCellAmount(m.id,r.id,meetingId||matrixMeetingId),0));
     if(!activeRubrics.length||!activeMembers.length){root.innerHTML='<div class="empty-state">'+tx('Ajoutez au moins un membre et une rubrique active.','Add at least one member and one active rubric.')+'</div>';return;}
     // SmartGrid is a presentation-only projection. Financial editors and writes
     // remain exclusively owned by the existing canonical renderer and Ledger.
     const panelScope=[app.currentActor(),app.activeGroup(),mode].map(encodeURIComponent).join('.');
     const choiceKey='eco.smartGrid.parts.'+panelScope;
     const uiMode=document.documentElement.dataset.uiMode||'visual';
-    const layout=planFinancialRubricLayout({count:activeRubrics.length,width:measuredWidth,mode:uiMode,individual:mode!=='meeting'});
+    const layout=planFinancialRubricLayout({count:displayRubrics.length,width:measuredWidth,mode:uiMode,individual:mode!=='meeting'});
     let savedParts=null;try{const saved=sessionStorage.getItem(choiceKey);if(saved!==null)savedParts=Number(saved);}catch{}
     const parts=savedParts===1?1:savedParts&&layout.fits(savedParts)?savedParts:layout.recommended||1;
     root.dataset.parts=String(parts);root.dataset.recommendedParts=String(layout.recommended||'');
     root.dataset.rubricCount=String(activeRubrics.length);
-    const columnGroups=splitFinancialRubrics(activeRubrics,parts);
+    const columnGroups=splitFinancialRubrics(displayRubrics,parts);
     const panelKey='eco.smartGrid.index.'+panelScope;
     let panelIndex=0;
     try{panelIndex=Math.max(0,Math.min(columnGroups.length-1,Number(sessionStorage.getItem(panelKey))||0));}catch{}
@@ -1635,6 +1653,8 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       presets.append(b);
     }
     presentation.append(title,presets);
+    presentation.append(tablePreferenceControls({scope:tableScope,preferences,rubrics:activeRubrics,tx,onApply:()=>renderCanonicalFinancialTable({root,mode,meetingId,membershipId,showToolbar,editable})}));
+    const visibility=document.createElement('p');visibility.className='eco-table-visibility';visibility.setAttribute('role','status');visibility.textContent=tx(displayMembers.length+' / '+activeMembers.length+' membres · '+displayRubrics.length+' / '+activeRubrics.length+' rubriques visibles. Les totaux généraux gardent toutes les données.',displayMembers.length+' / '+activeMembers.length+' members · '+displayRubrics.length+' / '+activeRubrics.length+' visible categories. Grand totals retain all data.');presentation.append(visibility);
     const fitHint=document.createElement('small');fitHint.className='hint eco-smartgrid-fit';
     fitHint.textContent=layout.recommended===null
       ?tx('Fenêtre trop étroite pour une partie entière : la vue intégrale conserve le défilement horizontal. Élargissez la fenêtre ou choisissez le mode Visuel.','The window is too narrow for a complete part: full view keeps horizontal scrolling. Widen the window or choose Visual mode.')
@@ -1693,20 +1713,21 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       matrixMeetingId=selectedMeeting;root.dataset.meetingId=selectedMeeting;
       const numberHead=document.createElement('th');numberHead.textContent=tx('N°','No.');numberHead.className='member-number-column';hr.append(numberHead);
       const memberHead=document.createElement('th');memberHead.textContent=tx('Membre','Member');hr.append(memberHead);
-      for(const r of visibleRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+      for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
       const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général membre','Member grand total'):tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
-      for(const m of activeMembers){
-        const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.innerHTML=html`<strong>${String(m.displayName??'')}</strong><small>${m.roles.join(', ')}</small>`;name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);
+      for(const m of displayMembers){
+        const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.replaceChildren(contextLink(String(m.displayName??''),'member',m.id));const roles=document.createElement('small');roles.textContent=m.roles.join(', ');name.append(roles);name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);
         tr.dataset.membershipId=m.id;
         for(const r of visibleRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
-        const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
+        const total=document.createElement('td');total.className='table-row-total';total.append(financialNumberButton({label:tx('Total membre · ','Member total · ')+m.displayName,total:rowTotal,rows:activeRubrics.map(r=>({label:r.name,id:r.id,type:'rubric',amount:exactCellAmount(m.id,r.id,selectedMeeting)})),fmt,tx,period:meetingLabel(meetings.find(x=>x.id===selectedMeeting))}));tr.append(total);body.append(tr);
       }
       const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.colSpan=2;totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);
       for(const r of visibleRubrics){const amount=activeMembers.reduce((sum,m)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);const td=document.createElement('td');td.dataset.totalRubricId=r.id;td.textContent=fmt(amount);totalRow.append(td);}
       const grandTd=document.createElement('td');grandTd.className='table-grand-total';
       const grand=activeMembers.reduce((total,m)=>total+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0),0);
-      grandTd.textContent=fmt(grand);grandTd.title=tx('Total général de toutes les rubriques','Grand total across every rubric');
+      grandTd.append(financialNumberButton({label:tx('Total général · toutes les rubriques et tous les membres','Grand total · all categories and members'),total:grand,rows:activeRubrics.map(r=>({label:r.name,id:r.id,type:'rubric',amount:activeMembers.reduce((n,m)=>n+exactCellAmount(m.id,r.id,selectedMeeting),0)})),fmt,tx,period:meetingLabel(meetings.find(x=>x.id===selectedMeeting))}));grandTd.title=tx('Total général de toutes les rubriques','Grand total across every rubric');
       totalRow.append(grandTd);body.append(totalRow);
+      if(displayMembers.length!==activeMembers.length){const filtered=document.createElement('tr');filtered.className='eco-filtered-total';const title=document.createElement('th');title.colSpan=2;title.textContent=tx('Sous-total des membres affichés','Subtotal of displayed members');filtered.append(title);for(const r of visibleRubrics){const td=document.createElement('td');td.textContent=fmt(displayMembers.reduce((n,m)=>n+exactCellAmount(m.id,r.id,selectedMeeting),0));filtered.append(td);}const total=document.createElement('td');total.textContent=fmt(displayMembers.reduce((n,m)=>n+activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0),0));filtered.append(total);body.append(filtered);}
       table.append(body);wrap.append(table);
       const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Une seule matrice financière canonique est utilisée ici et dans les fiches individuelles. Chaque cellule est la valeur totale de la séance : Remplacer 1 000 par 500 donne 500. La dernière ligne totalise chaque colonne et la dernière colonne totalise chaque membre.','One canonical financial matrix is used here and in individual sheets. Each cell is the total value for the meeting: replacing 1,000 with 500 gives 500. The last row totals every column and the last column totals every member.');
       if(showToolbar){
@@ -1718,7 +1739,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         label.append(scope);
         const other=document.createElement('button');other.type='button';other.className='secondary';other.textContent=tx('Voir les séances','View meetings');other.onclick=()=>go('sessions',{meetingId:selectedMeeting,force:true});
         const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent=tx('+ Nouvelle séance','+ New meeting');add.onclick=()=>go('sessions',{anchor:'sessionsCreateForm',force:true});
-        toolbar.append(label,other,add);root.append(toolbar);
+        toolbar.append(label,contextLink(meetingLabel(meetings.find(x=>x.id===selectedMeeting)),'meeting',selectedMeeting),other,add);root.append(toolbar);
       }
       root.append(presentation,wrap,note);
       if(columnGroups.length>1){
@@ -1730,11 +1751,11 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
     hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
-    for(const r of visibleRubrics){const th=document.createElement('th');th.textContent=r.name;hr.append(th);}
+    for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
     const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général séance','Meeting grand total'):tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
     const activeMeetings=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
     for(const meeting of activeMeetings){
-      const tr=document.createElement('tr'),th=document.createElement('th');th.textContent=meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):'');tr.append(th);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);
+      const tr=document.createElement('tr'),th=document.createElement('th');th.append(contextLink(meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):''),'meeting',meeting.id));th.scope='row';tr.append(th);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);
       tr.dataset.meetingId=meeting.id;
       for(const r of visibleRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
       const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
@@ -1815,6 +1836,7 @@ window.addEventListener('eco:restore-financial-sheet',event=>{
     const detail=event instanceof CustomEvent?event.detail??{}:{};
     if(detail.matrixMeetingId&&meetings.some(x=>x.id===detail.matrixMeetingId))matrixMeetingId=detail.matrixMeetingId;
     if(detail.sheetMode==='individual')document.querySelector('#individualSheetsViewBtn')?.click();else document.querySelector('#meetingSheetViewBtn')?.click();
+    if(detail.membershipId){const select=document.querySelector('#individualSheetMember');if(select&&[...select.options].some(o=>o.value===detail.membershipId))select.value=detail.membershipId;}
     renderMeetingMatrix();renderIndividualSheetMatrix();
     if(detail.membershipId&&detail.rubricId&&matrixMeetingId){
       requestAnimationFrame(()=>{const cell=document.querySelector(`.matrix-cell[data-membership-id="${CSS.escape(detail.membershipId)}"][data-rubric-id="${CSS.escape(detail.rubricId)}"][data-meeting-id="${CSS.escape(matrixMeetingId)}"]`);if(cell){cell.classList.add('pending-consensus');cell.scrollIntoView({behavior:'smooth',block:'center',inline:'center'});cell.focus({preventScroll:true});}});
@@ -2581,6 +2603,7 @@ window.addEventListener('eco:financial-live-update',event=>{
 });
 
 const refreshGroupContext = async () => {
+    window.dispatchEvent(new CustomEvent('eco:context-changed'));recoveryWorkspace.clearForContext();
     const requestedGroup=app.activeGroup(),requestedDashboardScope=dashboardScope();
     hydratedDashboardScope='';
     groupHomeUI.clearForContext();
@@ -2605,7 +2628,7 @@ const refreshGroupContext = async () => {
     // Reuse this same membership-checked directory in the personal cockpit.
     const personalDirectory=personalCockpitUI.prepareNavigation?.();
     personalDirectory?.catch(()=>{});
-    journeyUI.refresh();localAssistantUI.refreshContext();
+    journeyUI.refresh();localAssistantUI.refreshContext();void recoveryWorkspace.refresh().catch(fail);
     shellNavigation.refresh();
     await renderGroups();
     journeyUI.refresh();localAssistantUI.refreshContext();
@@ -2745,7 +2768,7 @@ const renderUniversalSearchFull=async()=>{
     const getSearchContext=()=>({actor:app.currentActor(),tenant:app.currentTenant(),group:app.activeGroup()||''}),captured=getSearchContext();
     const current=()=>revision===universalSearchRevision&&JSON.stringify(captured)===JSON.stringify(getSearchContext());
     let access={groups:[],privateGroup:false},privateUnavailable=false;
-    try{if(navigator.onLine===false)throw Error('SEARCH_OFFLINE');access=await authorizedSearchContext({app,context:captured,getContext:getSearchContext});}catch{privateUnavailable=true;}
+    try{access=await authorizedSearchContext({app,context:captured,getContext:getSearchContext,allowCached:navigator.onLine===false});}catch{privateUnavailable=true;}
     if(!current())return;
     const local=localUniversalSearch({query,groups:access.groups,modules,members:access.privateGroup?members:[],meetings:access.privateGroup?meetings:[],rubrics:access.privateGroup?rubrics:[]});
     let remote=[];
@@ -2756,17 +2779,18 @@ const renderUniversalSearchFull=async()=>{
             groupId?app.searchDocuments(query,20).catch(partial):Promise.resolve([]),
             app.searchKnowledge(query,groupId).catch(partial),
             groupId?app.listWorkspaceRecords(undefined,groupId).catch(partial):Promise.resolve([]),
-            app.inboxItems({requireServer:true}).catch(partial)
+            app.inboxItems({requireServer:navigator.onLine!==false}).catch(partial)
         ]);
         if(!current())return;
         remote=remoteUniversalSearch({query,documents,knowledge,workspaces,inbox});
     }
+    if(navigator.onLine===false){const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Recherche sur les copies autorisées de ce compte et de ce groupe · résultats éventuellement incomplets ou anciens.','Searching authorized copies for this account and group · results may be incomplete or old.');root.append(note);}
     const rows=[...local,...remote].sort((a,b)=>Number(b.score??0)-Number(a.score??0)||String(a.title??'').localeCompare(String(b.title??''),'fr')).slice(0,80);
     if(privateUnavailable){const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Une source privée ne peut pas être vérifiée. Les services locaux restent accessibles ; les résultats peuvent être incomplets.','A private source cannot be verified. Local services remain accessible; results may be incomplete.');root.append(p);}
     if(!rows.length){const p=document.createElement('p');p.className='empty-state';p.textContent=tx('Aucun résultat autorisé trouvé.','No authorized result found.');root.append(p);return;}
     for(const row of rows){
         const interactive=['group','member','meeting','rubric','module'].includes(row.kind),node=document.createElement(interactive?'button':'article');
-        if(interactive){node.type='button';node.className='search-hit';node.onclick=()=>void(async()=>{if(!current())return;try{if(row.kind!=='module'){const fresh=await authorizedSearchContext({app,context:captured,getContext:getSearchContext});if(!current())return;if(row.kind==='group'&&!fresh.groups.some(g=>g.id===row.id))throw Error('SEARCH_ACCESS_UNVERIFIED');}await openUniversalSearchResult(row);}catch{root.replaceChildren();const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Les droits de cette cible doivent être revérifiés. Relancez la recherche.','Permissions for this target need checking. Run the search again.');root.append(p);}})();}
+        if(interactive){node.type='button';node.className='search-hit';node.onclick=()=>void(async()=>{if(!current())return;try{if(row.kind!=='module'){const fresh=await authorizedSearchContext({app,context:captured,getContext:getSearchContext,allowCached:navigator.onLine===false});if(!current())return;if(row.kind==='group'&&!fresh.groups.some(g=>g.id===row.id))throw Error('SEARCH_ACCESS_UNVERIFIED');}await openUniversalSearchResult(row);}catch{root.replaceChildren();const p=document.createElement('p');p.className='truth-notice';p.textContent=tx('Les droits de cette cible doivent être revérifiés. Relancez la recherche.','Permissions for this target need checking. Run the search again.');root.append(p);}})();}
         else node.className='item';
         const title=document.createElement('strong');title.textContent=row.title||row.id;
         const sub=document.createElement('small');sub.textContent=row.subtitle||row.kind;
@@ -3346,9 +3370,11 @@ async function start() {
     applicationStartup=new Promise(resolve=>{settleStartup=resolve;});
     let authenticatedSession=false;
     try {
+        bootStage('AUTH_SESSION');
         const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
-        authenticatedSession=true;
+        authenticatedSession=true;bootStage('AUTHENTICATED');window.dispatchEvent(new CustomEvent('eco:preference-scope',{detail:{actorId:app.currentActor(),tenantId:app.currentTenant()}}));
+        window.dispatchEvent(new CustomEvent('eco:core-ready'));
         launchStudio?.refreshContext();identityVerificationUI.clearForContext?.();$('#authScreen').hidden=true;document.body.classList.remove('signed-out','auth-restoring');
         $('#accountName').textContent=session.account.displayName+(session.registrationState==='LOCAL_PENDING_REGISTRATION'?tx(' · local',' · local'):'');
         const claim=document.querySelector('#claimLocalAccountBtn');
@@ -3356,7 +3382,7 @@ async function start() {
           claim.hidden=session.registrationState!=='LOCAL_PENDING_REGISTRATION';claim.disabled=session.registrationState==='LOCAL_PENDING_REGISTRATION'&&!navigator.onLine;
           claim.textContent=navigator.onLine?tx('Finaliser le compte local','Finalize local account'):tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');
         }
-        await app.bootstrap();
+        bootStage('LOCAL_WORKSPACE');await app.bootstrap();
         const shareIntent=parseEcoShareIntent();
         try{
             const catalog=await app.productCatalog();
@@ -3373,7 +3399,7 @@ async function start() {
         renderEcosystemHighlights();
         renderDomainHubs();
         settleStartup();
-        await refreshAll();
+        await refreshAll();bootStage('READY');
         const requested=history.state?.ecoNav?.view?history.state.ecoNav:startupNavState??readPersistedNavState();
         if(requested?.view&&startupInteractionRevision===navigationInteractionRevision)showView(requested.view,requested);
         renderPersistedFinancialConflicts();startupNavState=null;
@@ -3400,7 +3426,7 @@ async function start() {
             }
             showAuth(tx('Mode hors ligne disponible : créez votre premier compte local maintenant.','Offline mode is available: create your first local account now.'),'register');return;
         }
-        fail(e);
+        bootStage('FAILED');fail(e);
     }
     finally { settleStartup(); }
 }
@@ -3444,7 +3470,7 @@ const setAuthMode=mode=>{
     $('#authSubmit').textContent=authMode==='register'?'Créer mon compte hors ligne ou en ligne':'Me connecter';
     $('#authPassword').autocomplete=authMode==='register'?'new-password':'current-password';
 };
-function showAuth(message='',preferredMode){document.body.classList.remove('auth-restoring');document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
+function showAuth(message='',preferredMode){window.dispatchEvent(new CustomEvent('eco:context-changed'));recoveryWorkspace.clearForContext();bootStage('SIGNED_OUT');document.body.classList.remove('auth-restoring');document.body.classList.add('signed-out');$('#authScreen').hidden=false;if(preferredMode)setAuthMode(preferredMode);if(message)$('#authError').textContent=message;$('#authUsername').focus();}
 document.querySelectorAll('[data-auth-mode]').forEach(button=>button.addEventListener('click',()=>setAuthMode(button.dataset.authMode)));
 document.querySelector('#authShowPassword')?.addEventListener('change',event=>{const input=document.querySelector('#authPassword');if(input)input.type=event.target.checked?'text':'password';});
 
@@ -3470,5 +3496,6 @@ document.querySelector('#claimLocalAccountBtn')?.addEventListener('click',()=>vo
 $('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();documentsUI.clearForContext();notificationCenterUI.clearForContext(true);ecoCareUI.clearForContext(true);governedGroupUI.clearForContext(true);economicExperimentsUI.clearForContext(true);resourceAssembliesUI.clearForContext(true);financialExplanationsUI.clearForContext(true);productiveCommunityUI.clearForContext(true);safetyReviewUI.clearForContext(true);dataQualityUI.clearForContext(true);launchStudio?.refreshContext(true);identityVerificationUI.clearForContext?.(true);journeyUI.refresh();localAssistantUI.refreshContext();document.body.classList.add('signed-out');$('#authScreen').hidden=false;$('#accountName').textContent='';const claim=document.querySelector('#claimLocalAccountBtn');if(claim)claim.hidden=true;showAuth(tx('Compte fermé sur cet appareil. Vos données locales ne sont pas supprimées.','Account signed out on this device. Your local data was not deleted.'));}catch(e){fail(e);}});
 // Online recovery is serialized by resumeOnline() above: sync durable outbox first, then restart projections.
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
-void ensureCurrentServiceWorker();
-void start();
+// Authentication and the first usable workspace take precedence over shell
+// installation downloads, especially on a slow phone or a cold browser profile.
+void start().finally(()=>void ensureCurrentServiceWorker());

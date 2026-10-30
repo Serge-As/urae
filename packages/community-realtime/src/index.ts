@@ -78,15 +78,26 @@ export class CommunityRealtimeStore{
     return{groupId,hubId,userId,draftTitle:String(row.draft_title??''),draftBody:String(row.draft_body??''),lastReadMessageId:row.last_read_message_id?String(row.last_read_message_id):undefined,lastReadAt:row.last_read_at?String(row.last_read_at):undefined,anchorMessageId:row.anchor_message_id?String(row.anchor_message_id):undefined,anchorRatio:Number(row.anchor_ratio??0),updatedAt:String(row.updated_at)};
   }
 
-  private async upsertState(tenantId:string,groupId:string,hubId:string,userId:string,patch:Partial<ForumUserState>):Promise<ForumUserState>{
-    const prev=await this.state(tenantId,groupId,hubId,userId),next={...prev,...patch,groupId,hubId,userId,updatedAt:now()};
-    await this.db.prepare("INSERT INTO community_user_state(tenant_id,group_id,hub_id,user_id,draft_title,draft_body,last_read_message_id,last_read_at,anchor_message_id,anchor_ratio,updated_at) VALUES(?,?,?,?,?,?,?,?,?,?,?) ON CONFLICT(tenant_id,group_id,hub_id,user_id) DO UPDATE SET draft_title=excluded.draft_title,draft_body=excluded.draft_body,last_read_message_id=excluded.last_read_message_id,last_read_at=excluded.last_read_at,anchor_message_id=excluded.anchor_message_id,anchor_ratio=excluded.anchor_ratio,updated_at=excluded.updated_at")
-      .bind(tenantId,groupId,hubId,userId,clean(next.draftTitle,180),next.draftBody.slice(0,10000),next.lastReadMessageId??null,next.lastReadAt??null,next.anchorMessageId??null,Math.min(Math.max(Number(next.anchorRatio)||0,0),1),next.updatedAt).run();
-    return next;
+  async saveDraft(input:{tenantId:string;groupId:string;hubId:string;userId:string;title:string;body:string;expectedTitle?:string;expectedBody?:string}):Promise<ForumUserState>{
+    const title=clean(input.title,180),body=input.body.slice(0,10000),checked=input.expectedTitle!==undefined&&input.expectedBody!==undefined;
+    if(checked){
+      const previous=await this.state(input.tenantId,input.groupId,input.hubId,input.userId);
+      if(previous.draftTitle===title&&previous.draftBody===body)return previous;
+      if(previous.draftTitle!==input.expectedTitle||previous.draftBody!==input.expectedBody)throw Error('FORUM_DRAFT_CHANGED');
+    }
+    const sql="INSERT INTO community_user_state(tenant_id,group_id,hub_id,user_id,draft_title,draft_body,anchor_ratio,updated_at) VALUES(?,?,?,?,?,?,0,?) ON CONFLICT(tenant_id,group_id,hub_id,user_id) DO UPDATE SET draft_title=excluded.draft_title,draft_body=excluded.draft_body,updated_at=excluded.updated_at"+(checked?" WHERE community_user_state.draft_title=? AND community_user_state.draft_body=?":"");
+    const values:unknown[]=[input.tenantId,input.groupId,input.hubId,input.userId,title,body,now()];if(checked)values.push(input.expectedTitle,input.expectedBody);
+    await this.db.prepare(sql).bind(...values).run();
+    const current=await this.state(input.tenantId,input.groupId,input.hubId,input.userId);
+    if(checked&&(current.draftTitle!==title||current.draftBody!==body))throw Error('FORUM_DRAFT_CHANGED');
+    return current;
   }
-  saveDraft(input:{tenantId:string;groupId:string;hubId:string;userId:string;title:string;body:string}){return this.upsertState(input.tenantId,input.groupId,input.hubId,input.userId,{draftTitle:input.title,draftBody:input.body});}
-  markRead(input:{tenantId:string;groupId:string;hubId:string;userId:string;messageId:string;anchorRatio?:number}){
-    const stamp=now();return this.upsertState(input.tenantId,input.groupId,input.hubId,input.userId,{lastReadMessageId:input.messageId,lastReadAt:stamp,anchorMessageId:input.messageId,anchorRatio:input.anchorRatio??0});
+  async markRead(input:{tenantId:string;groupId:string;hubId:string;userId:string;messageId:string;anchorRatio?:number}):Promise<ForumUserState>{
+    const stamp=now();
+    // Reading must not overwrite a draft being saved by another window.
+    await this.db.prepare("INSERT INTO community_user_state(tenant_id,group_id,hub_id,user_id,draft_title,draft_body,last_read_message_id,last_read_at,anchor_message_id,anchor_ratio,updated_at) VALUES(?,?,?,?,'','',?,?,?,?,?) ON CONFLICT(tenant_id,group_id,hub_id,user_id) DO UPDATE SET last_read_message_id=excluded.last_read_message_id,last_read_at=excluded.last_read_at,anchor_message_id=excluded.anchor_message_id,anchor_ratio=excluded.anchor_ratio,updated_at=excluded.updated_at")
+      .bind(input.tenantId,input.groupId,input.hubId,input.userId,input.messageId,stamp,input.messageId,Math.min(1,Math.max(0,Number(input.anchorRatio)||0)),stamp).run();
+    return this.state(input.tenantId,input.groupId,input.hubId,input.userId);
   }
 
   async messageContext(messageId:string):Promise<{tenantId:string;groupId:string;hubId:string;authorId:string}|undefined>{
@@ -102,5 +113,5 @@ export class CommunityRealtimeStore{
     await this.db.prepare('INSERT INTO community_reactions(message_id,user_id,reaction,created_at) VALUES(?,?,?,?)').bind(input.messageId,input.userId,reaction,now()).run();return{active:true};
   }
 
-  async clearDraft(tenantId:string,groupId:string,hubId:string,userId:string){return this.upsertState(tenantId,groupId,hubId,userId,{draftTitle:'',draftBody:''});}
+  async clearDraft(tenantId:string,groupId:string,hubId:string,userId:string){return this.saveDraft({tenantId,groupId,hubId,userId,title:'',body:''});}
 }

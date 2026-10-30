@@ -1,3 +1,4 @@
+import {mountOpportunityLanes}from'./opportunity-lanes.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const val=(form,name)=>String(new FormData(form).get(name)??'').trim();
 const num=(form,name)=>Number(new FormData(form).get(name)??0);
@@ -17,6 +18,7 @@ const safeDate=v=>{try{return new Date(v).toLocaleDateString('fr-FR')}catch{retu
 export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console.error,isManager=()=>false}){
   const marketHub=document.getElementById('marketHub'),guidanceHub=document.getElementById('guidanceHub');
   if(!marketHub||!guidanceHub)return{refresh:async()=>{}};
+  const opportunities=mountOpportunityLanes({app,host:marketHub.closest('section'),showError,notify});
 
   const valuePanel=el('details',undefined,'panel');valuePanel.id='valueNetworkOperational';
   valuePanel.append(el('summary','Besoins · offres · approvisionnement gouverné'));
@@ -214,10 +216,11 @@ export function mountCoreEconomicLearningUI({app,notify=()=>{},showError=console
     for(const cert of d.myCertificates??[]){const c=el('article',undefined,'item');c.append(el('strong',cert.title),el('span','Attestation','pill'),el('p','Aucun pouvoir financier ou administratif automatique.','hint'));academyList.append(c);}
   }catch(err){showError(err);}};
 
-  const refresh=async()=>{await Promise.allSettled([renderNeeds(),renderReferral(),renderAcademy()]);};
+  const refresh=async()=>{await Promise.allSettled([opportunities.refresh(),renderNeeds(),renderReferral(),renderAcademy()]);};
   valuePanel.addEventListener('toggle',()=>{if(valuePanel.open)void renderNeeds();});
   referralPanel.addEventListener('toggle',()=>{if(referralPanel.open)void renderReferral();});
   academyPanel.addEventListener('toggle',()=>{if(academyPanel.open)void renderAcademy();});
   document.addEventListener('eco:group-context-changed',()=>void refresh());
-  return{refresh};
+  window.addEventListener('eco:context-changed',opportunities.clearForContext);
+  return{refresh,clearForContext:opportunities.clearForContext};
 }

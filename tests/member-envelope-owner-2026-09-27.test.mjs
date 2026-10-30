@@ -43,6 +43,14 @@ test('member cannot fetch another member envelope while manager may build all re
  setCtx(k,'u1',['member']);await assert.rejects(()=>service.build('g1','meet1','m2'),/FORBIDDEN_SCOPE/);
  setCtx(k,'founder',['founder','manager']);const all=await service.buildAll('g1','meet1');assert.equal(all.length,2);assert.deepEqual(new Set(all.map(x=>x.recipientUserId)),new Set(['u1','u2']));
 });
+
+test('a scoped passage retains exact canonical amounts and versions without exposing another member',async()=>{
+ const {k,service}=await seed();setCtx(k,'founder',['founder','manager']);
+ const all=await service.canonicalCells('g1'),scoped=await service.canonicalCells('g1',{membershipId:'m1',meetingId:'meet1'});
+ assert.deepEqual(scoped.cells,all.cells.filter(x=>x.membershipId==='m1'&&x.meetingId==='meet1'));
+ assert.equal(scoped.cells[0].amount,1000);
+ setCtx(k,'u1',['member']);assert.deepEqual((await service.canonicalCells('g1',{membershipId:'m2'})).cells,[]);
+});
 test('member envelope UI and worker use targeted live readiness rather than broadcast financial payload',()=>{
  const ui=fs.readFileSync('apps/web/src/member-envelope-ui.js','utf8'),worker=fs.readFileSync('workers/api/src/index.ts','utf8');
  assert.match(ui,/aucune donnée financière des autres membres/);assert.match(ui,/MEMBER_ENVELOPE_READY/);

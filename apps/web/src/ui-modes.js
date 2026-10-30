@@ -1,4 +1,5 @@
-const STORAGE_KEY='eco.uiMode';
+let STORAGE_KEY='eco.uiMode';
+window.addEventListener('eco:preference-scope',event=>{const actor=event.detail?.actorId,tenant=event.detail?.tenantId;if(!actor)return;STORAGE_KEY='eco.uiMode.'+encodeURIComponent(JSON.stringify([tenant,actor]));applyUiMode(currentUiMode(),{persist:false,announce:true});});
 const VALID=new Set(['visual','senior','assisted']);
 
 const $=id=>document.getElementById(id);

@@ -1,13 +1,13 @@
-Eco-System Canopée + Repères deployment authorized by founder 2026-10-27
-release: 1.5.2.42-canopee-reperes
-date: 2026-10-27
+Eco-System eight lots authorized by founder 2026-10-30
+release: 1.5.2.43-canopee-collective
+date: 2026-10-30
 mode: code-only-with-verified-readonly-backup-no-migration
 db_mutation: none
-baseline_source: 6d3264bd7f345d808fb8cbfcc618d99c274d3891
+baseline_source: 1d6d2767e208b240d40f5fdd578f11e2582a8c8f
 qualification: complete governed CI, Chromium and WebKit on exact source
-scope: group-first Canopée presentation, canonical capability placement, clear financial tables and preserved entry workflows
+scope: startup recovery; context links; collective versioned synthesis; optional local voice; Canopée panoramas; tables and sources; canonical economic actions; offline continuity
 backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-public_verification: health, catalogue, shell assets and locked optional document engines
-trigger_nonce: 2026-10-27-canopee-final-interaction-preserving-startup
+public_verification: health, catalogue, shell assets and locked optional voice/document engines
+trigger_nonce: 2026-10-30-eight-lots-reviewed-release

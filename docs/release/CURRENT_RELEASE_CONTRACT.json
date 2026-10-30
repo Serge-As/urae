@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.42-canopee-reperes",
-    "buildId": "eco-system-1.5.2.42-20261026-canopee-reperes",
+    "version": "1.5.2.43-canopee-collective",
+    "buildId": "eco-system-1.5.2.43-20261030-canopee-collective",
     "schemaVersion": "d1-additive-20260923",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15242-canopee-reperes-20261026",
-    "previousPwaCache": "eco-system-v15241-programme-audit-20261025",
+    "pwaCache": "eco-system-v15243-canopee-collective-20261030",
+    "previousPwaCache": "eco-system-v15242-canopee-reperes-20261026",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {

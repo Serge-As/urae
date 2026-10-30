@@ -1,0 +1,18 @@
+// Independent classic script: recovery must work even if the ESM graph cannot load.
+(()=>{
+  const started=performance.now(),stages:Array<{stage:string;ms:number}>=[],failures:Array<{kind:string;path:string}>=[];
+  let stage='LOADING',settled=false,timer:ReturnType<typeof setTimeout>,mountTimer:ReturnType<typeof setTimeout>;
+  const en=()=>{try{return localStorage.getItem('tontine.locale')==='en';}catch{return false;}},tx=(fr:string,english:string)=>en()?english:fr;
+  const report=()=>({protocolVersion:1,generatedAt:new Date().toISOString(),release:document.querySelector('meta[name="eco-release"]')?.getAttribute('content')??document.title.match(/1\.\d+\.\d+(?:\.\d+)?/)?.[0]??'unknown',stage,elapsedMs:Math.round(performance.now()-started),online:navigator.onLine,capabilities:{indexedDB:'indexedDB'in window,serviceWorker:'serviceWorker'in navigator,speechRecognition:Boolean((window as any).SpeechRecognition||(window as any).webkitSpeechRecognition),audioRecording:typeof MediaRecorder!=='undefined'},stages:stages.slice(-25),failures:failures.slice(-12),privacy:{cookies:false,accounts:false,financialContent:false,storageContents:false}});
+  const download=()=>{const blob=new Blob([JSON.stringify(report(),null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='eco-diagnostic-demarrage.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+  const recover=()=>{
+    if(settled)return;const screen=document.getElementById('sessionRestoreScreen'),card=screen?.querySelector('.session-restore-card');if(!card){mountTimer=setTimeout(recover,200);return;}
+    screen!.classList.add('has-recovery');card.querySelector('p')!.textContent=tx('Le démarrage prend trop de temps. Vos données et saisies locales sont conservées.','Startup is taking too long. Your local data and entries are preserved.');
+    let controls=card.querySelector('.startup-recovery');if(!controls){controls=document.createElement('div');controls.className='startup-recovery';const detail=document.createElement('p');detail.id='startupStage';detail.className='hint';const retry=document.createElement('button');retry.type='button';retry.className='primary';retry.textContent=tx('Réessayer le démarrage','Retry startup');retry.onclick=()=>location.reload();const diag=document.createElement('button');diag.type='button';diag.textContent=tx('Télécharger le diagnostic','Download diagnostics');diag.onclick=download;controls.append(detail,retry,diag);card.append(controls);}const label=controls.querySelector('#startupStage');if(label)label.textContent=tx('Étape : ','Stage: ')+stage;
+  };
+  window.addEventListener('eco:boot-stage',(event:Event)=>{const detail=(event as CustomEvent).detail??{};stage=String(detail.stage??'LOADING').replace(/[^A-Z_]/g,'').slice(0,50);stages.push({stage,ms:Math.round(performance.now()-started)});if(['READY','SIGNED_OUT','AUTHENTICATED','LOCAL_READY'].includes(stage)){settled=true;clearTimeout(timer);clearTimeout(mountTimer);}else if(stage==='FAILED'){settled=false;recover();}});
+  window.addEventListener('error',(event:Event)=>{const target=event.target as HTMLScriptElement|HTMLLinkElement|null;let pathname='';try{pathname=new URL((target as HTMLScriptElement)?.src||(target as HTMLLinkElement)?.href||location.href).pathname;}catch{}failures.push({kind:target instanceof HTMLScriptElement?'SCRIPT':target instanceof HTMLLinkElement?'STYLE':'RUNTIME',path:pathname.slice(0,150)});if(!settled&&target instanceof HTMLScriptElement)recover();},true);
+  window.addEventListener('eco:startup-diagnostics',download);
+  (window as any).ecoStartupDiagnostics=report;
+  timer=setTimeout(recover,12000);
+})();

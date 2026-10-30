@@ -1,0 +1,29 @@
+{
+  "protocol": "ECO_OPTIONAL_LOCAL_VOICE_1",
+  "engine": {
+    "name": "vosk-browser",
+    "version": "0.0.8",
+    "license": "Apache-2.0",
+    "source": "https://cdn.jsdelivr.net/npm/vosk-browser@0.0.8/dist/vosk.js",
+    "bytes": 5804767,
+    "sha256": "29504515526e974f4cb053cf08811c4de5fb2a74007c0a5a957db50eaa8d5d0c"
+  },
+  "model": {
+    "name": "vosk-model-small-fr-0.22",
+    "language": "fr-FR",
+    "license": "Apache-2.0",
+    "source": "https://alphacephei.com/vosk/models/vosk-model-small-fr-0.22.zip",
+    "mirror": "https://huggingface.co/localstack/vosk-models/resolve/main/vosk-model-small-fr-0.22.zip",
+    "bytes": 42233323,
+    "sha256": "cabf6180e177eb9b3a9a9d43a437bd5e549f3a7d09525e5d69a3fed787be12ad"
+  },
+  "storage": {
+    "cache": "eco-voice-fr022-v1",
+    "database": "/eco-voice-fr022-v1",
+    "modelDirectory": "fr022"
+  },
+  "patch": "Separate model-only IDBFS mount and stable directory, explicit final flush tag, separate worker asset with a narrowly scoped CSP, and explicit traversable archive directories. Acoustic model and recognition unchanged.",
+  "onDemandOnly": true,
+  "audioTransfer": false,
+  "physicalBenchmark": "NOT_ACCEPTED"
+}

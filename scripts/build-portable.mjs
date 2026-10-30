@@ -25,12 +25,14 @@ async function compile(dir){
 }
 for(const dir of ['apps','packages','workers'])await compile(dir);
 await import('./prepare-local-document-engines.mjs');
+await import('./prepare-local-voice.mjs');
 for(const f of ['index.html','external-ad.html','public-notebook.html','styles.css','canopee.css','manifest.webmanifest','sw.js']){
  await cp(path.join(root,'apps/web',f),path.join(output,'apps/web',f));
  await cp(path.join(root,'apps/web',f),path.join(output,f));
 }
 await cp(path.join(output,'apps/web/src'),path.join(output,'src'),{recursive:true});
 await cp(path.join(root,'apps/web/vendor/documents'),path.join(output,'vendor/documents'),{recursive:true});
+await cp(path.join(root,'apps/web/vendor/voice'),path.join(output,'vendor/voice'),{recursive:true});
 console.log('Portable build OK — Node type transformation; TypeScript typecheck remains a separate check.');
 
 await import('./pwa-shell-closure.mjs');

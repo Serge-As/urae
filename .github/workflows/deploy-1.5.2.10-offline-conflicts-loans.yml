@@ -1,4 +1,4 @@
-name: Eco-System 1.5.2.42 — Live and Refonte Cloudflare Delivery
+name: Eco-System 1.5.2.43 — Live and Refonte Cloudflare Delivery
 
 on:
   workflow_dispatch:
@@ -20,9 +20,9 @@ env:
   ECO_SYSTEM_ROOT: https://eco-system.sergemimf.workers.dev/
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
-  EXPECTED_VERSION: 1.5.2.42-canopee-reperes
-  EXPECTED_BUILD: eco-system-1.5.2.42-20261026-canopee-reperes
-  EXPECTED_CACHE: eco-system-v15242-canopee-reperes-20261026
+  EXPECTED_VERSION: 1.5.2.43-canopee-collective
+  EXPECTED_BUILD: eco-system-1.5.2.43-20261030-canopee-collective
+  EXPECTED_CACHE: eco-system-v15243-canopee-collective-20261030
   MIN_CAPABILITIES: 164
 
 jobs:
@@ -57,7 +57,7 @@ jobs:
             -H "Authorization: Bearer ${{ github.token }}" \
             -H "Accept: application/vnd.github+json" \
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
-            -d '{"state":"pending","context":"eco-system/production-1.5.2.15","description":"Qualification + Cloudflare smoke in progress"}' >/dev/null
+            -d '{"state":"pending","context":"eco-system/production-1.5.2.43","description":"Qualification + Cloudflare smoke in progress"}' >/dev/null
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
@@ -85,7 +85,7 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-typecheck","description":"TypeScript qualification passed"}' >/dev/null
       - name: Governance and architecture gates
-        run: npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run lint:proposals
+        run: npm run lint:architecture && npm run lint:shared-governance && npm run lint:constitution && npm run lint:truth && npm run lint:memory && npm run lint:memory-index && npm run lint:source-coverage && npm run lint:proposals && npm run lint:offline-capabilities
       - name: Status · gate-governance
         continue-on-error: true
         run: |
@@ -149,7 +149,7 @@ jobs:
           python3 --version
           node -e "(async()=>{const p=require('@playwright/test');for(const name of ['chromium','webkit']){const browser=await p[name].launch();console.log(name+': '+browser.version());await browser.close();}})().catch(error=>{console.error(error);process.exit(1);});"
       - name: Mandatory WebKit sovereign offline qualification
-        run: node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/capability-placement-canopee-20261027.spec.mjs tests/browser/canopee-reperes-20261026.spec.mjs tests/browser/consolidated-completion-20261025.spec.mjs tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs tests/browser/engine-rehearsal-incident-20261024.spec.mjs tests/browser/productive-continuity-20261024.spec.mjs
+        run: node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/eight-lots-20261029.spec.mjs tests/browser/eight-lots-experience-20261030.spec.mjs tests/browser/capability-placement-canopee-20261027.spec.mjs tests/browser/canopee-reperes-20261026.spec.mjs tests/browser/consolidated-completion-20261025.spec.mjs tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs tests/browser/engine-rehearsal-incident-20261024.spec.mjs tests/browser/productive-continuity-20261024.spec.mjs
 
       - name: Status · gate-webkit
         continue-on-error: true
@@ -161,7 +161,7 @@ jobs:
             "https://api.github.com/repos/${GITHUB_REPOSITORY}/statuses/${GITHUB_SHA}" \
             -d '{"state":"success","context":"eco-system/gate-webkit","description":"WebKit sovereign offline passed"}' >/dev/null
       - name: Mandatory Chromium finance and shell qualification
-        run: node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/capability-placement-canopee-20261027.spec.mjs tests/browser/canopee-reperes-20261026.spec.mjs tests/browser/consolidated-completion-20261025.spec.mjs tests/browser/productive-continuity-20261024.spec.mjs tests/browser/engine-rehearsal-incident-20261024.spec.mjs tests/browser/common-innovations-20261023.spec.mjs tests/browser/review-recovery-20261023.spec.mjs tests/browser/business-value-network-20261022.spec.mjs tests/browser/personal-shops-lot10-20261020.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs tests/browser/cockpit-continuity-20261015.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs tests/browser/cockpit-priorities-lot02-20261020.spec.mjs tests/browser/assistant-tools-lot23-20261020.spec.mjs tests/browser/market-orders-lot10-20261020.spec.mjs tests/browser/notification-inbox-lot24-20261021.spec.mjs tests/browser/care-lot25-20261021.spec.mjs tests/browser/launch-kit-lot03-20261022.spec.mjs tests/browser/groups-governance-trust-20261022.spec.mjs tests/browser/temporal-commerce-pilots-20261022.spec.mjs tests/browser/financial-explanations-20261022.spec.mjs tests/browser/productive-community-20261022.spec.mjs
+        run: node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/eight-lots-20261029.spec.mjs tests/browser/eight-lots-experience-20261030.spec.mjs tests/browser/capability-placement-canopee-20261027.spec.mjs tests/browser/canopee-reperes-20261026.spec.mjs tests/browser/consolidated-completion-20261025.spec.mjs tests/browser/productive-continuity-20261024.spec.mjs tests/browser/engine-rehearsal-incident-20261024.spec.mjs tests/browser/common-innovations-20261023.spec.mjs tests/browser/review-recovery-20261023.spec.mjs tests/browser/business-value-network-20261022.spec.mjs tests/browser/personal-shops-lot10-20261020.spec.mjs tests/browser/financial-cell-consensus-persistence-1.5.2.6.spec.mjs tests/browser/browser-shell-mobile-1.5.2.6.spec.mjs tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs tests/browser/window-account-finance-20261010.spec.mjs tests/browser/cockpit-continuity-20261015.spec.mjs tests/browser/navigation-lot01-20261020.spec.mjs tests/browser/session-rehearsal-lot05-20261020.spec.mjs tests/browser/request-budget-lot28-20261020.spec.mjs tests/browser/cockpit-priorities-lot02-20261020.spec.mjs tests/browser/assistant-tools-lot23-20261020.spec.mjs tests/browser/market-orders-lot10-20261020.spec.mjs tests/browser/notification-inbox-lot24-20261021.spec.mjs tests/browser/care-lot25-20261021.spec.mjs tests/browser/launch-kit-lot03-20261022.spec.mjs tests/browser/groups-governance-trust-20261022.spec.mjs tests/browser/temporal-commerce-pilots-20261022.spec.mjs tests/browser/financial-explanations-20261022.spec.mjs tests/browser/productive-community-20261022.spec.mjs
 
       - name: Retain isolated browser qualification evidence
         if: always()
@@ -311,21 +311,25 @@ jobs:
           console.log(JSON.stringify({version:health.version,commitSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled}));
           const files=['/','/canopee.css','/src/group-home-ui.js','/src/capability-navigation.js','/src/role-dashboards-ui.js','/src/visual-media-presenter.js','/styles.css','/sw.js','/eco-shell-manifest.json','/src/main.js','/src/financial-work-ui.js','/src/completion-ui.js','/src/ui-modes.js','/src/field-hardening.js','/src/runtime-i18n.js','/src/shell-navigation.js','/src/session-rehearsal.js','/src/request-budget-ui.js','/packages/application/src/index.js','/packages/application/src/request-budget.js','/src/cockpit-priorities.js','/src/cockpit-priorities-ui.js','/src/journey-context.js','/src/personal-cockpit-ui.js','/src/workspace-navigation.js','/src/assistant-actions.js','/src/local-assistant.js','/src/universal-search.js','/src/advanced-ui.js','/src/community-shop-ui.js','/src/market-order-board.js','/src/market-quotes-ui.js','/src/personal-shops-ui.js','/src/business-studio-ui.js','/src/notification-center-ui.js','/packages/notifications/src/policy.js','/src/eco-care-ui.js','/packages/platform-kernel/src/case-care.js','/src/launch-studio.js','/src/launch-draft.js','/src/launch-guide-ui.js','/src/identity-verification-ui.js','/src/governed-group-ui.js','/src/economic-experiments-ui.js','/src/temporal-commerce-ui.js','/src/financial-explanations-ui.js','/src/productive-community-ui.js','/src/productive-business-ui.js','/src/safety-review-ui.js','/src/incident-package.js','/packages/trust/src/lab-review.js','/packages/group-documents/src/review.js','/src/resource-assemblies-ui.js','/src/engine-rehearsal-ui.js','/packages/offline/src/index.js','/src/productive-continuity-ui.js','/src/productive-calendar.js','/src/consolidated-completion-ui.js','/src/local-document-preparation.js','/src/local-ocr-session.js','/src/local-document-ocr-worker.js','/src/public-notebook-ui.js','/public-notebook.html','/vendor/documents/manifest.json'];
           files.push(...JSON.parse(fs.readFileSync('apps/web/document-engines.lock.json','utf8')).assets.map(asset=>'/vendor/documents/'+asset.path));
+          files.push('/src/startup-guard.js','/src/context-link.js','/src/member-synthesis-ui.js','/src/vosk-local.js','/src/voice-entry-ui.js','/src/table-preferences.js','/src/financial-number-ui.js','/src/tontine-timeline.js','/src/forum-decision-ui.js','/src/opportunity-lanes.js','/src/recovery-workspace.js','/src/offline-policies.generated.js','/vendor/voice/manifest.json','/vendor/voice/NOTICE.txt','/vendor/voice/LICENSE.txt');
+          files.push(...JSON.parse(fs.readFileSync('.build/vendor/voice/manifest.json','utf8')).assets.map(asset=>'/vendor/voice/'+asset.path));
           const assets=[];
           for(const pathname of files){
             const disk='.build/public/'+(pathname==='/'?'index.html':pathname.slice(1));
             const expected=createHash('sha256').update(fs.readFileSync(disk)).digest('hex');
-            let actual=null;
+            let actual=null,policy=null;
             for(let attempt=0;attempt<8;attempt++){
               try{
                 const response=await fetch(new URL(pathname,process.env.ECO_SYSTEM_ROOT),{cache:'no-store',headers:{'Cache-Control':'no-cache'},signal:AbortSignal.timeout(15000)});
-                if(response.ok) actual=createHash('sha256').update(Buffer.from(await response.arrayBuffer())).digest('hex');
+                if(response.ok){actual=createHash('sha256').update(Buffer.from(await response.arrayBuffer())).digest('hex');policy=response.headers.get('content-security-policy')||'';}
               }catch{}
               if(actual===expected)break;
               if(attempt<7)await new Promise(resolve=>setTimeout(resolve,4000));
             }
             if(actual!==expected)throw new Error('PUBLIC_ASSET_MISMATCH:'+pathname);
-            assets.push({path:pathname,sha256:actual});
+            if(pathname==='/'&&(!policy||policy.includes("'unsafe-eval'")))throw new Error('PUBLIC_DOCUMENT_POLICY_MISMATCH');
+            if(pathname==='/vendor/voice/worker.js'&&(!policy?.includes("script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'")||!policy.includes("connect-src 'self' blob:")||!policy.includes("worker-src 'none'")))throw new Error('PUBLIC_ASR_WORKER_POLICY_MISMATCH');
+            assets.push({path:pathname,sha256:actual,...(pathname==='/'||pathname==='/vendor/voice/worker.js'?{contentSecurityPolicy:policy}:{})});
           }
           const receipt={verifiedAt:new Date().toISOString(),version:health.version,sourceSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled,assets};
           fs.writeFileSync('.recovery/public-verification.json',JSON.stringify(receipt,null,2)+'\n');
@@ -354,12 +358,12 @@ jobs:
         run: |
           if [ "${{ job.status }}" = "success" ]; then
             state=success
-            description="1.5.2.15 qualified and production smoke passed"
+            description="1.5.2.43 qualified and production smoke passed"
           else
             state=failure
-            description="1.5.2.15 qualification or production smoke failed"
+            description="1.5.2.43 qualification or production smoke failed"
           fi
-          payload="$(node -e 'console.log(JSON.stringify({state:process.argv[1],context:"eco-system/production-1.5.2.15",description:process.argv[2]}))' "$state" "$description")"
+          payload="$(node -e 'console.log(JSON.stringify({state:process.argv[1],context:"eco-system/production-1.5.2.43",description:process.argv[2]}))' "$state" "$description")"
           curl --fail --silent --show-error -X POST \
             -H "Authorization: Bearer ${{ github.token }}" \
             -H "Accept: application/vnd.github+json" \

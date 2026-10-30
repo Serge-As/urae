@@ -1,6 +1,7 @@
+import {openMemberSynthesis} from './member-synthesis-ui.js';
 import {openSessionRehearsal} from './session-rehearsal.js';
 const node=(tag,text,cls)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(cls)e.className=cls;return e;};
-export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,waitForEntries=async()=>{},isLiveConnected=()=>false}){
+export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,waitForEntries=async()=>{},memberName=id=>id,openDetail=()=>{},isLiveConnected=()=>false}){
   const modes=new Map(),passages=new Map();let current=null,busy=null;
   const scope=(meetingId)=>JSON.stringify([app.currentActor(),app.activeGroup(),meetingId]);
   const prompt=({title,content,actions,loading})=>new Promise(resolve=>{
@@ -31,19 +32,11 @@ export function createFinancialWorkUI({app,tx,notify,summary,edit,resume,waitFor
     await app.chooseFinancialWorkMode(meetingId,mode,change);modes.set(key,mode);window.dispatchEvent(new CustomEvent('eco:financial-work-mode',{detail:{meetingId,mode}}));void resume();toolbar();return mode;
   };
   const finish=async()=>{
-    if(!current)return true;const selected={...current},key=JSON.stringify([scope(selected.meetingId),selected.membershipId]),changed=passages.get(key)??new Set();
-    let data,modified=null;const content=node('div');content.append(node('p',tx('Préparation de la synthèse… Les validations en cours se terminent avant son affichage.','Preparing summary… Entries being saved will finish before it is displayed.')));
-    // Open synchronously on the other member's focus, before a network wait or
-    // any typing. The modal never gates persistence of a previous validation.
-    const result=await prompt({title:tx('Synthèse du membre avant de continuer','Review member before continuing'),content,actions:[{label:tx('Valider la synthèse et continuer','Confirm summary and continue'),value:true,primary:true},{label:tx('Revenir à la saisie','Return to entry'),value:false}],loading:async()=>{
-      await waitForEntries(selected.meetingId,selected.membershipId);
-      if(navigator.onLine!==false)await resume();
-      data=await summary(selected.meetingId,selected.membershipId,[...changed]);const table=node('table',undefined,'eco-work-summary');const head=node('tr');for(const label of [tx('Rubrique','Category'),tx('Avant la séance','Before meeting'),tx('Séance actuelle','Current meeting'),tx('Total','Total'),tx('Action','Action')])head.append(node('th',label));const thead=node('thead');thead.append(head);table.append(thead);const body=node('tbody');
-      for(const row of data.lines){const tr=node('tr');for(const value of [row.rubricName,row.before,row.current,row.total])tr.append(node('td',typeof value==='number'?new Intl.NumberFormat('fr-CM').format(value)+' F CFA':value));const td=node('td'),b=node('button',tx('Modifier','Change'),'secondary');b.type='button';b.onclick=()=>{modified=row.rubricId;table.closest('dialog')?.querySelector('[data-return]')?.click();};td.append(b);tr.append(td);body.append(tr);}const total=node('tr',undefined,'table-total-row');total.append(node('th',tx('Total des flux affichés','Total displayed flows')));for(const key of ['before','current','total'])total.append(node('td',new Intl.NumberFormat('fr-CM').format(data.totals[key])+' F CFA'));total.append(node('td',''));body.append(total);table.append(body);
-      content.replaceChildren();if(data.local)content.append(node('p',tx('Cette synthèse présente les saisies enregistrées sur cet appareil. La connexion permettra de les partager.','This summary shows entries saved on this device. A connection will share them.')));content.append(node('p',tx('Vérifiez les montants. Le total ci-dessous additionne les flux affichés ; il ne représente pas le solde de caisse ni la dette.','Check the amounts. This total sums displayed flows; it is not the cash balance or debt.')),table);
-    }});
-    if(modified){edit(selected,modified);return false;}if(!result)return false;
-    await app.closeFinancialPassage(selected.meetingId,selected.membershipId,data.lines.map(x=>({rubricId:x.rubricId,amount:Math.abs(x.current),cellVersion:x.cellVersion})));current=null;passages.delete(key);void resume();toolbar();return true;
+    if(!current)return true;const selected={...current},key=JSON.stringify([scope(selected.meetingId),selected.membershipId]),changed=[...(passages.get(key)??new Set())];
+    const result=await openMemberSynthesis({app,selection:selected,changed,memberName:memberName(selected.membershipId),summary,waitForEntries,tx,notify});
+    if(result.modified){edit(selected,result.modified);return false;}
+    if(result.detail){openDetail(result.detail);return false;}
+    if(!result.approved)return false;current=null;passages.delete(key);void resume();toolbar();return true;
   };
   const before=async(meetingId,membershipId,rubricId)=>{
     // A fast validation during the member review must await it, never silently

@@ -16,7 +16,7 @@ for(const file of files){
  const slug=file.split('/').at(-1).replace('.spec.mjs',''),prefix=`artifacts/browser-isolated/${browser}-${slug}`;
  const log=await open(prefix+'.log','w');
  const server=spawn(process.execPath,['scripts/dev-server.mjs'],{env:{...process.env,OPEN_BROWSER:'0',PORT:'4173',ECO_DATA_FILE:`.data/qualification-${runId}-${browser}-${slug}.sqlite`},stdio:['ignore',log.fd,log.fd],windowsHide:true});
- const serverDone=once(server,'exit');let serverExited=false;serverDone.then(()=>{serverExited=true;});
+ let serverExited=false;const serverDone=once(server,'exit').then(async([code,signal])=>{serverExited=true;await log.write(`\nISOLATED_SERVER_EXIT code=${code} signal=${signal}\n`);return[code,signal];});
  try{
   let ready=false;
   for(let i=0;i<80;i++){if(serverExited)break;try{const r=await fetch('http://127.0.0.1:4173/health',{signal:AbortSignal.timeout(1000)});if(r.ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,250));}

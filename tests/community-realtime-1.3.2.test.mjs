@@ -36,3 +36,22 @@ test('Forum v2 reactions are per-user toggles and message pagination stays bound
     assert.equal(page.messages[0].reactions['👍'],undefined);
   }finally{db.close();}
 });
+
+test('draft content comparison preserves concurrent read markers, rejects stale windows and isolates authors',async()=>{
+  const db=new SQLiteD1(':memory:');db.migrate();
+  try{
+    const store=new CommunityRealtimeStore(db),scope={tenantId:'t',groupId:'g',hubId:'h',userId:'u1'};
+    await store.saveDraft({...scope,title:'Projet',body:'Version A',expectedTitle:'',expectedBody:''});
+    await store.markRead({...scope,messageId:'m-read',anchorRatio:.75});
+    const saved=await store.saveDraft({...scope,title:'Projet',body:'Version B',expectedTitle:'Projet',expectedBody:'Version A'});
+    assert.equal(saved.anchorMessageId,'m-read');assert.equal(saved.anchorRatio,.75);
+    await assert.rejects(store.saveDraft({...scope,title:'Ancienne fenêtre',body:'Écrasement',expectedTitle:'Projet',expectedBody:'Version A'}),/FORUM_DRAFT_CHANGED/);
+    assert.equal((await store.state('t','g','h','u1')).draftBody,'Version B');
+    assert.equal((await store.state('t','g','h','u2')).draftBody,'');
+    // An uncertain response can safely repeat the exact accepted content.
+    const retry=await store.saveDraft({...scope,title:'Projet',body:'Version B',expectedTitle:'Projet',expectedBody:'Version A'});
+    assert.equal(retry.draftBody,'Version B');
+    await store.markRead({...scope,messageId:'m-later'});
+    assert.equal((await store.state('t','g','h','u1')).draftBody,'Version B');
+  }finally{db.close();}
+});

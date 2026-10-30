@@ -1,3 +1,4 @@
+import {openForumDecision} from './forum-decision-ui.js';
 import {openWhatsAppShare,focusEcoShareTarget} from './share-out.js';
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const v=id=>String(document.getElementById(id)?.value??'').trim();
@@ -5,6 +6,7 @@ const split=value=>value.split(',').map(x=>x.trim()).filter(Boolean);
 const row=(label,value)=>{const p=el('p');const b=el('strong',label+' : ');p.append(b,document.createTextNode(String(value??'—')));return p;};
 
 export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,isManager=()=>false,fmt=n=>String(n),actorName=id=>id}){
+  const scope=()=>JSON.stringify([app.currentActor?.(),app.currentTenant?.(),app.activeGroup()]);
   let hubs=[],activeHub='',beforeCursor='',draftTimer,readTimer,observer,loadingPosts=false,forumTypingTimer=0,lastForumTypingSignal=0;
   const hubList=document.getElementById('communityHubList'),postList=document.getElementById('communityPostList'),hubSelect=document.getElementById('communityPostHub'),storefront=document.getElementById('groupStorefront');
   const bodyInput=document.getElementById('communityPostBody'),titleInput=document.getElementById('communityPostTitle'),draftState=document.getElementById('communityDraftState'),readState=document.getElementById('communityReadState');
@@ -13,10 +15,11 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
 
   const syncDraft=async()=>{
     if(!activeHub||!app.activeGroup()||!bodyInput)return;
-    try{const state=await app.saveForumDraft(activeHub,titleInput?.value??'',bodyInput.value??'');if(draftState)draftState.textContent='Brouillon synchronisé · '+new Date(state.updatedAt).toLocaleTimeString('fr-FR');}
-    catch(e){if(draftState)draftState.textContent='Brouillon conservé localement · synchronisation à reprendre';}
+    const at=scope(),hub=activeHub;
+    try{const state=await app.saveForumDraft(hub,titleInput?.value??'',bodyInput.value??'');if(scope()===at&&hub===activeHub&&draftState)draftState.textContent=(state.localPending?'Brouillon local · en attente de connexion · ':'Brouillon synchronisé · ')+new Date(state.updatedAt).toLocaleTimeString('fr-FR');}
+    catch(e){if(scope()===at&&hub===activeHub&&draftState)draftState.textContent='Brouillon conservé localement · synchronisation à reprendre';}
   };
-  const queueDraft=()=>{clearTimeout(draftTimer);if(draftState)draftState.textContent='Synchronisation du brouillon…';draftTimer=setTimeout(()=>void syncDraft(),650);};
+  const queueDraft=()=>{if(activeHub)void app.saveForumDraftLocal?.(activeHub,titleInput?.value??'',bodyInput?.value??'').catch(showError);clearTimeout(draftTimer);if(draftState)draftState.textContent='Synchronisation du brouillon…';draftTimer=setTimeout(()=>void syncDraft(),650);};
 
   const forumSignalPayload=()=>({kind:'COMMUNITY_DRAFT',hubId:activeHub});
   const stopForumTyping=()=>{if(forumTypingTimer){clearTimeout(forumTypingTimer);forumTypingTimer=0;}if(activeHub)void app.publishLiveSignal?.('TYPING_STOP',forumSignalPayload()).catch(()=>{});};
@@ -28,11 +31,12 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
 
   const restoreState=async(scroll=true)=>{
     if(!activeHub)return null;
+    const at=scope(),hub=activeHub;
     try{
-      const state=await app.forumUserState(activeHub);
+      const state=await app.forumUserState(hub);if(scope()!==at||hub!==activeHub)return null;
       if(bodyInput&&document.activeElement!==bodyInput&&bodyInput.value!==state.draftBody)bodyInput.value=state.draftBody??'';
       if(titleInput&&document.activeElement!==titleInput&&titleInput.value!==state.draftTitle)titleInput.value=state.draftTitle??'';
-      if(draftState)draftState.textContent=state.draftBody?'Brouillon serveur restauré · '+new Date(state.updatedAt).toLocaleString('fr-FR'):'Aucun brouillon en attente.';
+      if(draftState)draftState.textContent=state.draftBody?(state.localPending?'Brouillon local restauré · ':'Brouillon serveur restauré · ')+new Date(state.updatedAt).toLocaleString('fr-FR'):'Aucun brouillon en attente.';
       if(readState)readState.textContent=state.lastReadMessageId?'Dernière position mémorisée : '+new Date(state.lastReadAt??state.updatedAt).toLocaleString('fr-FR'):'Aucune position de lecture mémorisée.';
       if(scroll&&state.anchorMessageId)requestAnimationFrame(()=>document.querySelector('[data-forum-message-id="'+CSS.escape(state.anchorMessageId)+'"]')?.scrollIntoView({block:'center'}));
       return state;
@@ -96,19 +100,21 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
         }}));
       };
       actions.append(opportunity);
-    }const share=el('button','Partager WhatsApp','secondary');share.type='button';share.onclick=()=>{const payload=openWhatsAppShare({view:'ecosystem',anchor:'communityEnginePanel',kind:'forum-message',groupId:app.activeGroup(),objectId:post.id,contextId:activeHub,title:'Publication Eco-System',summary:'Ouvrir cette publication dans Eco-System.'});notify('WhatsApp ouvert · '+payload.refCode);};actions.append(share);card.append(actions);return card;
+    }if(isManager()){const decision=el('button','Préparer une décision et son suivi','secondary');decision.type='button';decision.onclick=()=>void openForumDecision({app,post,hubId:activeHub,notify,showError}).catch(showError);actions.append(decision);}const share=el('button','Partager WhatsApp','secondary');share.type='button';share.onclick=()=>{const payload=openWhatsAppShare({view:'ecosystem',anchor:'communityEnginePanel',kind:'forum-message',groupId:app.activeGroup(),objectId:post.id,contextId:activeHub,title:'Publication Eco-System',summary:'Ouvrir cette publication dans Eco-System.'});notify('WhatsApp ouvert · '+payload.refCode);};actions.append(share);card.append(actions);return card;
   };
 
   const renderPosts=async(options={})=>{
     if(!postList||!activeHub||loadingPosts){if(!activeHub)postList?.replaceChildren();return;}loadingPosts=true;
+    const at=scope(),hub=activeHub;
     try{
-      const state=await restoreState(false);
+      const state=await restoreState(false);if(scope()!==at||hub!==activeHub)return;
       const query={limit:60};if(options.around)query.around=options.around;else if(!options.latest&&state?.anchorMessageId)query.around=state.anchorMessageId;
       const [data,pictures,profiles]=await Promise.all([
         app.forumMessages(activeHub,query),
         app.forumPhotoMap(activeHub).catch(()=>({})),
         app.groupProfilePhotos().catch(()=>({}))
       ]);
+      if(scope()!==at||hub!==activeHub)return;
       cleanForumUrls();forumPhotosByPost=pictures;groupPortraits=profiles;
       postList.replaceChildren();beforeCursor=data.nextBefore??'';
       if(!data.messages?.length)postList.append(el('p','Aucun message dans ce Hub. Votre brouillon reste synchronisé jusqu’à publication.','hint'));
@@ -116,8 +122,9 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
       observeReadPositions();
       if(state?.anchorMessageId&&!options.latest)requestAnimationFrame(()=>postList.querySelector('[data-forum-message-id="'+CSS.escape(state.anchorMessageId)+'"]')?.scrollIntoView({block:'center'}));
     }catch(error){
+      if(scope()!==at||hub!==activeHub)return;
       // Compatibility fallback for data created before Forum v2.
-      try{const posts=await app.listCommunityPosts(activeHub);postList.replaceChildren();for(const post of posts){const card=el('article',undefined,'item');card.append(el('strong',post.title),row('Type',post.data?.postKind),el('p',post.summary??''),row('État',post.data?.moderationState));postList.append(card);}if(!posts.length)postList.append(el('p','Aucune publication dans ce Hub.','hint'));}catch(e){showError(error);}
+      try{const posts=await app.listCommunityPosts(hub);if(scope()!==at||hub!==activeHub)return;postList.replaceChildren();for(const post of posts){const card=el('article',undefined,'item');card.append(el('strong',post.title),row('Type',post.data?.postKind),el('p',post.summary??''),row('État',post.data?.moderationState));postList.append(card);}if(!posts.length)postList.append(el('p','Aucune publication dans ce Hub.','hint'));}catch(e){if(scope()===at)showError(error);}
     }finally{loadingPosts=false;}
   };
 
@@ -128,7 +135,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
 
   const renderHubs=async()=>{
     if(!hubList||!hubSelect||!app.activeGroup())return;
-    hubs=await app.listCommunityHubs();hubList.replaceChildren();hubSelect.replaceChildren();
+    const at=scope(),next=await app.listCommunityHubs();if(scope()!==at)return;hubs=next;hubList.replaceChildren();hubSelect.replaceChildren();
     if(!hubs.length){hubList.append(el('p','Aucun Hub. Créez un espace thématique pour démarrer une communauté.','hint'));hubSelect.append(new Option('Aucun Hub',''));activeHub='';postList?.replaceChildren();return;}
     for(const hub of hubs){
       hubSelect.append(new Option(hub.title,hub.id));
@@ -153,11 +160,14 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     }).catch(()=>image.remove());
   };
   const renderStorefront=async()=>{
-    const token=++marketVisualRender;
+    const token=++marketVisualRender,at=scope();
     releaseStockPhotos();
     if(!storefront||!app.activeGroup())return;storefront.replaceChildren();
     const [data,visuals]=await Promise.all([app.groupStorefront(),app.marketStockVisuals().catch(()=>({}))]);
+    if(scope()!==at||token!==marketVisualRender)return;
     if(token!==marketVisualRender)return;
+    const overview=el('section',undefined,'eco-commerce-overview');overview.append(el('span','BOUTIQUE DU GROUPE','eyebrow'),el('h3','Du catalogue à la remise effective'),el('p','Un devis prépare la commande ; une commande ne prouve pas son paiement. Les stocks et livraisons restent ceux du moteur Marketplace.','hint'));
+    const stats=el('div',undefined,'metrics small');for(const [value,label]of [[(data.items??[]).length,'Articles publiés'],[(data.items??[]).filter(x=>x.availableNow&&x.available>0).length,'Disponibles maintenant'],[(data.items??[]).filter(x=>!(x.available>0)).length,'À réapprovisionner']]){const metric=el('div',undefined,'metric');metric.append(el('strong',String(value)),el('span',label));stats.append(metric);}overview.append(stats);const work=el('button','Commandes, préparation, remises et litiges','primary');work.type='button';work.dataset.moduleOpen='MARKETPLACE.CORE';overview.append(work);storefront.append(overview);
     if(data.shop){
       const head=el('article',undefined,'item');head.append(el('strong',data.shop.name),row('Slogan',data.shop.tagline||'—'),row('Visibilité',data.shop.visibility),row('Localité',data.shop.locality||'—'),row('Catégories',(data.shop.categories??[]).join(', ')||'—'));storefront.append(head);
       const name=document.getElementById('groupShopName'),tag=document.getElementById('groupShopTagline'),vis=document.getElementById('groupShopVisibility'),loc=document.getElementById('groupShopLocality'),cats=document.getElementById('groupShopCategories');
@@ -169,6 +179,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     }
     if(isManager()){
       const records=await app.listWorkspaceRecords('MARKETPLACE.CORE',app.activeGroup());
+      if(scope()!==at||token!==marketVisualRender)return;
       const stocks=records.filter(x=>x.data?.marketKind==='STOCK_ITEM');
       if(stocks.length){const manage=el('section',undefined,'stack');manage.append(el('h4','Publication des articles du stock'));for(const item of stocks){
         const ownership=String(item.data.ownership??'COMMERCIAL'),card=el('article',undefined,'item');decorateStockPhoto(card,visuals[item.id],token);card.append(el('strong',item.title),row('Disponible à vendre',Number(item.data.quantity)-Number(item.data.reserved??0)-Number(item.data.quarantine??0)),row('En quarantaine',Number(item.data.quarantine??0)),row('Nature',ownership==='POT_RESERVED'?'Réservé pot / tontine':ownership==='CONSIGNMENT'?'Consignation':ownership==='DEPOSIT_SALE'?'Dépôt-vente':'Commercial'),row('Vitrine',item.data.published?'Publié':'Masqué'));
@@ -209,6 +220,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
       }catch(e){showError(e);}})();toolbar.append(addSupplier);supply.append(toolbar);
       try{
         const state=await app.marketProcurement();
+        if(scope()!==at||token!==marketVisualRender)return;
         for(const supplier of state.suppliers??[]){
           const card=el('article',undefined,'item');card.append(el('strong',supplier.title),row('Localité',supplier.data.locality||'—'),row('Conditions',supplier.data.paymentTerms||'—'));
           const order=el('button','Créer un approvisionnement','primary');order.type='button';order.onclick=()=>void(async()=>{try{
@@ -232,6 +244,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
             }catch(e){showError(e);}})();card.append(receive);
           }
           const lifecycle=await app.marketProcurementLifecycle(p.id).catch(()=>({invoices:[],reconciliations:[],creditNotes:[],credits:[]}));
+          if(scope()!==at||token!==marketVisualRender)return;
           card.append(row('Factures fournisseur',String(lifecycle.invoices?.length??0)),row('Rapprochements',String(lifecycle.reconciliations?.length??0)),row('Avoirs',String(lifecycle.creditNotes?.length??0)));
           const addInvoice=el('button','Ajouter facture fournisseur','secondary');addInvoice.type='button';addInvoice.onclick=()=>void(async()=>{try{
             const invoiceRef=window.prompt('Référence facture fournisseur :')?.trim();if(!invoiceRef)return;
@@ -271,7 +284,7 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
   };
 
   document.getElementById('communityHubForm')?.addEventListener('submit',e=>{e.preventDefault();void(async()=>{try{const hub=await app.createCommunityHub({title:v('communityHubTitle'),about:v('communityHubAbout')||undefined,visibility:v('communityHubVisibility'),tags:split(v('communityHubTags')),federatedGroupCodes:split(v('communityFederatedCodes'))});activeHub=hub.id;notify('Hub communautaire créé.');await renderHubs();}catch(err){showError(err);}})();});
-  hubSelect?.addEventListener('change',()=>{activeHub=hubSelect.value;void renderPosts();});
+  hubSelect?.addEventListener('change',()=>{clearTimeout(draftTimer);clearTimeout(readTimer);activeHub=hubSelect.value;void renderPosts();});
   bodyInput?.addEventListener('input',()=>{queueDraft();signalForumTyping();});
   titleInput?.addEventListener('input',()=>{queueDraft();signalForumTyping();});
   bodyInput?.addEventListener('focus',()=>{if(activeHub)void app.publishLiveSignal?.('CELL_FOCUS',forumSignalPayload()).catch(()=>{});});
@@ -317,5 +330,6 @@ export function mountCommunityShopUI({app,notify=()=>{},showError=console.error,
     if(['TYPING_STOP','CELL_BLUR'].includes(String(e.type??'')))livePresence.hidden=true;
   });
   const refresh=async()=>{if(!app.activeGroup()){stopForumTyping();hubList?.replaceChildren();postList?.replaceChildren();storefront?.replaceChildren();if(livePresence)livePresence.hidden=true;return;}try{await Promise.all([renderHubs(),renderStorefront()]);}catch(e){showError(e);}};
+  window.addEventListener('eco:context-changed',()=>{clearTimeout(draftTimer);clearTimeout(readTimer);clearTimeout(forumTypingTimer);observer?.disconnect();activeHub='';hubs=[];loadingPosts=false;marketVisualRender++;cleanForumUrls();releaseStockPhotos();hubList?.replaceChildren();hubSelect?.replaceChildren();postList?.replaceChildren();storefront?.replaceChildren();if(bodyInput){bodyInput.value='';delete bodyInput.dataset.replyTo;}if(titleInput)titleInput.value='';if(draftState)draftState.textContent='';if(readState)readState.textContent='';if(livePresence)livePresence.hidden=true;});
   return{refresh};
 }

@@ -44,12 +44,15 @@ export class MemberEnvelopeService{
   }
   /** The same canonical read model serves confrontation and private summaries.
    * It is not a second accounting engine and it never writes financial data. */
-  async canonicalCells(groupId:Id){
+  async canonicalCells(groupId:Id,scope?:{membershipId:Id;meetingId?:Id}){
     const c=this.ctx(),access=await this.access(groupId);
-    const [positions,revisions,events,expenses,corrections]=await Promise.all([
+    let [positions,revisions,events,expenses,corrections]=await Promise.all([
       this.ledger.receiptPositions(c.tenantId,groupId),this.repo.listFinancialCellRevisions(c.tenantId,groupId),
       this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.SHEET_EVENT',groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.EXPENSE',groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.CORRECTION_OUTBOX',groupId)
     ]);
+    // A passage never needs to reconstruct every other member's cell. Reuse
+    // exactly the canonical sources and amounts, narrowing before aggregation.
+    if(scope){const selected=(row:{membershipId?:unknown;meetingId?:unknown})=>row.membershipId===scope.membershipId&&(!scope.meetingId||row.meetingId===scope.meetingId);positions=positions.filter(selected);revisions=revisions.filter(selected);events=events.filter(x=>selected(x.data));expenses=expenses.filter(x=>selected(x.data));corrections=corrections.filter(x=>selected(x.data));}
     const key=(meetingId:string,membershipId:string,rubricId:string)=>JSON.stringify([meetingId,membershipId,rubricId]);
     const cells=new Map<string,{meetingId:string;membershipId:string;rubricId:string;amount:number;cellVersion:number;updatedAt:string;actorId?:string;nature?:string}>(),versions=new Map(revisions.map(r=>[key(r.meetingId,r.membershipId,r.rubricId),r]));
     for(const p of positions){if(!p.meetingId||!p.rubricId)continue;const k=key(p.meetingId,p.membershipId,p.rubricId),old=cells.get(k),r=versions.get(k),at=String(r?.updatedAt??p.receivedAt??'');cells.set(k,{meetingId:p.meetingId,membershipId:p.membershipId,rubricId:p.rubricId,amount:Number(old?.amount??0)+Number(p.netAmount??0),cellVersion:Number(r?.version??0),updatedAt:at>String(old?.updatedAt??'')?at:String(old?.updatedAt??at),actorId:String(p.receivedBy??old?.actorId??''),nature:'CONTRIBUTION'});}
@@ -70,17 +73,21 @@ export class MemberEnvelopeService{
     return{cells:visible,watermark,generatedAt:now()};
   }
 
-  async passageSummary(groupId:Id,meetingId:Id,membershipId:Id,rubricIds:string[]){
+  async passageSummary(groupId:Id,meetingId:Id,membershipId:Id,rubricIds:string[],collective=false){
     const c=this.ctx(),{target}=await this.target(groupId,membershipId),meeting=await this.repo.getMeeting(c.tenantId,groupId,meetingId);if(!meeting)throw Error('MEETING_NOT_FOUND');
-    const [projection,allMeetings,rubrics,notices]=await Promise.all([this.canonicalCells(groupId),this.repo.listMeetings(c.tenantId,groupId),this.repo.listRubricDefinitions(c.tenantId,groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.MEMBER_CONTROL',groupId)]);
+    const [projection,allMeetings,rubrics,notices]=await Promise.all([this.canonicalCells(groupId,{membershipId}),this.repo.listMeetings(c.tenantId,groupId),this.repo.listRubricDefinitions(c.tenantId,groupId),this.repo.listWorkspaceRecords(c.tenantId,'FINANCE.MEMBER_CONTROL',groupId)]);
     const ordered=allMeetings.slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))||a.id.localeCompare(b.id)),at=ordered.findIndex(x=>x.id===meetingId),beforeIds=new Set(ordered.slice(0,Math.max(0,at)).map(x=>x.id));
     const own=projection.cells.filter(x=>x.membershipId===membershipId),byRubric=new Map(rubrics.map(x=>[x.id,x]));
-    const lines=[...new Set(rubricIds)].map(rubricId=>{
+    const selected=collective?[...rubricIds,...own.filter(x=>x.meetingId===meetingId).map(x=>x.rubricId)]:rubricIds;
+    const authors=new Set([target.userId,...own.filter(x=>x.meetingId===meetingId).map(x=>x.actorId).filter((x):x is string=>Boolean(x))]);
+    const authorNames=new Map(await Promise.all([...authors].map(async id=>[id,(await this.repo.getUser(id))?.displayName??id] as const)));
+    const memberName=authorNames.get(target.userId)??target.userId;
+    const lines=[...new Set(selected)].filter(id=>byRubric.has(id)).map(rubricId=>{
       const rows=own.filter(x=>x.rubricId===rubricId),current=rows.find(x=>x.meetingId===meetingId),before=rows.filter(x=>beforeIds.has(x.meetingId)).reduce((n,x)=>n+x.amount,0),amount=Number(current?.amount??0),r=byRubric.get(rubricId);
       const controls=notices.filter(x=>x.data.membershipId===membershipId&&x.data.meetingId===meetingId&&x.data.rubricId===rubricId).sort((a,b)=>Number(Number(b.data.newAmount)===Math.abs(amount))-Number(Number(a.data.newAmount)===Math.abs(amount))||b.createdAt.localeCompare(a.createdAt));
-      return{rubricId,rubricName:r?.name??rubricId,before,current:amount,total:before+amount,currency:'XAF',cellVersion:Number(current?.cellVersion??0),authorId:current?.actorId??controls[0]?.createdBy??'',noticeId:controls[0]?.id??'',noticeIds:controls.map(x=>x.id),disputeState:String(controls[0]?.data.disputeState??'NO_RESERVE'),nature:current?.nature??'CONTRIBUTION'};
+      return{rubricId,rubricName:r?.name??rubricId,before,current:amount,total:before+amount,currency:'XAF',cellVersion:Number(current?.cellVersion??0),authorId:current?.actorId??controls[0]?.createdBy??'',authorName:authorNames.get(current?.actorId??controls[0]?.createdBy??'')??'',updatedAt:current?.updatedAt,reviewRequired:current?.reviewRequired??false,reviewDecision:current?.reviewDecision,noticeId:controls[0]?.id??'',noticeIds:controls.map(x=>x.id),disputeState:String(controls[0]?.data.disputeState??'NO_RESERVE'),nature:current?.nature??'CONTRIBUTION'};
     });
-    return{groupId,meetingId,meetingTitle:meeting.title,membershipId,userId:target.userId,generatedAt:projection.generatedAt,lines,totals:{before:lines.reduce((n,x)=>n+x.before,0),current:lines.reduce((n,x)=>n+x.current,0),total:lines.reduce((n,x)=>n+x.total,0)},totalMeaning:'SUM_OF_DISPLAYED_MONETARY_FLOWS_NOT_CASH_OR_DEBT_STOCK'};
+    return{groupId,meetingId,meetingTitle:meeting.title,membershipId,memberName,userId:target.userId,generatedAt:projection.generatedAt,collective,lines,totals:{before:lines.reduce((n,x)=>n+x.before,0),current:lines.reduce((n,x)=>n+x.current,0),total:lines.reduce((n,x)=>n+x.total,0)},totalMeaning:'SUM_OF_DISPLAYED_MONETARY_FLOWS_NOT_CASH_OR_DEBT_STOCK'};
   }
 
   async distributionReady(groupId:Id,meetingId:Id){

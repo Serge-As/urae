@@ -84,6 +84,7 @@ export function mountAdManagerUI({app,notify=()=>{},showError=console.error,isMa
         }).catch(()=>{picture.remove();});
       }
       card.append(el('p','Impressions '+c.impressions+' · Ouvertures '+c.opens+' · Actions '+c.actions+' · Retours négatifs '+c.negativeFeedback,'hint'));
+      const budget=el('dl',undefined,'eco-ad-budget');for(const[label,value]of [['Budget autorisé de simulation',fmt(Number(c.budgetSandbox??0))],['Dépenses financières réelles','Non activées · argent réel désactivé'],['Période',[c.startsAt,c.endsAt].filter(Boolean).map(x=>new Date(x).toLocaleDateString()).join(' → ')||'À préciser'],['Audience autorisée',Object.entries(c.targeting??{}).map(([k,v])=>k+' : '+(Array.isArray(v)?v.join(', '):String(v))).join(' · ')||'Contexte du groupe'],['Source des résultats','Compteurs AdManager · impressions, ouvertures et actions constatées']]){budget.append(el('dt',label),el('dd',value));}card.append(budget);
       const actions=el('div',undefined,'actions');
       const next={DRAFT:'PENDING_REVIEW',PENDING_REVIEW:'APPROVED',APPROVED:'ACTIVE',ACTIVE:'PAUSED',PAUSED:'ACTIVE'}[c.state];
       if(next){
