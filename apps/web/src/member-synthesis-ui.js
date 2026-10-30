@@ -29,7 +29,7 @@ export function openMemberSynthesis({app,selection,changed,memberName,summary,wa
         const local=await summary(selection.meetingId,selection.membershipId,changed,{local:true});if(!valid()||at!==revision)return;render(local);
         await waitForEntries(selection.meetingId,selection.membershipId);if(!valid()||at!==revision)return;
         const latest=navigator.onLine===false?local:await summary(selection.meetingId,selection.membershipId,changed,{collective:true});if(!valid()||at!==revision)return;render(latest);
-        status.textContent=(latest.local?tx('Copie locale datée · contrôle en attente de synchronisation','Dated local copy · review awaiting synchronization'):tx('Données confirmées · saisies des gestionnaires réunies','Confirmed data · managers’ entries combined'))+' · '+new Date(latest.generatedAt??Date.now()).toLocaleTimeString();confirm.disabled=false;
+        status.textContent=(latest.local?tx('Copie locale datée sur cet appareil · contrôle en attente de synchronisation','Dated local copy on this device · review awaiting synchronization'):tx('Données confirmées · saisies des gestionnaires réunies','Confirmed data · managers’ entries combined'))+' · '+new Date(latest.generatedAt??Date.now()).toLocaleTimeString();confirm.disabled=false;
       }catch(error){if(valid()&&at===revision){status.textContent=tx('Actualisation indisponible. Les saisies sont conservées. Réessayez ou revenez à la feuille.','Refresh unavailable. Entries are preserved. Retry or return to the sheet.');notify(String(error.message));}}
       finally{if(valid()&&at===revision)retry.disabled=false;}
     };

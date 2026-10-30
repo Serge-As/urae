@@ -167,3 +167,13 @@ Chromium pouvait sinon fournir le module depuis son cache, hors du routeur de
 requêtes du test. Les suites offline acquises restent actives et inchangées ;
 aucun test ignoré, aucune réponse de produit simulée. WebKit complet 44/44 sur
 le checkpoint précédent ; toutes les suites seront rejouées sur le SHA final.
+
+
+Les contrôles acquis de synthèse conservent la mention explicite « sur cet
+appareil » pour la copie locale. L’assertion historique du titre est renforcée
+pour exiger exactement « Synthèse du membre « Gestionnaire Alpha » avant de
+continuer », conformément au changement demandé par le fondateur ; les montants,
+annulations et validations testées restent inchangés. Sous 480 px, 16 px d’espace
+superflu sous les onglets du Panorama sont retirés pour remonter la caisse et
+respecter le contrôle acquis de visibilité sur petit écran, sans réduire les
+cibles tactiles. Aucun seuil de test de disposition ou de droit n’est relâché.

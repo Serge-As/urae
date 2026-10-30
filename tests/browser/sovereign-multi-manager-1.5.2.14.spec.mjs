@@ -397,7 +397,7 @@ test('clicking another member opens the previous summary before typing, and canc
   await enter(page,ids,1000);await expect(cell(page,ids)).toHaveAttribute('data-save-state','CONFIRMED');
   await page.route('**/financial-work/summary?**',async route=>{await new Promise(resolve=>setTimeout(resolve,850));await route.continue();});
   await cell(page,other).locator('.cell-current').click();
-  let review=page.locator('.eco-work-dialog');await expect(review).toBeVisible();await expect(review).toContainText('Synthèse du membre avant de continuer');
+  let review=page.locator('.eco-work-dialog');await expect(review).toBeVisible();await expect(review.getByRole('heading')).toHaveText('Synthèse du membre « Gestionnaire Alpha » avant de continuer');
   await expect(cell(page,other).locator('input')).toHaveJSProperty('readOnly',true);
   await page.keyboard.type('999');await expect(cell(page,other).locator('input')).toHaveValue('');
   await expect.poll(async()=>Number((await review.locator('tbody tr').first().locator('td').nth(2).innerText()).replace(/[^0-9-]/g,''))).toBe(1000);
