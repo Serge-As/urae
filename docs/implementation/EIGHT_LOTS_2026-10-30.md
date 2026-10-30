@@ -160,3 +160,10 @@ précède le graphe et le registre opérationnel précède le registre de modèl
 Aucun de ces chargements ne bloque l’écran de connexion. Une recette retarde
 réellement Documents et Business Studio puis vérifie leurs propriétaires enfants,
 sans modifier les contrôles historiques de réservation ou de confidentialité.
+
+
+La recette de retard de modules utilise son propre contexte sans service worker :
+Chromium pouvait sinon fournir le module depuis son cache, hors du routeur de
+requêtes du test. Les suites offline acquises restent actives et inchangées ;
+aucun test ignoré, aucune réponse de produit simulée. WebKit complet 44/44 sur
+le checkpoint précédent ; toutes les suites seront rejouées sur le SHA final.

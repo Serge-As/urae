@@ -5,7 +5,10 @@ test('an unavailable secondary module does not keep the phone behind session res
   await page.route('**/temporal-commerce-ui.js',r=>r.abort());await page.setViewportSize({width:360,height:780});await page.goto(base,{waitUntil:'domcontentloaded'});
   await expect(page.locator('body')).not.toHaveClass(/auth-restoring/,{timeout:10000});await expect(page.locator('#authScreen')).toBeVisible();
 });
-test('delayed parent modules keep printing and resource reservations mounted after authentication becomes usable',async({page})=>{
+test('delayed parent modules keep printing and resource reservations mounted after authentication becomes usable',async({browser})=>{
+  // A page route cannot delay a response already supplied by Chromium's SW.
+  // This regression isolates module ordering; the acquired offline suites keep SW enabled.
+  const context=await browser.newContext({serviceWorkers:'block'}),page=await context.newPage();
   let release;const ready=new Promise(resolve=>{release=resolve;});
   for(const file of ['documents-ui.js','business-studio-ui.js'])await page.route('**/'+file,async route=>{await ready;await route.continue();});
   try{
@@ -24,7 +27,7 @@ test('delayed parent modules keep printing and resource reservations mounted aft
     await expect(page.locator('#businessStudioOperational #resourceAssemblyPanel')).toHaveCount(1,{timeout:15000});
     await expect(page.locator('#eco-module-recovery-mountPrintCenterUI')).toHaveCount(0);
     await expect(page.locator('#eco-module-recovery-mountResourceAssembliesUI')).toHaveCount(0);
-  }finally{release();}
+  }finally{release();await context.close();}
 });
 
 test('authentication failure offers recovery and sanitized diagnostics without clearing local data',async({page})=>{
