@@ -28,7 +28,7 @@ test('optional ASR worker has its own CSP while document policy and missing-asse
   assert.equal(document.headers.get('content-security-policy'),strict);
   const voice=await worker.fetch(new Request('https://eco.test/vendor/voice/worker.js'),{ASSETS});
   assert.match(voice.headers.get('content-security-policy'),/script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'/);
-  assert.match(voice.headers.get('content-security-policy'),/connect-src 'self' blob:/);
+  assert.match(voice.headers.get('content-security-policy'),/connect-src 'self' blob: data:;/);
   assert.match(voice.headers.get('content-security-policy'),/worker-src 'none'/);
   const missing=await worker.fetch(new Request('https://eco.test/vendor/voice/worker.js'),{ASSETS:{fetch:async()=>new Response('<!doctype html>',{headers:{'content-type':'text/html'}})}});
   assert.equal(missing.status,503);assert.doesNotMatch(missing.headers.get('content-security-policy'),/unsafe-eval/);

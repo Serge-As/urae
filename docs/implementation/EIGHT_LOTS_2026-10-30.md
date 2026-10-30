@@ -130,3 +130,10 @@ Le cache et la base financière synthétiques restent présents. Les deux premie
 points d’échec ASR (CSP héritée et dossiers non traversables) ont été corrigés.
 La compilation complète et les deux moteurs navigateur sur le SHA publié restent
 la condition de livraison ; ce constat local ne remplace pas la recette physique.
+
+La recette vocale WebKit utilise l’arrêt réel d’un proxy local isolé, conformément
+aux tests souverains acquis : son simulateur offline bloque même les réponses
+du shell en cache. Le test vérifie que ce proxy ne répond plus puis charge
+réellement le moteur et le modèle depuis le stockage local. La permission
+`connect-src data:` est limitée au worker vocal, pour son WASM intégré ; aucun
+hôte extérieur n’est autorisé. Le navigateur de la page reste sous CSP stricte.

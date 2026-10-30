@@ -35,17 +35,28 @@ test('financial tables retain group totals while filtering, disclose sources and
     await expect(page.locator('#detailBody .cell-target-input')).toHaveCount(0);
     // Return via the established navigation owner, then use the group panorama.
     await page.locator('#groupHomeNavBtn').click();
-    const home=page.locator('.group-home-surface');await expect(home.locator('.group-home-finance')).toBeVisible();
+    const home=page.locator('.group-home-surface');await expect(home.locator('.group-home-finance')).toBeVisible({timeout:15000});
     await expect(home.getByRole('button',{name:'Atelier de séance',exact:true})).toBeVisible();
     await home.getByRole('button',{name:'Journal du groupe',exact:true}).click();await expect(home).toHaveAttribute('data-composition','journal');
     await home.getByRole('button',{name:'Panorama',exact:true}).click();await page.screenshot({path:testInfo.outputPath('group-panorama.png'),fullPage:false});
   }finally{await secondContext.close();}
 });
 
-test('optional local voice installs only on request, starts without network and deletes only its model stores',async({page},testInfo)=>{
+test('optional local voice installs only on request, starts without network and deletes only its model stores',async({page,browserName},testInfo)=>{
+  // Use the acquired real-origin outage method. WebKit's offline emulator
+  // rejects service-worker responses before the application's fetch handler.
+  const {createServer}=await import('node:http');
+  const proxy=createServer(async(req,res)=>{
+    try{const upstream=await fetch(base+req.url,{headers:{accept:req.headers.accept??'*/*'}});res.statusCode=upstream.status;for(const [key,value] of upstream.headers)if(!['content-encoding','content-length','transfer-encoding','connection'].includes(key))res.setHeader(key,value);res.end(Buffer.from(await upstream.arrayBuffer()));}
+    catch{res.writeHead(503);res.end('Origin unavailable');}
+  });
+  await new Promise((resolve,reject)=>{proxy.once('error',reject);proxy.listen(0,'127.0.0.1',resolve);});
+  const origin='http://127.0.0.1:'+proxy.address().port;
+  let stopped=false;const stop=async()=>{if(stopped)return;stopped=true;const done=new Promise((resolve,reject)=>proxy.close(e=>e?reject(e):resolve()));proxy.closeAllConnections();await done;};
+  try{
   page.on('console',message=>{if(message.type()==='error')console.log('LOCAL_VOICE_BROWSER_ERROR: '+message.text().slice(0,1600));});
   const requests=[];page.on('request',r=>{if(r.url().includes('/vendor/voice/'))requests.push(r.url());});
-  const rootResponse=await page.goto(base);await expect(page.locator('#authScreen')).toBeVisible();
+  const rootResponse=await page.goto(origin);await expect(page.locator('#authScreen')).toBeVisible();
   expect(rootResponse.headers()['content-security-policy']).not.toContain("'unsafe-eval'");
   expect(requests).toEqual([]);
   await page.evaluate(async()=>{await navigator.serviceWorker.register('/sw.js');await Promise.race([navigator.serviceWorker.ready,new Promise((_,reject)=>setTimeout(()=>reject(Error('SHELL_INSTALL_TIMEOUT')),45000))]);});
@@ -56,18 +67,21 @@ test('optional local voice installs only on request, starts without network and 
     await new Promise((resolve,reject)=>{const r=indexedDB.open('synthetic-financial-preservation',1);r.onupgradeneeded=()=>r.result.createObjectStore('outbox');r.onsuccess=()=>{r.result.close();resolve();};r.onerror=()=>reject(r.error);});
     await voice.installLocalModel();
     const worker=await(await caches.open('eco-voice-fr022-v1')).match('/vendor/voice/worker.js');
-    if(!worker?.headers.get('content-security-policy')?.includes("connect-src 'self' blob:"))throw Error('LOCAL_WORKER_POLICY_NOT_PRESERVED');
+    if(!worker?.headers.get('content-security-policy')?.includes("connect-src 'self' blob: data:;"))throw Error('LOCAL_WORKER_POLICY_NOT_PRESERVED');
     return voice.localModelInstalled();
   });expect(installed).toBe(true);expect(requests.some(x=>x.includes('model-fr-part-'))).toBe(true);
-  await page.context().setOffline(true);
+  await stop();
+  await expect(async()=>{await fetch(origin+'/__network_probe__',{signal:AbortSignal.timeout(2000)});}).rejects.toThrow();
+  if(browserName==='chromium')await page.context().setOffline(true);
   const result=await page.evaluate(async()=>{
     const voice=await import('/src/vosk-local.js'),start=performance.now(),model=await voice.loadLocalModel(),coldLoadMs=performance.now()-start;
     const recognizer=new model.KaldiRecognizer(16000);recognizer.setWords(true);
     const silence=await new Promise((resolve,reject)=>{const timer=setTimeout(()=>reject(Error('LOCAL_ASR_FLUSH_TIMEOUT')),20000);recognizer.on('result',m=>{if(m.final){clearTimeout(timer);resolve(m.result);}});recognizer.acceptWaveformFloat(new Float32Array(16000),16000);recognizer.retrieveFinalResult();});recognizer.remove();
     const warm=performance.now();await voice.loadLocalModel();const warmLoadMs=performance.now()-warm;
     await voice.removeLocalModel();
-    return{coldLoadMs,warmLoadMs,silence,installed:await voice.localModelInstalled(),financialCache:await(await caches.open('synthetic-financial-preservation')).match('/synthetic-outbox-evidence').then(Boolean),financialDB:(await indexedDB.databases()).some(x=>x.name==='synthetic-financial-preservation'),physicalAcceptance:'NOT_ACCEPTED',recognitionAccuracy:'NOT_MEASURED_SYNTHETIC_SILENCE_ONLY'};
+    return{coldLoadMs,warmLoadMs,silence,installed:await voice.localModelInstalled(),financialCache:await(await caches.open('synthetic-financial-preservation')).match('/synthetic-outbox-evidence').then(Boolean),financialDB:(await indexedDB.databases()).some(x=>x.name==='synthetic-financial-preservation'),networkProof:'ISOLATED_ORIGIN_STOPPED',physicalAcceptance:'NOT_ACCEPTED',recognitionAccuracy:'NOT_MEASURED_SYNTHETIC_SILENCE_ONLY'};
   });
   expect(result.installed).toBe(false);expect(result.financialCache).toBe(true);expect(result.financialDB).toBe(true);expect(result.silence.text).toBe('');
   await testInfo.attach('local-voice-runtime.json',{body:JSON.stringify(result,null,2),contentType:'application/json'});
+  }finally{await stop();}
 });

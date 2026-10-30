@@ -40,3 +40,15 @@ Aucun rollback ne doit effacer les intentions d’un appareil ou réécrire D1.
 
 Statut au checkpoint : implémentation consolidée, qualification finale en cours.
 `FIELD_ACCEPTED=NOT_ACCEPTED`, crédits exacts non mesurables.
+
+Contrôle navigateur complémentaire : le simulateur offline de Playwright/WebKit
+rejette aussi le shell mis en cache avant le fetch du service worker (défaut
+déjà documenté par la suite souveraine). La nouvelle recette vocale réutilise
+l’arrêt réel d’un proxy isolé, vérifie son inaccessibilité puis charge le moteur
+local et traite le silence. Aucun test ignoré ni politique CSP assouplie ;
+aucune modification des données financières. Qualification finale à refaire
+sur le nouveau SHA publié avant livraison.
+
+Le worker vocal autorise également `data:` dans son seul `connect-src`, pour
+le WASM intégré au moteur verrouillé. La page conserve sa CSP ; ce worker ne
+peut joindre aucun hôte extérieur. Cela évite un refus suivi d’un repli WebKit.

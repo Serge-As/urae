@@ -3825,7 +3825,7 @@ export default {async fetch(request:Request,env:WorkerEnv={}){
     if(asset.ok&&url.pathname==='/vendor/voice/worker.js'){
       if(!asset.headers.get('content-type')?.includes('javascript'))return new Response('Local voice worker unavailable',{status:503,headers:{'content-type':'text/plain; charset=utf-8','x-content-type-options':'nosniff','content-security-policy':"default-src 'none'; frame-ancestors 'none'"}});
       const headers=new Headers(asset.headers);
-      headers.set('content-security-policy',"default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' blob:; worker-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'");
+      headers.set('content-security-policy',"default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' blob: data:; worker-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'");
       return new Response(asset.body,{status:asset.status,statusText:asset.statusText,headers});
     }
     if(asset.status!==404 || url.pathname==='/' || url.pathname==='/index.html') return asset;

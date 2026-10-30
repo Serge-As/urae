@@ -328,7 +328,7 @@ jobs:
             }
             if(actual!==expected)throw new Error('PUBLIC_ASSET_MISMATCH:'+pathname);
             if(pathname==='/'&&(!policy||policy.includes("'unsafe-eval'")))throw new Error('PUBLIC_DOCUMENT_POLICY_MISMATCH');
-            if(pathname==='/vendor/voice/worker.js'&&(!policy?.includes("script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'")||!policy.includes("connect-src 'self' blob:")||!policy.includes("worker-src 'none'")))throw new Error('PUBLIC_ASR_WORKER_POLICY_MISMATCH');
+            if(pathname==='/vendor/voice/worker.js'&&(!policy?.includes("script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'")||!policy.includes("connect-src 'self' blob: data:;")||!policy.includes("worker-src 'none'")))throw new Error('PUBLIC_ASR_WORKER_POLICY_MISMATCH');
             assets.push({path:pathname,sha256:actual,...(pathname==='/'||pathname==='/vendor/voice/worker.js'?{contentSecurityPolicy:policy}:{})});
           }
           const receipt={verifiedAt:new Date().toISOString(),version:health.version,sourceSha:health.commitSha,buildId:health.buildId,pwaCache:health.pwaCache,capabilities:catalog.count,realMoneyEnabled:health.realMoneyEnabled,assets};

@@ -63,7 +63,7 @@ const requestHandler = async (req,res) => {
     const s=await stat(file); if(!s.isFile()) throw new Error('not file');
     const data=await readFile(file);
     const cacheControl = pathname === '/sw.js' ? 'no-cache' : 'no-store';
-    const assetSecurity=pathname==='/vendor/voice/worker.js'?{...securityHeaders,'content-security-policy':"default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' blob:; worker-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"}:securityHeaders;
+    const assetSecurity=pathname==='/vendor/voice/worker.js'?{...securityHeaders,'content-security-policy':"default-src 'none'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' blob: data:; worker-src 'none'; object-src 'none'; frame-ancestors 'none'; base-uri 'none'"}:securityHeaders;
     res.writeHead(200,{'content-type':mime[path.extname(file)]??'application/octet-stream','cache-control':cacheControl,...assetSecurity}); res.end(data);
   } catch { res.writeHead(404,{'content-type':'text/plain; charset=utf-8',...securityHeaders}); res.end('Not found'); }
 };
