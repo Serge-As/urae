@@ -137,3 +137,10 @@ du shell en cache. Le test vérifie que ce proxy ne répond plus puis charge
 réellement le moteur et le modèle depuis le stockage local. La permission
 `connect-src data:` est limitée au worker vocal, pour son WASM intégré ; aucun
 hôte extérieur n’est autorisé. Le navigateur de la page reste sous CSP stricte.
+
+
+Contrôle des 164 destinations : le centre d’impression dépend du shell Documents,
+créé par son propriétaire canonique. Son chargement attend désormais ce montage,
+sans attendre les requêtes de documents et sans bloquer la restauration de session.
+Le chargement différé reste conservé ; aucune route ni écriture financière ajoutée.
+Les tests acquis de présence des propriétaires restent inchangés.

@@ -9,6 +9,7 @@ export function deferredMount(loader,exportName,label){
       const host=document.createElement('div');host.id='eco-module-recovery-'+exportName;host.className='eco-module-recovery';host.setAttribute('role','status');const text=document.createElement('span');text.textContent=label+' · '+(document.documentElement.lang==='en'?'Could not load this space.':'Cet espace n’a pas pu être chargé.');const retry=document.createElement('button');retry.type='button';retry.textContent=document.documentElement.lang==='en'?'Retry':'Réessayer';retry.onclick=()=>{host.remove();void load().then(controller=>controller.refresh?.()).catch(showFailure);};host.append(text,retry);(document.getElementById('errorBox')?.parentElement??document.body).append(host);
     };
     window.addEventListener('eco:core-ready',()=>{void load().catch(showFailure);},{once:true});
-    return new Proxy({}, {get(_target,key){if(key==='then')return undefined;if(key==='clearForContext')return()=>{revision++;mounted?.clearForContext?.();};return(...args)=>{const scope=context(),at=revision;return load().then(controller=>{if(scope!==context()||at!==revision)return;return controller[key]?.(...args);}).catch(error=>{showFailure();options?.showError?.(error);});};}});
+    return new Proxy({}, {get(_target,key){if(key==='then')return undefined;
+      if(key==='whenMounted')return()=>load();if(key==='clearForContext')return()=>{revision++;mounted?.clearForContext?.();};return(...args)=>{const scope=context(),at=revision;return load().then(controller=>{if(scope!==context()||at!==revision)return;return controller[key]?.(...args);}).catch(error=>{showFailure();options?.showError?.(error);});};}});
   };
 }

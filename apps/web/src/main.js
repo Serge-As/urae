@@ -67,7 +67,7 @@ import { parseEcoShareIntent } from './share-out.js';
 import { localUniversalSearch, remoteUniversalSearch, authorizedSearchContext } from './universal-search.js';
 import { buildUnifiedCalendar } from './unified-calendar.js';
 const mountDocumentsUI=deferredMount(()=>import('./documents-ui.js'),'mountDocumentsUI','Documents');
-const mountPrintCenterUI=deferredMount(()=>import('./print-center.js'),'mountPrintCenterUI','Eco-System');
+const mountPrintCenterUI=deferredMount(async()=>{await documentsUI.whenMounted();return import('./print-center.js');},'mountPrintCenterUI','Eco-System');
 const mountMemberDossierUI=deferredMount(()=>import('./member-dossier-ui.js'),'mountMemberDossierUI','Documents');
 import { mountIdentityVerificationUI } from './identity-verification-ui.js';
 import { mountDataQualityUI } from './data-quality-ui.js';

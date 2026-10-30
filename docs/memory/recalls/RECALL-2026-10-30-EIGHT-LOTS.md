@@ -58,3 +58,10 @@ sur le nouveau SHA publié avant livraison.
 Le worker vocal autorise également `data:` dans son seul `connect-src`, pour
 le WASM intégré au moteur verrouillé. La page conserve sa CSP ; ce worker ne
 peut joindre aucun hôte extérieur. Cela évite un refus suivi d’un repli WebKit.
+
+
+Contrôle des 164 destinations : le centre d’impression dépend du shell Documents,
+créé par son propriétaire canonique. Son chargement attend désormais ce montage,
+sans attendre les requêtes de documents et sans bloquer la restauration de session.
+Le chargement différé reste conservé ; aucune route ni écriture financière ajoutée.
+Les tests acquis de présence des propriétaires restent inchangés.
