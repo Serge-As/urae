@@ -66,3 +66,12 @@ le proxy différé ne transmettait pas l’argument force de clearForContext(tru
 Il transmet maintenant tous les arguments au contrôleur canonique, conservant
 le nettoyage immédiat des vues privées sans effacer les données locales.
 Le test de calendrier privé après déconnexion est conservé sans modification.
+
+
+Audit complet des dépendances de montage différé : Business Studio précède les
+ressources, expérimentations et Value Discovery ; Value Network précède les
+expérimentations et offres temporelles ; Wallet précède son enveloppe ; Matching
+précède le graphe et le registre opérationnel précède le registre de modèles.
+Aucun de ces chargements ne bloque l’écran de connexion. Une recette retarde
+réellement Documents et Business Studio puis vérifie leurs propriétaires enfants,
+sans modifier les contrôles historiques de réservation ou de confidentialité.

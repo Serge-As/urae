@@ -5,6 +5,28 @@ test('an unavailable secondary module does not keep the phone behind session res
   await page.route('**/temporal-commerce-ui.js',r=>r.abort());await page.setViewportSize({width:360,height:780});await page.goto(base,{waitUntil:'domcontentloaded'});
   await expect(page.locator('body')).not.toHaveClass(/auth-restoring/,{timeout:10000});await expect(page.locator('#authScreen')).toBeVisible();
 });
+test('delayed parent modules keep printing and resource reservations mounted after authentication becomes usable',async({page})=>{
+  let release;const ready=new Promise(resolve=>{release=resolve;});
+  for(const file of ['documents-ui.js','business-studio-ui.js'])await page.route('**/'+file,async route=>{await ready;await route.continue();});
+  try{
+    await page.goto(base,{waitUntil:'domcontentloaded'});
+    await expect(page.locator('#authScreen')).toBeVisible({timeout:15000});
+    await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);
+    await api(page,'/api/v1/auth/register','POST',{username:'delayed_parent_'+Date.now(),password:'Synthetic-delayed-parents-20261030!',displayName:'Montage différé synthétique'});
+    await page.reload({waitUntil:'domcontentloaded'});
+    await expect(page.locator('#authScreen')).toBeHidden({timeout:15000});
+    await expect(page.locator('body')).not.toHaveClass(/auth-restoring/);
+    expect(await page.locator('#paperPrintCenter').count()).toBe(0);
+    expect(await page.locator('#resourceAssemblyPanel').count()).toBe(0);
+    // Let unrelated child modules finish while their actual parent is held.
+    await page.waitForTimeout(1200);release();
+    await expect(page.locator('#view-documents #paperPrintCenter')).toHaveCount(1,{timeout:15000});
+    await expect(page.locator('#businessStudioOperational #resourceAssemblyPanel')).toHaveCount(1,{timeout:15000});
+    await expect(page.locator('#eco-module-recovery-mountPrintCenterUI')).toHaveCount(0);
+    await expect(page.locator('#eco-module-recovery-mountResourceAssembliesUI')).toHaveCount(0);
+  }finally{release();}
+});
+
 test('authentication failure offers recovery and sanitized diagnostics without clearing local data',async({page})=>{
   await page.addInitScript(()=>localStorage.setItem('synthetic-preserved','retained'));
   await page.route('**/api/v1/auth/session',r=>r.fulfill({status:500,contentType:'application/json',body:'{"error":"SYNTHETIC_AUTH_FAILURE"}'}));
