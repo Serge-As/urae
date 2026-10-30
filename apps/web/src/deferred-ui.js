@@ -10,6 +10,6 @@ export function deferredMount(loader,exportName,label){
     };
     window.addEventListener('eco:core-ready',()=>{void load().catch(showFailure);},{once:true});
     return new Proxy({}, {get(_target,key){if(key==='then')return undefined;
-      if(key==='whenMounted')return()=>load();if(key==='clearForContext')return()=>{revision++;mounted?.clearForContext?.();};return(...args)=>{const scope=context(),at=revision;return load().then(controller=>{if(scope!==context()||at!==revision)return;return controller[key]?.(...args);}).catch(error=>{showFailure();options?.showError?.(error);});};}});
+      if(key==='whenMounted')return()=>load();if(key==='clearForContext')return(...args)=>{revision++;mounted?.clearForContext?.(...args);};return(...args)=>{const scope=context(),at=revision;return load().then(controller=>{if(scope!==context()||at!==revision)return;return controller[key]?.(...args);}).catch(error=>{showFailure();options?.showError?.(error);});};}});
   };
 }

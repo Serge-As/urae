@@ -59,3 +59,10 @@ créé par son propriétaire canonique. Son chargement attend désormais ce mont
 sans attendre les requêtes de documents et sans bloquer la restauration de session.
 Le chargement différé reste conservé ; aucune route ni écriture financière ajoutée.
 Les tests acquis de présence des propriétaires restent inchangés.
+
+
+La suite WebKit Linux acquise a détecté un retrait de nettoyage à la déconnexion :
+le proxy différé ne transmettait pas l’argument force de clearForContext(true).
+Il transmet maintenant tous les arguments au contrôleur canonique, conservant
+le nettoyage immédiat des vues privées sans effacer les données locales.
+Le test de calendrier privé après déconnexion est conservé sans modification.
