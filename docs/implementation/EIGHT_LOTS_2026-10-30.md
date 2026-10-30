@@ -177,3 +177,13 @@ annulations et validations testées restent inchangés. Sous 480 px, 16 px d’e
 superflu sous les onglets du Panorama sont retirés pour remonter la caisse et
 respecter le contrôle acquis de visibilité sur petit écran, sans réduire les
 cibles tactiles. Aucun seuil de test de disposition ou de droit n’est relâché.
+
+
+La recette de dictée acquise cible désormais le champ montant par son rôle et
+son libellé, car la case de relecture autorisée ajoute un deuxième input. Les
+contrôles 5000, arrêt, absence de comptabilisation et refus de contexte périmé
+sont conservés. Le même test vérifie en plus qu’une confiance faible bloque le
+report jusqu’à la relecture explicite du montant en chiffres et en lettres.
+Le scénario d’exercice de séance acquis passe 2/2 dans Linux au SHA dd5ddde0 ;
+les incidents locaux Windows de processus/clic restent consignés séparément,
+sans abaisser les assertions ni modifier le produit pour contourner le test.

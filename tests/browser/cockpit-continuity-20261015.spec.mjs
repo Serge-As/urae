@@ -41,7 +41,7 @@ test('cell dictation waits for stop and review, never submits finance, and rejec
  await expect(page.locator('body')).not.toHaveClass(/auth-restoring/);
  await page.addScriptTag({type:'module',url:base+'/src/voice-entry-ui.js'});
  await page.evaluate(()=>{
-  window.SpeechRecognition=class{start(){this.onstart?.();window.testRecognition=this;}stop(){this.onresult?.({resultIndex:0,results:[Object.assign([{transcript:'cinq mille',confidence:.98}],{isFinal:true})]});this.onend?.();}};
+  window.testConfidence=.98;window.SpeechRecognition=class{start(){this.onstart?.();window.testRecognition=this;}stop(){this.onresult?.({resultIndex:0,results:[Object.assign([{transcript:'cinq mille',confidence:window.testConfidence}],{isFinal:true})]});this.onend?.();}};
   // Keep module loading in the browser; wait below for the real mounted fixture.
   // Returning a dynamic-import promise through DevTools was intermittently
   // rejected as a destroyed execution context without a new document request.
@@ -52,8 +52,17 @@ test('cell dictation waits for stop and review, never submits finance, and rejec
  });
  await expect(page.locator('#dictationFixture')).toBeVisible();
  expect(await page.evaluate(()=>window.testFixtureError??null)).toBeNull();
- await page.locator('#dictationFixture .cell-dictate').click();await page.locator('dialog button').filter({hasText:'Écouter'}).click();await expect(page.locator('dialog textarea')).toHaveValue('');await page.locator('dialog button').filter({hasText:'Arrêter'}).click();await expect(page.locator('dialog textarea')).toHaveValue('cinq mille');await expect(page.locator('dialog input')).toHaveValue('5000');await expect(page.locator('#dictationTarget')).toHaveValue('');
+ await page.locator('#dictationFixture .cell-dictate').click();await page.locator('dialog button').filter({hasText:'Écouter'}).click();await expect(page.locator('dialog textarea')).toHaveValue('');await page.locator('dialog button').filter({hasText:'Arrêter'}).click();await expect(page.locator('dialog textarea')).toHaveValue('cinq mille');await expect(page.getByRole('spinbutton',{name:'Montant total à reporter (F CFA)',exact:true})).toHaveValue('5000');await expect(page.locator('#dictationTarget')).toHaveValue('');
  await page.locator('dialog button').filter({hasText:'Reporter'}).click();await expect(page.locator('#dictationTarget')).toHaveValue('5000');expect(await page.evaluate(()=>window.testFinancialWrites)).toBe(0);
- await page.locator('#dictationFixture .cell-dictate').click();await page.locator('dialog input').fill('6000');await page.evaluate(()=>window.testScope='two');await page.locator('dialog button').filter({hasText:'Reporter'}).click();await expect(page.locator('#dictationTarget')).toHaveValue('5000');await expect(page.locator('dialog')).toContainText('changé');
+ await page.locator('#dictationFixture .cell-dictate').click();await page.getByRole('spinbutton',{name:'Montant total à reporter (F CFA)',exact:true}).fill('6000');await page.evaluate(()=>window.testScope='two');await page.locator('dialog button').filter({hasText:'Reporter'}).click();await expect(page.locator('#dictationTarget')).toHaveValue('5000');await expect(page.locator('dialog')).toContainText('changé');
  await page.locator('dialog button').filter({hasText:'Annuler'}).click();await expect(page.locator('dialog.eco-dictation-dialog')).toHaveCount(0);
+ // Low confidence adds an explicit review, without silently changing or posting the amount.
+ await page.evaluate(()=>window.testConfidence=.4);await page.locator('#dictationFixture .cell-dictate').click();
+ await page.locator('dialog button').filter({hasText:'Écouter'}).click();await page.locator('dialog button').filter({hasText:'Arrêter'}).click();
+ await expect(page.getByRole('spinbutton',{name:'Montant total à reporter (F CFA)',exact:true})).toHaveValue('5000');
+ await expect(page.locator('dialog .eco-voice-amount-reading')).toContainText('cinq mille');
+ const report=page.locator('dialog button').filter({hasText:'Reporter'}),ack=page.getByLabel('J’ai vérifié le montant entendu et le montant en lettres.',{exact:true});
+ await expect(ack).toBeVisible();await expect(report).toBeDisabled();await ack.check();await expect(report).toBeEnabled();
+ await page.locator('dialog button').filter({hasText:'Annuler'}).click();await expect(page.locator('#dictationTarget')).toHaveValue('5000');expect(await page.evaluate(()=>window.testFinancialWrites)).toBe(0);
+
 });
