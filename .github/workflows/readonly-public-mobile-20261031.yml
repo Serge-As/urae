@@ -1,0 +1,59 @@
+{
+  "name": "Eco v43 — Readonly public mobile verification",
+  "on": {
+    "push": {
+      "branches": [
+        "codex/public-mobile-76ef0956-20261031"
+      ]
+    }
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "jobs": {
+    "public-mobile": {
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 12,
+      "container": {
+        "image": "mcr.microsoft.com/playwright:v1.56.1-noble",
+        "options": "--ipc=host"
+      },
+      "defaults": {
+        "run": {
+          "shell": "bash"
+        }
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@v4"
+        },
+        {
+          "uses": "actions/setup-node@v4",
+          "with": {
+            "node-version": "24",
+            "cache": "npm"
+          }
+        },
+        {
+          "name": "Install locked browser library",
+          "run": "npm ci --ignore-scripts"
+        },
+        {
+          "name": "Verify actual public anonymous startup and F5 — no account or financial writes",
+          "run": "mkdir -p artifacts/publication/mobile-startup\ncat > artifacts/public-mobile-startup.mjs <<'ECO_PUBLIC_PROBE'\nimport {chromium,webkit} from '@playwright/test';\nimport {writeFile,mkdir,readFile,rename} from 'node:fs/promises';\nconst root='https://eco-system.sergemimf.workers.dev/',sha=process.argv[2];\nif(!/^[a-f0-9]{40}$/.test(sha??''))throw Error('Exact source SHA required');\nconst health=await(await fetch(new URL('health',root),{headers:{'User-Agent':'Mozilla/5.0'},signal:AbortSignal.timeout(30000)})).json();\nif(health.commitSha!==sha||health.realMoneyEnabled!==false)throw Error('Unexpected live source');\nconst receiptPath='artifacts/publication/production-mobile-startup-'+sha.slice(0,8)+'.json';\nlet cached;try{cached=JSON.parse(await readFile(receiptPath,'utf8'));}catch(error){if(error.code!=='ENOENT')throw error;}\nif(cached&&cached.sourceSha===sha&&Date.now()-Date.parse(cached.verifiedAt)<300000){\n if(cached.scope!=='READONLY_ANONYMOUS_PUBLIC_MOBILE_STARTUP_AND_RELOAD'||cached.version!==health.version||cached.FIELD_ACCEPTED!=='NOT_ACCEPTED'||cached.results.length!==2)throw Error('Invalid current-source public receipt');\n if(new Set(cached.results.map(r=>r.browser)).size!==2||!['chromium','webkit'].every(b=>cached.results.some(r=>r.browser===b)))throw Error('Missing browser receipt');\n for(const r of cached.results)if(r.realAccountUsed!==false||r.financialMutations!==0||r.pageErrors.length||r.starts.length!==2||!r.starts.every(s=>s.stage==='SIGNED_OUT'&&s.scriptOrStyleFailures.length===0))throw Error('Incomplete public startup proof');\n console.log(JSON.stringify({reusedExactSourcePublicReceipt:true,sourceSha:sha,verifiedAt:cached.verifiedAt}));process.exit(0);\n}\nconst results=[];await mkdir('artifacts/publication/mobile-startup',{recursive:true});\nfor(const [name,engine]of Object.entries({chromium,webkit})){\n  const browser=await engine.launch();try{\n    const context=await browser.newContext({viewport:{width:360,height:800},locale:'fr-FR'}),page=await context.newPage(),pageErrors=[],blockedMutations=[];\n    page.on('pageerror',e=>pageErrors.push(e.message));\n    await page.route('**/api/v1/**',async route=>{if(!['GET','HEAD','OPTIONS'].includes(route.request().method())){blockedMutations.push(new URL(route.request().url()).pathname);return route.abort();}return route.continue();});\n    const starts=[];\n    for(let n=0;n<2;n++){\n      const started=performance.now();\n      console.log(JSON.stringify({mobileBrowser:name,stage:n===0?'NAVIGATE':'RELOAD',sourceSha:sha}));\n      try{if(n===0)await page.goto(root,{waitUntil:'domcontentloaded',timeout:45000});else await page.reload({waitUntil:'domcontentloaded',timeout:45000});}\n      catch(error){\n        const state=await page.evaluate(()=>({documentReadyState:document.readyState,stage:window.ecoStartupDiagnostics?.().stage??null,restoring:document.body.classList.contains('auth-restoring'),authVisible:!!document.querySelector('#authScreen')?.getBoundingClientRect().height})).catch(()=>null);\n        await writeFile('artifacts/publication/mobile-startup/'+name+'-failure.json',JSON.stringify({sourceSha:sha,browser:name,reload:n>0,elapsedMs:Math.round(performance.now()-started),error:error.message,state},null,2));\n        await page.screenshot({path:'artifacts/publication/mobile-startup/'+name+'-failure.png',timeout:5000}).catch(()=>{});throw error;\n      }\n      await page.waitForFunction(()=>window.ecoStartupDiagnostics?.().stage==='SIGNED_OUT',null,{timeout:30000});\n      if(!await page.locator('#authScreen').isVisible())throw Error('Authentication is not reachable');\n      if(await page.locator('body').evaluate(n=>n.classList.contains('auth-restoring')))throw Error('Session restoration still blocks the phone');\n      for(const id of ['authUsername','authPassword','authSubmit'])if(!await page.locator('#'+id).isEnabled()||!await page.locator('#'+id).isVisible())throw Error('Authentication control unavailable: '+id);\n      console.log(JSON.stringify({mobileBrowser:name,stage:'USABLE_AUTH',reload:n>0,elapsedMs:Math.round(performance.now()-started)}));\n      const diagnostics=await page.evaluate(()=>window.ecoStartupDiagnostics());\n      starts.push({reload:n>0,elapsedMs:Math.round(performance.now()-started),stage:diagnostics.stage,scriptOrStyleFailures:diagnostics.failures.filter(f=>['SCRIPT','STYLE'].includes(f.kind))});\n      if(starts.at(-1).scriptOrStyleFailures.length)throw Error('Missing startup asset');\n    }\n    if(pageErrors.length)throw Error('Public startup page error: '+pageErrors[0]);\n    await page.screenshot({path:'artifacts/publication/mobile-startup/'+name+'-360.png',fullPage:false});\n    results.push({browser:name,engineVersion:browser.version(),viewport:{width:360,height:800},starts,pageErrors,blockedMutations,realAccountUsed:false,financialMutations:0});await context.close();\n  }finally{await browser.close();}\n}\nconst receipt={sourceSha:sha,version:health.version,verifiedAt:new Date().toISOString(),scope:'READONLY_ANONYMOUS_PUBLIC_MOBILE_STARTUP_AND_RELOAD',results,FIELD_ACCEPTED:'NOT_ACCEPTED'};\nawait writeFile(receiptPath+'.tmp',JSON.stringify(receipt,null,2)+'\\n');await rename(receiptPath+'.tmp',receiptPath);console.log(JSON.stringify(receipt));\n\nECO_PUBLIC_PROBE\nnode --check artifacts/public-mobile-startup.mjs\nnode artifacts/public-mobile-startup.mjs 76ef095649d0cf85a7d6e26c4927ae7cb9098652\n"
+        },
+        {
+          "name": "Keep sanitized public verification evidence",
+          "if": "always()",
+          "uses": "actions/upload-artifact@v4",
+          "with": {
+            "name": "public-mobile-startup-76ef0956",
+            "path": "artifacts/publication/",
+            "if-no-files-found": "error",
+            "retention-days": 14
+          }
+        }
+      ]
+    }
+  }
+}
