@@ -1,8 +1,33 @@
-## Huit lots Canopée — candidat v43, 30 octobre 2026
+## Huit lots Canopée — livraison vérifiée v43
 
-Les huit lots / 32 critères autorisés sont intégrés sur la base v42 `1d6d2767e208b240d40f5fdd578f11e2582a8c8f`, sans migration ni mutation de données réelles. Matrice et limites : `docs/implementation/EIGHT_LOTS_2026-10-30.md`. Qualification locale ciblée : 4/4 Chromium (démarrage partiel, récupération, deux gestionnaires, clôture périmée), 7/7 tests ciblés de versions, voix et brouillons. La projection de synthèse est bornée au membre ; les révisions de brouillon sont rejouées dans l’ordre avec comparaison de contenu. Le téléchargement de la dictée française locale reste explicite et ses données sont isolées des finances.
+Les **8 lots / 32 critères autorisés** sont implémentés et déployés :
+`1.5.2.43-canopee-collective`, source runtime `76ef095649d0cf85a7d6e26c4927ae7cb9098652`.
+Qualification indépendante [run 41145634261](https://github.com/Serge-As/urae/actions/runs/41145634261)
+et livraison [run 41185934157](https://github.com/Serge-As/urae/actions/runs/41185934157) :
+**1069 natifs / 106 Chromium / 44 WebKit Linux**, zéro échec, ignoré ou instable.
+Vérification publique indépendante terminée le `2026-10-31T09:54:01.349902+00:00` : santé, catalogue,
+identités source/build/cache, CSP de page et worker vocal, 159 ressources publiques.
+Le catalogue conserve ses **164 identifiants et maturités** ; les 28 lots/92 propositions
+historiques et les 256 fichiers de tests/support v42 (208 v18) sont conservés.
 
-Les suites complètes du SHA final, Chromium/WebKit Linux, BIR D1/source et preuve publique restent à terminer. La production attestée reste v42 ; aucun résultat local ne vaut déploiement ou acceptation terrain. `realMoneyEnabled=false`, `FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables. Ne pas recommencer les 28 lots/92 propositions ni effacer les stockages d’appareil.
+Les corrections finales restaurent l’ordre de montage des propriétaires Documents,
+Business Studio, ressources et dépendances, ainsi que le nettoyage forcé des vues
+privées à la déconnexion. Les tests acquis ont été conservés. Aucun schéma,
+clé existante, donnée financière ou stockage d’appareil n’a été réécrit ou purgé.
+Le BIR en lecture seule D1/source a été restauré sur copie vierge et relu dans R2
+privé avant la mutation du Worker ; portée **D1_AND_EXACT_SOURCE_ONLY**.
+La clôture documentaire n’est pas une nouvelle source runtime à redéployer.
+
+Preuves : `docs/release/evidence/EIGHT-LOTS-DELIVERY-2026-10-30.json` ; matrice : `docs/implementation/EIGHT_LOTS_2026-10-30.md`.
+La matrice offline expose 7 politiques explicites ; les 157 autres capacités
+restent indiquées comme non qualifiées pour une promesse offline générale.
+Les états d’attente, confirmations serveur, réserves et auteurs restent distincts.
+Le moteur vocal local facultatif est installé et testé sans serveur en automatisé ;
+reconnaissance avec microphone réel, bruit, accent, batterie et groupes physiques
+restent des vérifications terrain. `realMoneyEnabled=false`,
+`FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables.
+
+**ÉTAT DU PROJET APRÈS ÉTAPE : VERIFIED_REMOTE / DEPLOYED / FIELD_ACCEPTED=NOT_ACCEPTED.**
 
 ## Historique conservé
 

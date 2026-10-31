@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-27",
+  "generatedOn": "2026-10-31",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -1784,15 +1784,17 @@
     {
       "id": "canopee-eight-lots-20261030",
       "scope": "Eight authorized lots: startup, navigation, collective synthesis, voice, panoramas, tables, economic handoffs and offline recovery",
-      "status": "IN_PROGRESS",
-      "observedOn": "2026-10-30",
-      "statement": "All eight lots implemented; exact-source qualification and delivery pending. Four targeted Chromium and seven targeted native tests passed before final source consolidation. No financial data mutation or schema migration. Physical acceptance remains NOT_ACCEPTED.",
+      "status": "VERIFIED_REMOTE",
+      "observedOn": "2026-10-31",
+      "statement": "All eight lots/32 criteria delivered as v43 at 76ef095649d0cf85a7d6e26c4927ae7cb9098652. Same-source independent CI and delivery:1069 native,106 Chromium,44 Linux WebKit,zero failures/skips/flaky. Public verification confirms164 unchanged capability IDs/maturities and 159 asset hashes. Readonly D1/source restore and private R2 readback before Worker mutation. No schema migration, financial test mutation, storage purge or key rotation. Optional local ASR and collective versioned member synthesis tested synthetically. FIELD_ACCEPTED=NOT_ACCEPTED;realMoneyEnabled=false.",
       "evidence": [
-        "docs/implementation/EIGHT_LOTS_2026-10-30.md",
-        "tests/browser/eight-lots-20261029.spec.mjs",
-        "tests/forum-local-drafts-20261030.test.mjs"
+        "docs/release/evidence/EIGHT-LOTS-DELIVERY-2026-10-30.json",
+        "https://github.com/Serge-As/urae/actions/runs/41145634261",
+        "https://github.com/Serge-As/urae/actions/runs/41185934157",
+        "https://eco-system.sergemimf.workers.dev/health",
+        "docs/implementation/EIGHT_LOTS_2026-10-30.md"
       ],
-      "next": "Complete final exact-source gates, readonly backup, deployment and public verification."
+      "next": "Preserve the verified v43 runtime and canonical owners. Do not repeat completed implementation/deployment. Physical microphone/device/group acceptance and external provider contracts remain distinct. Never clear pending local work."
     }
   ]
 }

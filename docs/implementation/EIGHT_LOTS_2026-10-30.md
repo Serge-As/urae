@@ -1,6 +1,6 @@
 # Huit lots Canopée — implémentation et preuves
 
-Date : 30 octobre 2026. Candidat : 1.5.2.43-canopee-collective.
+Implémentation : 30 octobre 2026. Livraison vérifiée : 2026-10-31. Runtime : 1.5.2.43-canopee-collective.
 Base runtime : `1d6d2767e208b240d40f5fdd578f11e2582a8c8f` (v42).
 Base du checkout : `9c8e8332fc0eb44102ba7a35b245a32630322459`.
 
@@ -8,9 +8,8 @@ Autorisation : le fondateur demande de reprendre et livrer tous les huit lots,
 sans retrait silencieux des parcours existants. Les quatre couleurs restent
 doré, blanc, rouge et vert. Associations et tontines rotatives restent prioritaires.
 
-Statut au checkpoint : **IMPLEMENTED / FINAL_QUALIFICATION_IN_PROGRESS**.
-Ce document n’atteste pas un déploiement. Les preuves exactes du SHA final seront
-ajoutées dans `docs/release/evidence/`. `realMoneyEnabled=false` et
+Statut au checkpoint : **VERIFIED_REMOTE / DEPLOYED**.
+Livraison attestée sur `76ef095649d0cf85a7d6e26c4927ae7cb9098652` ; preuves exactes dans `docs/release/evidence/EIGHT-LOTS-DELIVERY-2026-10-30.json`. `realMoneyEnabled=false` et
 `FIELD_ACCEPTED=NOT_ACCEPTED` restent obligatoires.
 
 ## Matrice des 32 critères
@@ -21,7 +20,7 @@ ajoutées dans `docs/release/evidence/`. `realMoneyEnabled=false` et
 | L1.2 | Authentification et noyau prioritaires ; import des panneaux secondaires à la demande ; installation du SW après le premier démarrage. | `main.js`, contrôleurs existants, authentification inchangée ; qualification du graphe PWA et test téléphone. |
 | L1.3 | Paramètres → Mon appareil : groupe actif, date des copies, opérations en attente, conflits, reprise vers les feuilles et outbox existantes. | `recovery-workspace.js`, copies de l’acteur/tenant/groupe courant ; aucune suppression de données. |
 | L1.4 | Diagnostic téléchargeable limité aux étapes et capacités techniques. | `startup-guard.ts`, pas de montants, nom, identifiant, cookie, contenu de stockage ou message serveur brut ; test de confidentialité. |
-| L2.1 | Nom du membre dans la feuille → sa fiche individuelle modifiable ; changement de membre soumis au passage financier existant. | `context-link.js`, routeur de détail et deuxième feuille canonique ; test réel à deux comptes. |
+| L2.1 | Nom du membre dans la feuille → sa fiche individuelle modifiable ; changement de membre soumis au passage financier existant. | `context-link.js`, routeur de détail et deuxième feuille canonique ; parcours navigateur avec deux comptes synthétiques. |
 | L2.2 | Nom d’une rubrique → feuille globale en lecture financière et paramètres selon les droits. | Routeur et configuration Rubrics existants ; aucune troisième feuille de saisie ; test expérience. |
 | L2.3 | Nom d’une séance → détail de cette séance ; contexte conservé dans les feuilles et l’historique du membre. | Identifiants métier dans les liens, routeur existant ; pas de sélection par nom ambigu. |
 | L2.4 | Liens réutilisables dans matrices, dettes, présences, cumuls et historiques ; navigation de détail et retour conservés. | `context-link.js`, deux feuilles existantes, tests navigation acquis et contexte. |
@@ -187,3 +186,35 @@ report jusqu’à la relecture explicite du montant en chiffres et en lettres.
 Le scénario d’exercice de séance acquis passe 2/2 dans Linux au SHA dd5ddde0 ;
 les incidents locaux Windows de processus/clic restent consignés séparément,
 sans abaisser les assertions ni modifier le produit pour contourner le test.
+
+
+## Huit lots Canopée — livraison vérifiée v43
+
+Les **8 lots / 32 critères autorisés** sont implémentés et déployés :
+`1.5.2.43-canopee-collective`, source runtime `76ef095649d0cf85a7d6e26c4927ae7cb9098652`.
+Qualification indépendante [run 41145634261](https://github.com/Serge-As/urae/actions/runs/41145634261)
+et livraison [run 41185934157](https://github.com/Serge-As/urae/actions/runs/41185934157) :
+**1069 natifs / 106 Chromium / 44 WebKit Linux**, zéro échec, ignoré ou instable.
+Vérification publique indépendante terminée le `2026-10-31T09:54:01.349902+00:00` : santé, catalogue,
+identités source/build/cache, CSP de page et worker vocal, 159 ressources publiques.
+Le catalogue conserve ses **164 identifiants et maturités** ; les 28 lots/92 propositions
+historiques et les 256 fichiers de tests/support v42 (208 v18) sont conservés.
+
+Les corrections finales restaurent l’ordre de montage des propriétaires Documents,
+Business Studio, ressources et dépendances, ainsi que le nettoyage forcé des vues
+privées à la déconnexion. Les tests acquis ont été conservés. Aucun schéma,
+clé existante, donnée financière ou stockage d’appareil n’a été réécrit ou purgé.
+Le BIR en lecture seule D1/source a été restauré sur copie vierge et relu dans R2
+privé avant la mutation du Worker ; portée **D1_AND_EXACT_SOURCE_ONLY**.
+La clôture documentaire n’est pas une nouvelle source runtime à redéployer.
+
+Preuves : `docs/release/evidence/EIGHT-LOTS-DELIVERY-2026-10-30.json` ; matrice : `docs/implementation/EIGHT_LOTS_2026-10-30.md`.
+La matrice offline expose 7 politiques explicites ; les 157 autres capacités
+restent indiquées comme non qualifiées pour une promesse offline générale.
+Les états d’attente, confirmations serveur, réserves et auteurs restent distincts.
+Le moteur vocal local facultatif est installé et testé sans serveur en automatisé ;
+reconnaissance avec microphone réel, bruit, accent, batterie et groupes physiques
+restent des vérifications terrain. `realMoneyEnabled=false`,
+`FIELD_ACCEPTED=NOT_ACCEPTED`. Crédits exacts non mesurables.
+
+**ÉTAT DU PROJET APRÈS ÉTAPE : VERIFIED_REMOTE / DEPLOYED / FIELD_ACCEPTED=NOT_ACCEPTED.**
