@@ -1,8 +1,26 @@
-## Reprise active — six lots de l’audit du 1 novembre 2026
+## Six lots de l’audit — livraison vérifiée v44
 
-Le code des six lots est présent sur `codex/audit-six-lots-20261101`. Ne pas recommencer l’audit de la machine.
-Terminer les vérifications natives et Chromium/WebKit du SHA exact, publier la même source par avance normale sur la branche de livraison, vérifier sauvegarde restaurée/R2 et index additifs, santé/catalogue/assets publics, puis fermer les reçus documentaires.
-La preuve v43 acquise reste le point de comparaison. Les deux feuilles et propriétaires canoniques, 164 capacités et 92 propositions restent obligatoires. Ne pas purger les données d’appareil. FIELD_ACCEPTED=NOT_ACCEPTED.
+Les six lots autorisés après l’audit annoté sont implémentés et déployés.
+Runtime : **1.5.2.44-audit-cockpit**, source `ea1214af2d89b875c2e73b2fc2b828d6fa37f345`.
+Qualification [run 41353322321](https://github.com/Serge-As/urae/actions/runs/41353322321) et livraison [run 41355046190](https://github.com/Serge-As/urae/actions/runs/41355046190) : **1086 natifs / 110 Chromium / 48 WebKit Linux**, zéro échec, ignoré ou instable sur la même source.
+
+Contrôle public indépendant : 165 ressources du socle PWA ; contrôle de livraison : 104 fichiers publics, moteurs facultatifs compris. Démarrage et F5 à 360 px passent en Chromium/WebKit sans compte réel ni écriture financière.
+
+Les 8 lots Canopée, 28 lots/92 propositions et 164 capacités conservent leurs identifiants et maturités. Aucun fichier historique de tests/support retiré : 261 v43, 256 v42, 208 v18. Trente-six fichiers des moteurs financiers, offline, droits et anciens schémas restent identiques au socle.
+
+La sauvegarde D1/source a été restaurée puis relue dans R2 privé avant les deux index partiels de lecture autorisés et le Worker. Les empreintes des données de la copie restaurée sont identiques avant/après index. Portée : **D1_AND_EXACT_SOURCE_ONLY** ; pièces jointes, stockage d’appareil et fournisseurs exclus.
+Preuve : `docs/release/evidence/SIX-LOTS-AUDIT-DELIVERY-2026-11-01.json` ; matrice : `docs/implementation/SIX_LOTS_AUDIT_2026-11-01.md`. La clôture documentaire ne change pas la source runtime et ne demande pas un autre déploiement.
+
+Le contrôle de budget réseau hérité de v43 a aussi été corrigé : il appelait une URL texte comme une fonction sur les POST. L’échec supplémentaire 41355046192 est conservé ; le contrôle corrigé passe dans un job Linux ciblé, avec branches POST de lecture et financier explicitement vérifiées, sur un code applicatif identique à ea1214af2d89b875c2e73b2fc2b828d6fa37f345. Ce correctif de test et la clôture documentaire ne demandent pas un autre déploiement.
+
+Les deux feuilles restent les éditeurs financiers habituels ; comptabilisation, contrôle, réserve et paiement restent distincts. Aucun stockage d’appareil purgé. Sept politiques offline sont explicites ; 157 capacités ne sont pas qualifiées pour une promesse offline générale. Téléphone physique, microphone, bruit de réunion et fournisseurs restent à accepter sur le terrain.
+**realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED.** Crédits exacts non mesurables.
+
+**ÉTAT DU PROJET APRÈS ÉTAPE : VERIFIED_REMOTE / DEPLOYED / FIELD_ACCEPTED=NOT_ACCEPTED.**
+
+Prochaine intervention : seulement une demande ciblée ou une recette contrôlée du téléphone, du microphone et du groupe réel. Ne pas refaire les six lots ni le déploiement acquis ; préserver les opérations locales en attente.
+
+## Historique conservé
 
 ## Huit lots Canopée — livraison vérifiée v43
 
