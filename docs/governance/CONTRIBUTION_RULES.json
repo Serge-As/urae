@@ -1,0 +1,93 @@
+{
+  "protocol": 1,
+  "rules": [
+    {
+      "id": "FINANCE",
+      "patterns": [
+        "packages/domain/",
+        "packages/member-control/",
+        "packages/meeting-live-consensus/",
+        "workers/api/src/financial",
+        "workers/api/src/synthesis",
+        "apps/web/src/financial-work",
+        "apps/web/src/member-control",
+        "workers/api/src/index.ts"
+      ],
+      "owner": "Ledger / MemberFinancialControl / MeetingLiveConsensus",
+      "proofs": [
+        "tests/member-financial-control.test.mjs",
+        "tests/eco-manager-review-dispute.test.mjs",
+        "tests/audit-six-lots-review-20261101.test.mjs"
+      ],
+      "invariants": [
+        "absolute replacement",
+        "independent review preserves amounts and reserves",
+        "server ACK differs from offline intent"
+      ]
+    },
+    {
+      "id": "STORAGE",
+      "patterns": [
+        "packages/repositories/",
+        "cloudflare/migrations/"
+      ],
+      "owner": "D1PlatformRepository",
+      "proofs": [
+        "tests/audit-six-lots-d1-20261101.test.mjs",
+        "tests/audit-p0-financial-cell-atomic-1.5.0.test.mjs"
+      ],
+      "invariants": [
+        "tenant/group isolation",
+        "same result and historical latest semantics",
+        "no destructive migration"
+      ]
+    },
+    {
+      "id": "SHELL",
+      "patterns": [
+        "apps/web/src/main.js",
+        "apps/web/src/group-home",
+        "apps/web/src/runtime-i18n",
+        "apps/web/index.html",
+        "apps/web/canopee.css",
+        "scripts/build",
+        "scripts/bundle-browser-core.mjs",
+        "apps/web/src/boot-core.js",
+        "apps/web/src/home-priorities.js"
+      ],
+      "owner": "Existing shell controllers and PWA",
+      "proofs": [
+        "tests/browser/audit-six-lots-20261101.spec.mjs",
+        "tests/browser/eight-lots-20261029.spec.mjs"
+      ],
+      "invariants": [
+        "two editors",
+        "private views clear on logout",
+        "module mount order and offline closure"
+      ]
+    },
+    {
+      "id": "EXERCISE",
+      "patterns": [
+        "packages/exercise/",
+        "apps/web/src/print-center",
+        "apps/web/src/share-out",
+        "apps/web/src/meeting-export",
+        "apps/web/src/voice-echo",
+        "apps/web/src/sovereign-offline-ui.js",
+        "apps/web/src/rubric-matrix.js",
+        "apps/web/src/xlsx-export.js",
+        "apps/web/src/detail-ui.js"
+      ],
+      "owner": "Exercise / PrintCenter / Ledger",
+      "proofs": [
+        "tests/audit-six-lots-documents-20261101.test.mjs"
+      ],
+      "invariants": [
+        "preview is not payout",
+        "no invented source or signature",
+        "integer conservation and no third editor"
+      ]
+    }
+  ]
+}

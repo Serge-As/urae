@@ -1,3 +1,9 @@
+## Reprise active — six lots de l’audit du 1 novembre 2026
+
+Le code des six lots est présent sur `codex/audit-six-lots-20261101`. Ne pas recommencer l’audit de la machine.
+Terminer les vérifications natives et Chromium/WebKit du SHA exact, publier la même source par avance normale sur la branche de livraison, vérifier sauvegarde restaurée/R2 et index additifs, santé/catalogue/assets publics, puis fermer les reçus documentaires.
+La preuve v43 acquise reste le point de comparaison. Les deux feuilles et propriétaires canoniques, 164 capacités et 92 propositions restent obligatoires. Ne pas purger les données d’appareil. FIELD_ACCEPTED=NOT_ACCEPTED.
+
 ## Huit lots Canopée — livraison vérifiée v43
 
 Les **8 lots / 32 critères autorisés** sont implémentés et déployés :

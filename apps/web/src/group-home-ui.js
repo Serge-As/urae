@@ -1,3 +1,4 @@
+import {selectHomePriorities} from './home-priorities.js';
 import {contextLink} from './context-link.js';
 const byId=id=>document.getElementById(id);
 const managerRoles=new Set(['founder','manager','admin','president','treasurer']);
@@ -37,6 +38,7 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
     const group=getGroups().find(x=>x.id===app.activeGroup());
     if(!group){root.removeAttribute('aria-busy');root.append(make('div','empty-state',t('Sélectionnez un groupe pour afficher son Accueil.','Select a group to show its Home.')));return;}
     const loading=make('p','hint',t('Actualisation de la situation du groupe…','Updating the group overview…'));loading.setAttribute('role','status');root.append(loading);
+    const prioritiesPromise=app.inboxItems?.().catch(()=>null)??Promise.resolve(null),offersPromise=app.valueOffers?.().catch(()=>[])??Promise.resolve([]);
     const members=getMembers(),meetings=getMeetings(),[me,passport,profile]=await Promise.all([
       app.groupMe().catch(()=>({isManager:false,membership:null})),
       app.groupIdentityPassport(false).catch(()=>null),
@@ -56,10 +58,21 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
     const shortcuts=make('nav','group-home-shortcuts');shortcuts.setAttribute('aria-label',t('Agir dans ce groupe','Act in this group'));
     shortcuts.append(action(t('Séances & réunions','Sessions & meetings'),'sessions'),action(manage?t('Fiches des membres','Member sheets'):t('Ma fiche individuelle','My individual sheet'),'operations','twoSheetWorkspace',{sheetMode:'individual',membershipId:me?.membership?.id}),action(t('Approfondir · Récap','Explore · Recap'),'recap'));
     surface.append(shortcuts);
+    surface.dataset.i18nOwner='component';
     surface.dataset.composition='panorama';
     const views=make('nav','eco-panorama-views');views.setAttribute('aria-label',t('Composition de l’accueil','Home composition'));
     const compositionKey='eco.groupComposition.'+scope();let saved='panorama';try{saved=localStorage.getItem(compositionKey)||'panorama';}catch{}if(['panorama','journal'].includes(saved))surface.dataset.composition=saved;
     for(const [mode,fr,en]of[['panorama','Panorama','Overview'],['atelier','Atelier de séance','Meeting workshop'],['journal','Journal du groupe','Group journal']]){const b=make('button','secondary',t(fr,en));b.type='button';b.setAttribute('aria-pressed',String(surface.dataset.composition===mode));b.onclick=()=>{if(mode==='atelier'){navigate('operations',{anchor:'twoSheetWorkspace',sheetMode:'meeting',force:true});return;}surface.dataset.composition=mode;try{localStorage.setItem(compositionKey,mode);}catch{}for(const other of views.querySelectorAll('button'))other.setAttribute('aria-pressed',String(other===b));};views.append(b);}surface.append(views);
+
+    const priority=make('section','group-home-priorities');priority.setAttribute('aria-label',t('Priorités du groupe','Group priorities'));priority.setAttribute('aria-busy','true');
+    priority.append(make('p','hint',t('Actualisation des priorités…','Updating priorities…')));surface.append(priority);
+    void prioritiesPromise.then(inbox=>{
+      if(!isCurrent())return;priority.replaceChildren(make('span','eyebrow',t('À TRAITER MAINTENANT','NEEDS YOUR ATTENTION')));
+      const selected=selectHomePriorities(inbox,group.id,Date.now());
+      for(const item of selected.visible){const b=action(item.title,'inbox');b.classList.add('group-home-priority');if(String(item.priority).toUpperCase()==='CRITICAL')b.classList.add('is-critical');if(item.dueAt)b.append(make('small','',t('Échéance : ','Due: ')+humanDateTime(item.dueAt)));priority.append(b);}
+      if(!selected.total)priority.append(make('p','hint',inbox===null?t('Priorités indisponibles dans cette copie. Ouvrez À faire pour vérifier.','Priorities unavailable in this copy. Open Tasks to check.'):t('Aucune action ouverte dans votre boîte pour ce groupe.','No open task in your inbox for this group.')));
+      if(selected.remaining)priority.append(action(selected.remaining===1?t('Voir une autre action →','View one more task →'):t('Voir '+selected.remaining+' autres actions →','View '+selected.remaining+' more tasks →'),'inbox'));priority.removeAttribute('aria-busy');
+    });
 
     const identification=make('details','group-home-block group-home-identity');identification.append(make('summary','',t('Identité, Bureau et repères du groupe','Identity, office and group details')));
     const grid=make('div','metrics small'),groupLabel=passport?.publicCode?group.name+' · '+passport.publicCode:group.name;
@@ -183,12 +196,12 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
         const columns=(recap.layout?.columns??[]).slice(0,5),rows=recap.rows??[];
         if(rows.length){
           const wrap=make('div','matrix-wrap group-home-table');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label',t('Aperçu du Récap, défilement horizontal possible','Recap preview, scroll horizontally'));
-          const table=make('table','meeting-matrix'),head=make('thead'),hr=make('tr');table.append(make('caption','sr-only',t('Récap canonique : 8 membres et 5 rubriques au maximum. Le détail reste disponible dans Récap.','Canonical Recap: up to 8 members and 5 categories. Full details remain in Recap.')));
+          const table=make('table','meeting-matrix'),head=make('thead'),hr=make('tr');table.append(make('caption','sr-only',t('Récap canonique : 4 membres et 5 rubriques au maximum. Le détail reste disponible dans Récap.','Canonical Recap: up to 4 members and 5 categories. Full details remain in Recap.')));
           for(const label of [t('Membre','Member'),...columns.map(c=>c.label??c.name??c.id),t('Total de fiche','Sheet total')])hr.append(make('th','',label));head.append(hr);table.append(head);
-          const body=make('tbody');for(const row of rows.slice(0,8)){const tr=make('tr'),name=make('th'),open=make('button','link-btn',row.displayName);open.type='button';open.dataset.detailType='member';open.dataset.detailId=row.membershipId;name.scope='row';name.append(open);tr.append(name);for(const column of columns){const value=row.cells?.[column.id]?.displayAmount;tr.append(td(value==null?'—':fmt(value)));}tr.append(td(row.total==null?'—':fmt(row.total)));body.append(tr);}table.append(body);wrap.append(table);preview.append(wrap);
-          preview.append(make('p','hint',t('Aperçu de '+Math.min(rows.length,8)+' / '+rows.length+' membres. Les montants reprennent les fiches ; ils ne sont ni des revenus personnels ni une promesse de gain.','Preview of '+Math.min(rows.length,8)+' / '+rows.length+' members. These figures reflect sheets; they are not personal earnings or promised returns.')));
+          const body=make('tbody');for(const row of rows.slice(0,4)){const tr=make('tr'),name=make('th'),open=make('button','link-btn',row.displayName);open.type='button';open.dataset.detailType='member';open.dataset.detailId=row.membershipId;name.scope='row';name.append(open);tr.append(name);for(const column of columns){const value=row.cells?.[column.id]?.displayAmount;tr.append(td(value==null?'—':fmt(value)));}tr.append(td(row.total==null?'—':fmt(row.total)));body.append(tr);}table.append(body);wrap.append(table);preview.append(wrap);
+          preview.append(make('p','hint',t('Aperçu de '+Math.min(rows.length,4)+' / '+rows.length+' membres. Les montants reprennent les fiches ; ils ne sont ni des revenus personnels ni une promesse de gain.','Preview of '+Math.min(rows.length,4)+' / '+rows.length+' members. These figures reflect sheets; they are not personal earnings or promised returns.')));
         }else preview.append(make('p','empty-state',t('Aucune ligne de Récap enregistrée pour ce groupe.','No Recap rows recorded for this group.')));
-        finance.append(preview);
+        const financeDetails=make('details','group-home-finance-details');financeDetails.append(make('summary','',t('Explorer les fiches et les dettes du groupe','Explore member sheets and group debts')),preview);finance.append(financeDetails);
         const debt=make('div','stack');debt.append(make('h4','',t('Membres redevables / impayés / amendes · prêts · intérêts','Members owing / arrears / fines · loans · interest')));
         const debtRows=[];
         for(const m of members.filter(x=>x.status!=='left')){
@@ -200,7 +213,7 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
           const wrap=make('div','matrix-wrap'),table=document.createElement('table');table.className='meeting-matrix';const head=document.createElement('thead'),hr=document.createElement('tr');for(const h of [t('Membre','Member'),t('Capital prêt','Loan principal'),t('Intérêts dus','Interest due'),t('Autres impayés','Other arrears'),t('Dette totale','Total debt')])hr.append(make('th','',h));head.append(hr);table.append(head);const tbody=document.createElement('tbody');
           for(const d of debtRows){const tr=document.createElement('tr'),name=td(''),open=make('button','link-btn',d.member.displayName);open.type='button';open.dataset.detailType='member';open.dataset.detailId=d.member.id;name.append(open);tr.append(name,td(fmt(d.principal)),td(fmt(d.interest)),td(fmt(d.other)),td(fmt(d.total)));tbody.append(tr);}
           const totals=debtRows.reduce((a,d)=>({principal:a.principal+d.principal,interest:a.interest+d.interest,other:a.other+d.other,total:a.total+d.total}),{principal:0,interest:0,other:0,total:0}),tr=document.createElement('tr');tr.className='table-total-row';tr.append(make('th','',t('TOTAL','TOTAL')),td(fmt(totals.principal)),td(fmt(totals.interest)),td(fmt(totals.other)),td(fmt(totals.total)));tbody.append(tr);table.append(tbody);wrap.append(table);debt.append(wrap,make('p','hint',t('La dette totale additionne le capital restant, les intérêts déjà dus et les autres obligations. Un intérêt ajouté à la clôture d’une séance est porté sur la séance suivante.','Total debt includes outstanding principal, accrued interest and other obligations. Interest added when a session closes is assigned to the next session.')));
-        }else debt.append(make('p','hint',arrearsResult&&loansResult?t('Aucune créance ouverte connue à ce jour.','No known open receivable today.'):t('Certaines données de dettes sont indisponibles. Consultez les fiches avant de conclure.','Some debt data is unavailable. Check the statements before drawing a conclusion.')));if(!arrearsResult||!loansResult)debt.append(make('p','truth-notice',t('Vue partielle : prêts ou impayés indisponibles.','Partial view: loans or arrears unavailable.')));finance.append(debt);
+        }else debt.append(make('p','hint',arrearsResult&&loansResult?t('Aucune créance ouverte connue à ce jour.','No known open receivable today.'):t('Certaines données de dettes sont indisponibles. Consultez les fiches avant de conclure.','Some debt data is unavailable. Check the statements before drawing a conclusion.')));if(!arrearsResult||!loansResult)debt.append(make('p','truth-notice',t('Vue partielle : prêts ou impayés indisponibles.','Partial view: loans or arrears unavailable.')));financeDetails.append(debt);
         const scheduled=shares.filter(x=>['SCHEDULED','SERVED'].includes(String(x.data?.completionState??''))).sort((a,b)=>Number(a.data?.scheduledRound??999)-Number(b.data?.scheduledRound??999)||Number(a.data?.scheduledSlot??999)-Number(b.data?.scheduledSlot??999));
         if(group.kind==='rotating_tontine'||scheduled.length){
           const ranking=make('section','group-home-rounds'),head=make('div','panel-head');head.append(make('h4','',t('Le cycle, tour après tour','Your cycle, round by round')),action(t('Gérer les tontines →','Manage tontines →'),'tontines'));ranking.append(head);
@@ -211,7 +224,7 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
             const body=make('tbody');for(const share of scheduled.slice(0,12)){const member=members.find(m=>m.id===String(share.data?.membershipId??'')),tr=make('tr');tr.dataset.roundState=share.data.completionState;tr.append(td(share.data.scheduledRound),td(share.data.scheduledSlot),td(member?.displayName??share.title),td(share.data.completionState==='SERVED'?t('Servi','Served'):t('Programmé','Scheduled')));body.append(tr);}table.append(body);wrap.append(table);ranking.append(wrap);
             if(scheduled.length>12)ranking.append(make('p','hint',t('12 premières parts affichées. Le calendrier complet est dans Tontines.','First 12 shares shown. The full schedule is in Tontines.')));
           }else ranking.append(make('p','empty-state',sharesResult?t('Aucun classement de Tontine programmé.','No scheduled tontine ranking.'):t('Calendrier des tours momentanément indisponible.','Round schedule is temporarily unavailable.')));
-          if(group.kind==='rotating_tontine')finance.insertBefore(ranking,preview);else finance.append(ranking);
+          if(group.kind==='rotating_tontine')finance.insertBefore(ranking,financeDetails);else finance.append(ranking);
         }
       }catch{finance.append(make('div','empty-state',t('Situation financière momentanément indisponible. Aucune valeur de remplacement n’est inventée.','Financial situation temporarily unavailable. No substitute value is invented.')));}
     }else if(me?.membership?.id){
@@ -250,6 +263,7 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
       ['Studio médias','Media studio','Personnaliser les visuels autorisés','Customize the visuals you can manage',null,'ecoVisualMediaStudio'],
       ['Tous les services','All services','Trouver une capacité pour votre projet','Find a capability for your project',null,null]
     ]){const b=make('button','group-home-door');b.type='button';b.append(make('strong','',t(fr,en)),make('span','',t(detailFr,detailEn)),make('span','group-home-door-arrow','↗'));if(module)b.dataset.moduleOpen=module;else b.onclick=()=>navigate(anchor?'ecosystem':'services',{anchor,force:true});doorGrid.append(b);}
+    void offersPromise.then(offers=>{if(!isCurrent())return;const published=offers.filter(x=>String(x.data?.completionState??x.state??x.status).toUpperCase()==='PUBLISHED').slice(0,2);if(!published.length)return;const selected=make('div','group-home-live-offers');selected.append(make('h4','',t('Offres publiées à explorer','Published offers to explore')));for(const offer of published){const b=action(offer.title??t('Voir l’offre','View offer'),'ecosystem','valueNetworkOperational');b.append(make('small','',t('Offre publiée · conditions à vérifier auprès du porteur','Published offer · check terms with the provider')));selected.append(b);}doors.append(selected);});
     doors.append(doorGrid);surface.append(doors,timeline,identification);if(kitPanel)surface.append(kitPanel);
     surface.append(make('p','group-home-asof',t('Situation consultée le ','Viewed on ')+humanDateTime(now)+t(' · selon vos droits d’accès.',' · subject to your access rights.')));
     root.replaceChildren(surface);root.removeAttribute('aria-busy');

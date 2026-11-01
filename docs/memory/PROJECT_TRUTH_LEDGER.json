@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-10-31",
+  "generatedOn": "2026-11-01",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -25,6 +25,21 @@
     "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
   ],
   "records": [
+    {
+      "id": "audit.six-lots.20261101",
+      "scope": "Six approved audit lots; preserve financial owners and acquired capabilities",
+      "status": "VERIFIED_LOCAL",
+      "observedOn": "2026-11-01",
+      "statement": "Six lots implemented locally. Initial TypeScript passed; portable build and 33 targeted tests passed. Full exact-source qualification, additive-index backup/application and public deployment remain to prove. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "evidence": [
+        "docs/implementation/SIX_LOTS_AUDIT_2026-11-01.md",
+        "docs/change-impact/CIR-2026-11-01-SIX-LOTS.md",
+        "tests/audit-six-lots-review-20261101.test.mjs",
+        "tests/audit-six-lots-d1-20261101.test.mjs",
+        "tests/audit-six-lots-documents-20261101.test.mjs",
+        "tests/browser/audit-six-lots-20261101.spec.mjs"
+      ]
+    },
     {
       "id": "visual.canopee-deployment.20261027",
       "scope": "Same-source publication, business placement and financial table presentation",

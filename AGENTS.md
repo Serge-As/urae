@@ -28,19 +28,9 @@ Le fondateur confirme : « C'est moi qui ai rendu Urae public, ne t'inquiète pl
 - Aucun redémarrage de l'ordinateur sans autorisation explicite.
 
 ## MEMORY BEFORE CODE
-Avant tout lot substantiel, lire dans cet ordre :
-1. `AGENTS.md` ;
-2. `docs/memory/CURRENT_TRUTH.md` ;
-3. `docs/memory/PROJECT_TRUTH_LEDGER.json` ;
-4. `PROJECT_STATE.md` ;
-5. `docs/constitution/ECO_SYSTEM_Cahier_des_Charges_Maitre_Exhaustif_3.2.0_2026-09-16.md` + socle constitutionnel 2.3.4 ;
-6. `docs/economics/ECO_SYSTEM_Modele_Economique_AdManager_Approfondi_3.2.0_2026-09-16.md` ;
-7. `docs/governance/DELOR85_DEUX_CONVENTIONS_FONDATRICES_UNIVERSELLES_1.0.0.md` ;
-8. `docs/governance/ECO_SYSTEM_LIVING_RULES_DOCTRINE_1.0.0.md` ;
-9. `FEATURE_REGISTRY.yaml` ;
-10. `NEXT_RUN.md` ;
-11. CIR/ADR/Recall pertinents ;
-12. vérifier une fois le HEAD distant et les runs pertinents au début d'un lot ; réutiliser ces informations pendant le travail local, puis revérifier le HEAD avant publication. Pas de nouvelle vérification réseau sans raison concrète, changement attendu ou reprise après interruption.
+Décision du fondateur du 1 novembre 2026 : adopter l’entrée compacte et les contrôles ciblés décrits dans `ARCHITECTURE_COMPACTE.md` pour limiter les relectures sans réduire les protections. Lire cette entrée, le début de Current Truth, le CIR courant, puis les textes et propriétaires du domaine concerné. Les maîtres restent normatifs et doivent être consultés pour un domaine inconnu ou un conflit. Le registre `docs/governance/CONTRIBUTION_RULES.json` et `npm run lint:contribution` rendent les preuves attendues explicites. Ne réécrire les registres qu’au jalon ou lors d’un changement de vérité.
+
+Vérifier le HEAD distant au début du lot puis avant publication ; réutiliser les reçus immuables du même SHA. Les autorisations du fondateur priment sur les anciennes modalités de lecture.
 
 Un prompt, une capture ou un résumé n'est jamais la totalité du besoin. **Absence visible ≠ suppression autorisée.**
 

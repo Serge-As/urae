@@ -509,51 +509,62 @@ const translateExact=(source:string,locale:RuntimeLocale)=>{
 export const localeTag=(locale:RuntimeLocale)=>locale==='en'?'en-CM':'fr-CM';
 
 export const captureRuntimeI18n=(root:ParentNode=document)=>{
+  const texts=new Map<Text,string>(),attributes=new Map<Element,Map<string,string>>();
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);
   let node:Node|null;
   while((node=walker.nextNode())){
     const text=node as Text;
     const raw=text.nodeValue??'';
-    if(normalize(raw)&&text.parentElement&&!text.parentElement.closest('[data-i18n-owner="component"]')&&!['SCRIPT','STYLE','TEXTAREA'].includes(text.parentElement.tagName))textSources.set(text,raw);
+    if(normalize(raw)&&text.parentElement&&!text.parentElement.closest('[data-i18n-owner="component"]')&&!['SCRIPT','STYLE','TEXTAREA'].includes(text.parentElement.tagName)){if(!textSources.has(text))textSources.set(text,raw);texts.set(text,textSources.get(text)!);}
   }
   const elements:Element[]=root instanceof Element?[root,...root.querySelectorAll('*')]:[...root.querySelectorAll?.('*')??[]];
   for(const el of elements){
     if(el.closest('[data-i18n-owner="component"]'))continue;
     const saved=new Map<string,string>();
     for(const attr of attrs){const value=el.getAttribute(attr);if(value)saved.set(attr,value);}
-    if(saved.size)attributeSources.set(el,saved);
+    if(saved.size){if(!attributeSources.has(el))attributeSources.set(el,saved);attributes.set(el,attributeSources.get(el)!);}
   }
+  return {texts,attributes};
 };
 
-export const applyRuntimeLocale=(locale:RuntimeLocale)=>{
+export const applyRuntimeLocale=(locale:RuntimeLocale,targets?:{texts:Map<Text,string>;attributes:Map<Element,Map<string,string>>})=>{
   document.documentElement.lang=locale;
-  for(const [node,raw] of textSources){
-    if(!node.isConnected||node.parentElement?.closest('[data-i18n-owner="component"]'))continue;
+  for(const [node,raw] of targets?.texts??textSources){
+    if(!node.isConnected){textSources.delete(node);continue;}
+    if(node.parentElement?.closest('[data-i18n-owner="component"]'))continue;
     const lead=raw.match(/^\s*/)?.[0]??'',trail=raw.match(/\s*$/)?.[0]??'';
     const source=normalize(raw);
-    node.nodeValue=lead+translateExact(source,locale)+trail;
+    const next=lead+translateExact(source,locale)+trail;if(node.nodeValue!==next)node.nodeValue=next;
   }
-  for(const [el,saved] of attributeSources){
+  for(const [el,saved] of targets?.attributes??attributeSources){
     if(!el.isConnected||el.closest('[data-i18n-owner="component"]'))continue;
-    for(const [attr,source] of saved)el.setAttribute(attr,translateExact(source,locale));
+    for(const [attr,source] of saved){const next=translateExact(source,locale);if(el.getAttribute(attr)!==next)el.setAttribute(attr,next);}
   }
 };
 
 export const installRuntimeI18nObserver=(getLocale:()=>RuntimeLocale)=>{
   if(typeof MutationObserver==='undefined'||typeof document==='undefined')return()=>{};
   const observer=new MutationObserver(mutations=>{
-    let changed=false;
+    const targets={texts:new Map<Text,string>(),attributes:new Map<Element,Map<string,string>>()};
     for(const mutation of mutations){
+      for(const removed of mutation.removedNodes){
+        // Prune detached subtrees without retaining entire former screens.
+        if(removed.isConnected)continue;
+        for(const key of textSources.keys())if(removed===key||removed.contains(key))textSources.delete(key);
+        for(const key of attributeSources.keys())if(removed===key||removed.contains(key))attributeSources.delete(key);
+      }
       for(const node of mutation.addedNodes){
         if(node.nodeType===Node.TEXT_NODE){
           const text=node as Text,raw=text.nodeValue??'',parent=text.parentElement;
-          if(normalize(raw)&&parent&&!parent.closest('[data-i18n-owner="component"]')&&!['SCRIPT','STYLE','TEXTAREA'].includes(parent.tagName)){textSources.set(text,raw);changed=true;}
+          if(normalize(raw)&&parent&&!parent.closest('[data-i18n-owner="component"]')&&!['SCRIPT','STYLE','TEXTAREA'].includes(parent.tagName)){textSources.set(text,raw);targets.texts.set(text,raw);}
         }else if(node.nodeType===Node.ELEMENT_NODE){
-          captureRuntimeI18n(node as Element);changed=true;
+          const captured=captureRuntimeI18n(node as Element);
+          for(const pair of captured.texts)targets.texts.set(...pair);
+          for(const pair of captured.attributes)targets.attributes.set(...pair);
         }
       }
     }
-    if(changed)applyRuntimeLocale(getLocale());
+    if(targets.texts.size||targets.attributes.size)applyRuntimeLocale(getLocale(),targets);
   });
   observer.observe(document.documentElement,{subtree:true,childList:true});
   return()=>observer.disconnect();

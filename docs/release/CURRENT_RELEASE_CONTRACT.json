@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.43-canopee-collective",
-    "buildId": "eco-system-1.5.2.43-20261030-canopee-collective",
-    "schemaVersion": "d1-additive-20260923",
+    "version": "1.5.2.44-audit-cockpit",
+    "buildId": "eco-system-1.5.2.44-20261101-audit-cockpit",
+    "schemaVersion": "d1-additive-20261101-indexes",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15243-canopee-collective-20261030",
-    "previousPwaCache": "eco-system-v15242-canopee-reperes-20261026",
+    "pwaCache": "eco-system-v15244-audit-cockpit-20261101",
+    "previousPwaCache": "eco-system-v15243-canopee-collective-20261030",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {
@@ -20,6 +20,7 @@
     "canonicalD1": "eco-system-db",
     "canonicalR2": "eco-system-backups",
     "migrations": "ADDITIVE_ONLY",
-    "minimumCapabilities": 164
+    "minimumCapabilities": 164,
+    "qualifiedIndexMigration": "0020_scoped_module_directory_indexes.sql"
   }
 }

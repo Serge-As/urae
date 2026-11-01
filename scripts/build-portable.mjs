@@ -35,5 +35,6 @@ await cp(path.join(root,'apps/web/vendor/documents'),path.join(output,'vendor/do
 await cp(path.join(root,'apps/web/vendor/voice'),path.join(output,'vendor/voice'),{recursive:true});
 console.log('Portable build OK — Node type transformation; TypeScript typecheck remains a separate check.');
 
+await import('./bundle-browser-core.mjs');
 await import('./pwa-shell-closure.mjs');
 await import('./public-assets.mjs');

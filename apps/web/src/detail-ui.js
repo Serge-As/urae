@@ -1,3 +1,5 @@
+import {projectRubricMatrix,rubricUnitLabel} from './rubric-matrix.js';
+import {buildXlsx} from './xlsx-export.js';
 const el=(tag,text,className)=>{const e=document.createElement(tag);if(text!==undefined)e.textContent=text;if(className)e.className=className;return e;};
 const row=(label,value)=>{const p=el('p');p.append(el('strong',label+' : '),document.createTextNode(String(value??'—')));return p;};
 const link=(label,type,id)=>{const a=el('a',label,'link-btn');a.href='#detail='+encodeURIComponent(type)+':'+encodeURIComponent(id);a.dataset.detailType=type;a.dataset.detailId=id;return a;};
@@ -189,18 +191,18 @@ export function mountDetailUI({app,navigate,getGroups,getMembers,getMeetings,get
   };
 
   const rubricContributionMatrix=(rubric,ledger)=>{
-    const meetings=getMeetings().slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt))),members=getMembers();
-    const wrap=el('div',undefined,'matrix-wrap rubric-contribution-matrix'),table=document.createElement('table');table.className='meeting-matrix';
-    const head=document.createElement('thead'),hr=document.createElement('tr');hr.append(el('th','Membre'));
-    for(const meeting of meetings){const th=document.createElement('th');th.append(link(humanMeetingLabel(meeting),'meeting',meeting.id));hr.append(th);}
-    const noMeeting=ledger.receipts.some(x=>x.rubricId===rubric.id&&!x.meetingId);if(noMeeting)hr.append(el('th','Sans séance'));
-    hr.append(el('th','Total rubrique'));head.append(hr);table.append(head);const bodyRows=document.createElement('tbody');
-    for(const member of members){const tr=document.createElement('tr'),name=document.createElement('th');name.append(link(member.displayName,'member',member.id));tr.append(name);let total=0;
-      for(const meeting of meetings){const amount=ledger.receipts.filter(x=>x.membershipId===member.id&&x.rubricId===rubric.id&&x.meetingId===meeting.id).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;tr.append(el('td',fmt(amount)));}
-      if(noMeeting){const amount=ledger.receipts.filter(x=>x.membershipId===member.id&&x.rubricId===rubric.id&&!x.meetingId).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;tr.append(el('td',fmt(amount)));}
-      const sum=el('td');sum.append(el('strong',fmt(total)));tr.append(sum);bodyRows.append(tr);
-    }
-    table.append(bodyRows);wrap.append(table);return wrap;
+    const box=el('section',undefined,'rubric-matrix-section'),controls=el('div',undefined,'eco-table-controls'),from=document.createElement('input'),to=document.createElement('input'),only=document.createElement('input');from.type=to.type='date';only.type='checkbox';
+    const label=(text,input)=>{const l=el('label',text);l.append(input);return l;};const exportBtn=el('button','Exporter ce tableau (.xlsx)','secondary');exportBtn.type='button';
+    controls.append(label('Du',from),label('Au',to),label('Cotisants uniquement',only),exportBtn);box.append(el('p',rubricUnitLabel(rubric),'truth-notice'),controls);
+    const wrap=el('div',undefined,'matrix-wrap rubric-contribution-matrix');wrap.tabIndex=0;wrap.setAttribute('role','region');wrap.setAttribute('aria-label','Contributions par membre et séance');box.append(wrap);let projected;
+    const render=()=>{
+      projected=projectRubricMatrix({rubricId:rubric.id,meetings:getMeetings(),members:getMembers(),receipts:ledger.receipts,from:from.value,to:to.value,contributorsOnly:only.checked});
+      const table=el('table',undefined,'meeting-matrix'),head=el('thead'),hr=el('tr');hr.append(el('th','Membre'));for(const c of projected.columns){const th=el('th');th.scope='col';if(c.meeting)th.append(link(humanMeetingLabel(c.meeting),'meeting',c.id));else th.textContent=c.title;hr.append(th);}hr.append(el('th','Total rubrique'));head.append(hr);table.append(head);
+      const bodyRows=el('tbody');for(const row of projected.rows){const tr=el('tr'),th=el('th');th.scope='row';th.append(link(row.member.displayName,'member',row.member.id));tr.append(th);for(const amount of row.cells)tr.append(el('td',fmt(amount)));tr.append(el('td',fmt(row.total)));bodyRows.append(tr);}
+      const total=el('tr',undefined,'table-total-row');total.append(el('th','Total affiché'));for(const value of [...projected.columnTotals,projected.total])total.append(el('td',fmt(value)));bodyRows.append(total);table.append(bodyRows);wrap.replaceChildren(table);
+    };for(const input of [from,to,only])input.onchange=render;
+    exportBtn.onclick=()=>{const rows=[['Membre',...projected.columns.map(c=>c.meeting?humanMeetingLabel(c.meeting):c.title),'Total'],...projected.rows.map(r=>[r.member.displayName,...r.cells,r.total]),['Totaux',...projected.columnTotals,projected.total]],bytes=buildXlsx([{name:'Contributions',rows},{name:'Repères',rows:[['Rubrique',rubric.name],['Unités',rubricUnitLabel(rubric)],['Période',(from.value||'Début')+' → '+(to.value||'Fin')],['Source','Positions nettes Ledger ; obligations non déduites de zéros'],['Généré le',new Date().toISOString()]]}]);const a=el('a');a.href=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}));a.download='Eco-rubrique-'+rubric.id+'.xlsx';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);};
+    box.append(el('p','Les cellules à zéro ne prouvent pas une obligation impayée. Consultez les règles et échéances canoniques de la rubrique. Les filtres modifient uniquement cette projection.','hint'));render();return box;
   };
 
   const rubricConfigurationEditor=r=>{

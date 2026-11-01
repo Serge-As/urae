@@ -1,3 +1,4 @@
+import {createVoiceEcho} from './voice-echo.js';
 import {mountRecoveryWorkspace} from './recovery-workspace.js';
 import {readTablePreferences,selectTableMembers,tablePreferenceControls} from './table-preferences.js';
 import {financialNumberButton} from './financial-number-ui.js';
@@ -28,7 +29,7 @@ if(typeof structuredClone!=='function'){
     // Blobs/Files are never passed through this compatibility clone.
     window.structuredClone=value=>value===undefined?undefined:JSON.parse(JSON.stringify(value));
 }
-import { ConnectedApplication } from '../../../packages/application/src/index.js';
+import { ConnectedApplication } from './boot-core.js';
 import { captureRuntimeI18n, applyRuntimeLocale, installRuntimeI18nObserver, localeTag, runtimeTranslate } from './runtime-i18n.js';
 import { mountCompletionUI } from './completion-ui.js';
 import { mountAdvancedUI } from './advanced-ui.js';
@@ -102,6 +103,7 @@ const previewEnvironment=location.hostname==='eco-system-refonte-preview.sergemi
 const previewBadge=document.getElementById('previewEnvBadge');
 if(previewBadge)previewBadge.hidden=!previewEnvironment;
 const app = new ConnectedApplication({ locale: uiLocale });
+const financialVoice=createVoiceEcho({scope:()=>JSON.stringify([app.currentTenant(),app.currentActor(),app.activeGroup()]),notify:message=>toast(message)});
 mountRequestBudgetUI({app,tx});
 captureRuntimeI18n(document);
 applyRuntimeLocale(uiLocale);
@@ -204,7 +206,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.43-canopee-collective';
+const CAHIER_VERSION = '1.5.2.44-audit-cockpit';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -251,6 +253,8 @@ const fail = (e) => {
         ACCOUNT_UNAVAILABLE: 'Cet identifiant est déjà utilisé.',
         RATE_LIMITED: 'Trop de tentatives. Réessayez dans dix minutes.',
         INDEPENDENT_APPROVAL_REQUIRED: 'Chaque approbateur doit valider avec son propre compte. Une liste de noms ne vaut pas validation.',
+        FINANCIAL_NOTICE_CHANGED_RETRY: 'La fiche a changé pendant votre contrôle. Actualisez et relisez la nouvelle version ; la réserve et les montants sont conservés.',
+        CELL_REVIEW_STALE: 'Cette version a été remplacée. Relisez le montant actuel avant de l’approuver.',
         INDEPENDENT_REVIEW_REQUIRED: 'Cette correction financière exige la revue d’un autre responsable habilité. L’auteur ne peut jamais valider sa propre correction.',
         MEMBER_SELF_ACTION_REQUIRED: 'Le dossier personnel et certaines validations doivent être effectués par le membre concerné lui-même.',
         IDEMPOTENCY_CONFLICT: 'Cette référence correspond déjà à une opération différente. Consultez le reçu existant.',
@@ -1358,6 +1362,7 @@ const submitFinancialCellElement=async validate=>{
           if(!reason.trim()){setCellState('IDLE');return;}
         }
       }
+      if(!await financialVoice.before({amount:target,memberName:members.find(x=>x.id===membershipId)?.displayName,rubricName:rubric.name})){setCellState('IDLE');return;}
       validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
       let result;
       const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
@@ -1397,7 +1402,7 @@ const submitFinancialCellElement=async validate=>{
         traceFinancialCell('CELL_LOCAL_COMMIT',{cellKey,target,status:'QUEUED'});
         toast(tx('✓ Valeur enregistrée sur cet appareil · synchronisation automatique en attente.','✓ Value saved on this device · automatic sync pending.'));
         if(navigator.onLine!==false)scheduleFinancialOutboxRecovery({meetingId,membershipId,rubricId,amount:displayTarget,nature});
-      }else if(result?.selfBenefit){
+      }else if(result?.selfBenefit&&result?.requiresIndependentReview!==false){
         currentLabel.textContent=fmt(displayTarget);financialReviewTargets.delete(cellKey);
         setCellState('CONFIRMED',tx('Correction appliquée · vérification indépendante signalée','Correction saved · independent review required'));
         traceFinancialCell('CELL_REVIEW_REQUIRED',{cellKey,target,current,selfBenefit:true});

@@ -1,3 +1,5 @@
+import {downloadXlsx} from './xlsx-export.js';
+import {shareStatementImage} from './share-statement-image.js';
 const el=(tag,text,className)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=String(text);if(className)n.className=className;return n;};
 const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=n=>Number(n??0).toLocaleString('fr-FR')+' XAF';
@@ -54,7 +56,9 @@ export function mountPrintCenterUI({app,getGroups=()=>[],getMembers=()=>[],getMe
   const memberLabel=el('label','Membre'),memberSelect=document.createElement('select');memberSelect.name='member';memberLabel.append(memberSelect);
   const previewBtn=el('button','Prévisualiser','secondary');previewBtn.type='submit';
   const printBtn=el('button','Imprimer / Enregistrer en PDF','primary');printBtn.type='button';
-  controls.append(kindLabel,meetingLabel,memberLabel,previewBtn,printBtn);panel.append(controls);
+  const excelBtn=el('button','Exporter Excel (.xlsx)','secondary');excelBtn.type='button';
+  const imageBtn=el('button','Partager un extrait PNG','secondary');imageBtn.type='button';
+  controls.append(kindLabel,meetingLabel,memberLabel,previewBtn,printBtn,excelBtn,imageBtn);panel.append(controls);
   const quick=el('div',undefined,'actions'),printGroup=el('button','Imprimer cet état du groupe','link-btn');printGroup.type='button';quick.append(printGroup);panel.append(quick);
   const preview=el('div',undefined,'stack');panel.append(preview);host.append(panel);
 
@@ -71,7 +75,7 @@ export function mountPrintCenterUI({app,getGroups=()=>[],getMembers=()=>[],getMe
     for(const [v,l] of options)kind.append(new Option(l,v));if(options.some(([v])=>v===prevKind))kind.value=prevKind;
     meetingSelect.replaceChildren(new Option('Choisir une séance',''));for(const m of [...getMeetings()].sort((a,b)=>String(b.scheduledAt??b.openedAt??'').localeCompare(String(a.scheduledAt??a.openedAt??''))))meetingSelect.append(new Option((m.title??'Séance')+' · '+new Date(m.scheduledAt??m.openedAt).toLocaleDateString('fr-FR'),m.id));if(getMeetings().some(m=>m.id===prevMeeting))meetingSelect.value=prevMeeting;
     memberSelect.replaceChildren(new Option('Choisir un membre',''));for(const m of visibleMembers())memberSelect.append(new Option(m.displayName,m.id));if(visibleMembers().some(m=>m.id===prevMember))memberSelect.value=prevMember;else if(visibleMembers().length===1)memberSelect.value=visibleMembers()[0].id;
-    const k=kind.value;meetingLabel.hidden=!['SESSION_SHEET','ATTENDANCE_SHEET'].includes(k);memberLabel.hidden=k!=='MEMBER_SHEET';
+    const k=kind.value;imageBtn.hidden=!['MEMBER_SHEET','SESSION_SHEET'].includes(k);meetingLabel.hidden=!['SESSION_SHEET','ATTENDANCE_SHEET'].includes(k);memberLabel.hidden=k!=='MEMBER_SHEET';
   };
 
   const snapshot=async()=>{
@@ -145,6 +149,8 @@ export function mountPrintCenterUI({app,getGroups=()=>[],getMembers=()=>[],getMe
   kind.onchange=()=>{refill();void render();};meetingSelect.onchange=()=>void render();memberSelect.onchange=()=>void render();
   controls.onsubmit=e=>{e.preventDefault();void render();};
   printBtn.onclick=()=>void openPrint(kind.value).catch(showError);
+  excelBtn.onclick=()=>void(async()=>{const selected=app.activeGroup(),actor=app.currentActor(),k=kind.value,d=await dataFor(k);if(app.activeGroup()!==selected||app.currentActor()!==actor)throw Error('CONTEXT_CHANGED');downloadXlsx(k,d);notify('Copie Excel préparée ; les références et limites figurent dans Repères.');})().catch(showError);
+  imageBtn.onclick=()=>void(async()=>{const selected=app.activeGroup(),actor=app.currentActor(),k=kind.value,d=await dataFor(k);if(app.activeGroup()!==selected||app.currentActor()!==actor)throw Error('CONTEXT_CHANGED');await shareStatementImage(k,d);})().catch(showError);
   printGroup.onclick=()=>void openPrint('GROUP_STATE').catch(showError);
   document.addEventListener('eco:group-context-changed',()=>void render());void render();return{refresh:render};
 }

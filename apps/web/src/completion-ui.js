@@ -55,7 +55,7 @@ export const mountCompletionUI=({app,notify,showError,getMembers,getMeetings,get
 
   const locale=()=>getLocale()==='en'?'en':'fr';
   const tr=(fr,en)=>locale()==='en'?en:fr;
-  const byId=id=>document.getElementById(id);
+  const byId=id=>{const tontineOperational=/^(?:tontine(?:Cycle|Share|Serve|Rounds|Pots|PotAmount|Schedule|Completion)|suggestTontine|applyTontine|readiness)/.test(id);if(tontineOperational&&!document.getElementById('tontineCompletionPanel'))return null;return document.getElementById(id);};
   const value=id=>String(byId(id)?.value??'').trim();
   const number=id=>Number(value(id));
   const nameOfMember=id=>getMembers().find(x=>x.id===id)?.displayName??id;

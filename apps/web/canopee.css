@@ -241,3 +241,21 @@ body.eco-canopee .group-home-masthead{position:relative;overflow:hidden;backgrou
 .eco-round-beneficiary{display:grid;gap:.35rem;margin-top:.75rem}.eco-round-beneficiary small{overflow-wrap:anywhere}
 .eco-opportunity-paths,.eco-offer-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,230px),1fr));gap:1rem}
 .eco-offer-card dl{display:grid;gap:.25rem;margin:1rem 0}.eco-offer-card dt{font-size:.78rem;font-weight:700;color:#426255}.eco-offer-card dd{margin:0 0 .65rem;overflow-wrap:anywhere}.eco-offer-card small{display:block;overflow-wrap:anywhere}
+
+/* Six-lot audit: overview first, detailed evidence on demand. */
+.group-home-priorities{display:flex;flex-wrap:wrap;gap:.55rem;padding:.8rem 1rem;border:1px solid #d8dfd5;border-left:4px solid #bb963e;border-radius:14px;background:#fffdf5;margin-block:.8rem}
+.group-home-priorities>.eyebrow{flex-basis:100%;margin:0}.group-home-priorities>.hint{margin:.15rem 0}
+.group-home-priority{display:flex;flex-direction:column;text-align:left;flex:1;min-width:190px;max-width:100%}.group-home-priority small{font-weight:400}
+.group-home-priority.is-critical{border-color:#b93836;color:#9b2625;background:#fff4f2}
+.group-home-finance-details{margin-top:.8rem;border-top:1px solid #d8dfd5;padding-top:.75rem}.group-home-finance-details>summary{cursor:pointer;font-weight:700;padding:.6rem;color:#1b5946}
+.group-home-live-offers{margin-top:1rem;display:flex;gap:.7rem;flex-wrap:wrap}.group-home-live-offers h4{flex-basis:100%;margin:0}.group-home-live-offers button{display:flex;flex-direction:column;text-align:left;flex:1;min-width:200px}
+@media(max-width:600px){.group-home-priorities{padding:.65rem}.group-home-priority{min-width:100%}.group-home-finance-details>summary{padding:.65rem .15rem}}
+
+/* The meeting landmark follows normal grid flow so it cannot cover the people card. */
+body.eco-canopee .group-home-main{grid-template-rows:min-content 1fr}
+body.eco-canopee .group-home-main>.group-home-next{position:static;top:auto;grid-column:2;grid-row:1}
+body.eco-canopee .group-home-main>.eco-group-people{grid-column:2;grid-row:2;align-self:start}
+body.eco-canopee .group-home-heading>p{color:#e8efdc;opacity:1}
+body.eco-canopee .eco-panorama-views [aria-pressed=true]{background:#173e30;color:#fff9e8;border-color:#173e30}
+body.eco-canopee .group-home-priorities .group-home-priority.is-critical{border-color:#b93836;color:#9b2625;background:#fff4f2}
+@media(max-width:1000px){body.eco-canopee .group-home-main{grid-template-rows:auto}body.eco-canopee .group-home-main>.group-home-next,body.eco-canopee .group-home-main>.eco-group-people{grid-column:1;grid-row:auto}}

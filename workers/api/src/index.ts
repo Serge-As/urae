@@ -84,11 +84,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.43-canopee-collective';
-const RELEASE_BUILD_ID='eco-system-1.5.2.43-20261030-canopee-collective';
-const RELEASE_SCHEMA_VERSION='d1-additive-20260923';
+const RELEASE_VERSION='1.5.2.44-audit-cockpit';
+const RELEASE_BUILD_ID='eco-system-1.5.2.44-20261101-audit-cockpit';
+const RELEASE_SCHEMA_VERSION='d1-additive-20261101-indexes';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15243-canopee-collective-20261030';
+const RELEASE_PWA_CACHE='eco-system-v15244-audit-cockpit-20261101';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -280,7 +280,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const noticeCell=receipt.meetingId&&receipt.rubricId?await financialCellState(groupId,receipt.meetingId,receipt.membershipId,receipt.rubricId):undefined;
       const positions=await ledger.receiptPositions(ctx.tenantId,groupId);
       const after=positions.filter(p=>p.membershipId===receipt.membershipId).reduce((n,p)=>n+p.netAmount,0);
-      const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after,previousAmount:noticeCell?noticeCell.current-receipt.amount.amount:undefined,newAmount:noticeCell?.current});
+      const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry,operationType:'CASH_CONTRIBUTION',amount:receipt.amount.amount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:after-receipt.amount.amount,newSituation:after,previousAmount:noticeCell?noticeCell.current-receipt.amount.amount:undefined,newAmount:noticeCell?.current,cellVersion:noticeCell?.cellVersion,serverReceivedAt:receipt.receivedAt});
       const grouped=await groupNotice(groupId,notice,entry.id);
       const entryMember=await memberLabel(groupId,receipt.membershipId),entryRubric=receipt.rubricId?await rubricLabel(groupId,receipt.rubricId):'Sans rubrique';
       if(!grouped){
@@ -318,18 +318,14 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(record.status==='DONE')return true;
     try{
       const payload=JSON.parse(String(record.data.payloadJson??'{}'));
+      const entryId=String(payload.ledgerEntryId??String(record.data.eventKey??'').split(':').at(-1)??''),entry=await repo.getLedgerEntry(ctx.tenantId,record.groupId!,entryId);
+      if(!entry)throw Error('SHEET_NOTIFICATION_LEDGER_SOURCE_REQUIRED');
+      const previous=Number(payload.previousAmount??0),current=Number(payload.newAmount??0);
+      const notice=await memberControl.create({groupId:record.groupId!,membershipId:String(payload.membershipId),meetingId:String(payload.meetingId),rubricId:String(payload.rubricId),entry,operationType:String(payload.operationType??'SHEET_OPERATION'),amount:Math.abs(current-previous),currency:'XAF',previousAmount:previous,newAmount:current,cellVersion:Number(payload.cellVersion??0),serverReceivedAt:record.createdAt});
       if(!options.premiumLive||!options.liveNamespace)return false;
       await publishLive(record.groupId!,'MEETING_UPDATE',String(record.data.eventKey),payload);
-      // Specialized financial owners have already committed these entries.
-      // Bind grouped member control to that exact Ledger entry, never to a draft.
       const {stub}=liveStubFor(record.groupId!);const contextReply=await stub.fetch(new Request('https://group-live.internal/financial-work/context?meetingId='+encodeURIComponent(String(payload.meetingId??''))));
-      if((await contextReply.json() as any).context){
-        const entryId=String(payload.ledgerEntryId??String(record.data.eventKey??'').split(':').at(-1)??''),entry=await repo.getLedgerEntry(ctx.tenantId,record.groupId!,entryId);
-        if(!entry)throw Error('SHEET_NOTIFICATION_LEDGER_SOURCE_REQUIRED');
-        const previous=Number(payload.previousAmount??0),current=Number(payload.newAmount??0);
-        const notice=await memberControl.create({groupId:record.groupId!,membershipId:String(payload.membershipId),meetingId:String(payload.meetingId),rubricId:String(payload.rubricId),entry,operationType:String(payload.operationType??'SHEET_OPERATION'),amount:Math.abs(current-previous),currency:'XAF',previousAmount:previous,newAmount:current});
-        await groupNotice(record.groupId!,notice,entry.id);
-      }
+      if((await contextReply.json() as any).context)await groupNotice(record.groupId!,notice,entry.id);
       await repo.saveWorkspaceRecord({...record,status:'DONE',updatedAt:new Date().toISOString()});return true;
     }catch(error){console.info('Sheet Live delivery pending',error);return false;}
   };
@@ -364,7 +360,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const correctionActor=await actorLabelFor(record.createdBy).catch(()=>record.createdBy);
       await publishLive(groupId,'MEETING_UPDATE','financial-cell-managers:'+entry.id,{meetingId,kind:'FINANCIAL_CELL_CORRECTION',operationType:'FINANCIAL_CELL_CORRECTION',membershipId,rubricId,previousAmount,newAmount,cellVersion:d.cellVersion===undefined?0:Number(d.cellVersion),meetingClosed:meeting.status==='closed',actorId:record.createdBy,actorName:correctionActor});
       const positions=await ledger.receiptPositions(ctx.tenantId,groupId),newSituation=positions.filter(x=>x.membershipId===membershipId).reduce((n,x)=>n+x.netAmount,0),previousSituation=newSituation-(newAmount-previousAmount);
-      const notice=await memberControl.create({groupId,membershipId,entry,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',rubricId,meetingId,previousSituation,newSituation,previousAmount,newAmount,correctionReason:reason,selfBenefit:targetMember.userId===record.createdBy,requiresIndependentReview:false});
+      const notice=await memberControl.create({groupId,membershipId,entry,operationType:'FINANCIAL_CELL_CORRECTION',amount:newAmount,currency:'XAF',rubricId,meetingId,previousSituation,newSituation,previousAmount,newAmount,correctionReason:reason,selfBenefit:targetMember.userId===record.createdBy,requiresIndependentReview:false,cellVersion:d.cellVersion===undefined?undefined:Number(d.cellVersion),serverReceivedAt:record.createdAt});
       const grouped=await groupNotice(groupId,notice,operationId);
       const correctionMember=await memberLabel(groupId,membershipId),correctionRubric=await rubricLabel(groupId,rubricId),meetingWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(meeting.scheduledAt??meeting.openedAt)),changeWhen=new Intl.DateTimeFormat('fr-FR',{dateStyle:'medium',timeStyle:'short'}).format(new Date(record.createdAt)),action={view:'operations',anchor:'twoSheetWorkspace',meetingId,membershipId,rubricId,label:'Voir la cellule modifiée'};
       await notifications.publish(groupId,{title:meeting.status==='closed'?'Séance clôturée modifiée':'Donnée financière corrigée',message:`${correctionMember} · ${correctionRubric} · ${meetingWhen} : ${previousAmount} → ${newAmount} F CFA. Auteur : ${correctionActor}. Modification : ${changeWhen}. Motif : ${reason}`,channels:['IN_APP','WEB_PUSH'],audience:'MANAGERS',priority:meeting.status==='closed'?'CRITICAL':'HIGH',action,idempotencyKey:'financial-correction:'+operationId+':managers'});
@@ -404,7 +400,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
     if(!evidenceEntry)throw Error('FINANCIAL_CORRECTION_NOT_APPLIED');
     const outbox=correction.operationId?await repo.getWorkspaceRecord(ctx.tenantId,'financial_correction_outbox_'+correction.operationId):undefined;
     const delivery=outbox?await dispatchFinancialCorrectionProjection(outbox):{ok:false};
-    return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice:delivery.notice??null,deliveryPending:!delivery.ok,groupId:group.id};
+    return{status:'APPLIED',current:state.current,target:input.targetAmount,previousAmount:state.current,newAmount:input.targetAmount,cellVersion:correction.cellVersion,receipt,notice:delivery.notice??null,selfBenefit:delivery.notice?.selfBenefit,requiresIndependentReview:delivery.notice?.requiresIndependentReview,reviewState:delivery.notice?.reviewState,deliveryPending:!delivery.ok,groupId:group.id};
   };
 
   // Trusted clock quality is added only by authenticatedApi, never by client.
@@ -555,6 +551,7 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
       const outcome=await consensus.reviewCanonicalCell({groupId,meetingId,membershipId,rubricId,
         amount:current.current,cellVersion:current.cellVersion,reason,
         decision:decision as 'APPROVE'|'RESERVE'});
+      if(decision==='APPROVE')await memberControl.approveCell(groupId,meetingId,membershipId,rubricId,current.cellVersion,current.current);
       if(decision==='RESERVE'){
         const actor=await actorLabel(),member=await memberLabel(groupId,membershipId),rubricName=await rubricLabel(groupId,rubricId);
         await notifications.publish(groupId,{
@@ -2028,10 +2025,10 @@ export const createApiHandler = (repo:PlatformRepository = defaultRepo,options:{
         }
         const positionsAfter=await ledger.receiptPositions(ctx.tenantId,groupId),afterSituation=positionsAfter.filter(x=>x.membershipId===receipt.membershipId).reduce((n,x)=>n+x.netAmount,0),noticeEntry=replacementEntry??reversal;
         const notice=await memberControl.create({groupId,membershipId:receipt.membershipId,entry:noticeEntry,operationType:'CASH_CONTRIBUTION_CORRECTED',amount:newAmount,currency:receipt.amount.currency,rubricId:receipt.rubricId,meetingId:receipt.meetingId,previousSituation:beforeSituation,newSituation:afterSituation,previousAmount:oldAmount,newAmount,correctionReason:reason,selfBenefit,requiresIndependentReview});
-        await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...record.tags,'completed'],data:{...record.data,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,replacementEntryId:replacementEntry?.id??null,afterSituation,noticeId:notice.id},updatedAt:new Date().toISOString()});
+        await repo.saveWorkspaceRecord({...record,status:'DONE',tags:[...record.tags,'completed'],data:{...record.data,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,replacementEntryId:replacementEntry?.id??null,afterSituation,noticeId:notice.id,requiresIndependentReview:notice.requiresIndependentReview,reviewState:notice.reviewState??null},updatedAt:new Date().toISOString()});
         await repo.saveAudit(kernel.audit.append({tenantId:ctx.tenantId,actorId:ctx.actorId,action:'FINANCIAL_CORRECTION_COMPLETED',targetType:'financial_correction',targetId:correctionId,requestId:ctx.requestId,metadata:{receiptId:receipt.id,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??'',oldAmount,newAmount,beforeSituation,afterSituation,selfBenefit,requiresIndependentReview}}));
         try{await publishLive(groupId,'FINANCIAL_NOTICE','correction-notice:'+noticeEntry.id,{noticeId:notice.id,ledgerEntryId:notice.ledgerEntryId,operationType:notice.operationType,amount:notice.amount,currency:notice.currency,previousSituation:notice.previousSituation??0,newSituation:notice.newSituation??0,selfBenefit},notice.userId);}catch{}
-        return json({correctionId,receiptId:receipt.id,oldAmount,newAmount,beforeSituation,afterSituation,selfBenefit,requiresIndependentReview,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,notice},200,cors);
+        return json({correctionId,receiptId:receipt.id,oldAmount,newAmount,beforeSituation,afterSituation,selfBenefit,requiresIndependentReview:notice.requiresIndependentReview,reviewState:notice.reviewState,reversalEntryId:reversal.id,replacementReceiptId:replacementReceipt?.id??null,notice},200,cors);
       }catch(error){
         const failure=(error instanceof Error?error.message:String(error)).slice(0,300);
         await repo.saveWorkspaceRecord({...record,status:'ACTIVE',tags:[...record.tags,'failed','recovery-required'],data:{...record.data,error:failure},updatedAt:new Date().toISOString()});

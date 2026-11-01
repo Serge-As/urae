@@ -1,13 +1,12 @@
-Eco-System eight lots authorized by founder 2026-10-30
-release: 1.5.2.43-canopee-collective
-date: 2026-10-30
-mode: code-only-with-verified-readonly-backup-no-migration
-db_mutation: none
-baseline_source: 1d6d2767e208b240d40f5fdd578f11e2582a8c8f
+Eco-System six audit lots authorized by founder 2026-11-01
+release: 1.5.2.44-audit-cockpit
+date: 2026-11-01
+mode: qualified-additive-read-indexes-after-restored-private-backup
+db_mutation: two scoped read indexes only; no table or financial record rewrite
+baseline_source: 76ef095649d0cf85a7d6e26c4927ae7cb9098652
 qualification: complete governed CI, Chromium and WebKit on exact source
-scope: startup recovery; context links; collective versioned synthesis; optional local voice; Canopée panoramas; tables and sources; canonical economic actions; offline continuity
+scope: compact governance; 48h independent review; home cockpit; static core bundle and local translation; scoped D1 queries; rubric periods, XLSX, optional local readback and closing projection
 backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-public_verification: health, catalogue, shell assets and locked optional voice/document engines
-trigger_nonce: 2026-10-30-eight-lots-reviewed-release
+trigger_nonce: 2026-11-01-six-audit-lots

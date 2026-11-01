@@ -195,6 +195,7 @@ export interface PlatformRepository {
   listMarketShops(actorId?:Id):WorkspaceRecord[]|Promise<WorkspaceRecord[]>;
   listMarketPurchases(actorId:Id):WorkspaceRecord[]|Promise<WorkspaceRecord[]>;
   saveWorkspaceRecord(record: WorkspaceRecord): void | Promise<void>;
+  saveFinancialNoticeState(record:WorkspaceRecord,expectedVersion:number):boolean|Promise<boolean>;
   /** Notification-owned append-only publication/read/attempt; a replay never overwrites the first payload. */
   insertNotificationRecord(record: WorkspaceRecord): NotificationInsertResult | Promise<NotificationInsertResult>;
   /** Immutable, append-only facts owned by verification and poll follow-up. */
@@ -456,6 +457,13 @@ export class InMemoryPlatformRepository implements PlatformRepository {
   saveGovernanceKnowledgeClaim(claim: GovernanceKnowledgeClaim): void { this.governanceKnowledgeClaims.set(claim.id, structuredClone(claim)); }
   listGovernanceKnowledgeClaims(tenantId: Id, groupId?: Id): GovernanceKnowledgeClaim[] { return [...this.governanceKnowledgeClaims.values()].filter(x=>x.tenantId===tenantId&&(!groupId||x.groupId===groupId)).map(x=>structuredClone(x)); }
   saveWorkspaceRecord(record: WorkspaceRecord): void { this.workspaceRecords.set(record.id, structuredClone(record)); }
+  saveFinancialNoticeState(record:WorkspaceRecord,expectedVersion:number):boolean{
+    if(record.moduleId!=='FINANCE.MEMBER_CONTROL'||!Number.isSafeInteger(expectedVersion)||Number(record.data.version)!==expectedVersion+1)throw Error('INVALID_FINANCIAL_NOTICE_CAS');
+    const current=this.workspaceRecords.get(record.id);
+    if(!current||current.tenantId!==record.tenantId||current.groupId!==record.groupId||current.moduleId!==record.moduleId||Number(current.data.version??1)!==expectedVersion)return false;
+    this.workspaceRecords.set(record.id,structuredClone(record));return true;
+  }
+
   insertNotificationRecord(record:WorkspaceRecord):NotificationInsertResult {
     if(!['NOTIFY.MESSAGE','NOTIFY.READ','NOTIFY.ATTEMPT','NOTIFY.REMINDER'].includes(record.moduleId))throw Error('INVALID_NOTIFICATION_RECORD');
     const previous=this.workspaceRecords.get(record.id);
@@ -945,7 +953,10 @@ export class D1PlatformRepository implements PlatformRepository {
   saveCashboxReconciliation(x:CashboxReconciliationRecord){return this.saveRecord('cashbox',x,{tenantId:x.tenantId,groupId:x.groupId});}
   listCashboxReconciliations(t:Id,g:Id){return this.list<CashboxReconciliationRecord>('cashbox','tenant_id=? AND group_id=?',[t,g]);}
   savePublicGroupListing(x:PublicGroupListing){return this.saveRecord('public_group_listing',x,{tenantId:x.tenantId,groupId:x.groupId});}
-  async getPublicGroupListing(groupId:Id){return (await this.listPublicGroupListings()).find(x=>x.groupId===groupId);}
+  async getPublicGroupListing(groupId:Id){
+    const rows=await this.list<PublicGroupListing>('public_group_listing',"json_extract(data_json,'$.groupId')=?",[groupId]);
+    return rows.reduce<PublicGroupListing|undefined>((latest,x)=>!latest||x.updatedAt>=latest.updatedAt?x:latest,undefined);
+  }
   async listPublicGroupListings(){
     // Historical rows use a listing ID, not the group ID. Retain older versions
     // while exposing only the latest privacy projection for each group.
@@ -964,6 +975,13 @@ export class D1PlatformRepository implements PlatformRepository {
   saveGovernanceKnowledgeClaim(x:GovernanceKnowledgeClaim){return this.saveRecord('governance_claim',x,{tenantId:x.tenantId,groupId:x.groupId});}
   listGovernanceKnowledgeClaims(t:Id,g?:Id){return this.list<GovernanceKnowledgeClaim>('governance_claim',g?'tenant_id=? AND group_id=?':'tenant_id=?',g?[t,g]:[t]);}
   saveWorkspaceRecord(x:WorkspaceRecord){return this.saveRecord('workspace_record',x,{tenantId:x.tenantId,groupId:x.groupId,assigneeId:x.createdBy});}
+  async saveFinancialNoticeState(record:WorkspaceRecord,expectedVersion:number):Promise<boolean>{
+    if(record.moduleId!=='FINANCE.MEMBER_CONTROL'||!record.groupId||!Number.isSafeInteger(expectedVersion)||Number(record.data.version)!==expectedVersion+1)throw Error('INVALID_FINANCIAL_NOTICE_CAS');
+    const result=await this.db.prepare("UPDATE platform_records SET data_json=?,updated_at=? WHERE record_type='workspace_record' AND record_id=? AND tenant_id=? AND group_id=? AND json_extract(data_json,'$.moduleId')='FINANCE.MEMBER_CONTROL' AND CAST(COALESCE(json_extract(data_json,'$.data.version'),1) AS INTEGER)=?")
+      .bind(JSON.stringify(record),record.updatedAt,record.id,record.tenantId,record.groupId,expectedVersion).run();
+    const changes=result as {meta?:{changes?:number};changes?:number};return Number(changes.meta?.changes??changes.changes??0)===1;
+  }
+
   async insertNotificationRecord(x:WorkspaceRecord):Promise<NotificationInsertResult>{
     if(!['NOTIFY.MESSAGE','NOTIFY.READ','NOTIFY.ATTEMPT','NOTIFY.REMINDER'].includes(x.moduleId))throw Error('INVALID_NOTIFICATION_RECORD');
     const result=await this.db.prepare(`INSERT INTO platform_records(record_type,record_id,tenant_id,group_id,assignee_id,idempotency_key,data_json,updated_at) VALUES('workspace_record',?,?,?,?,NULL,?,?) ON CONFLICT(record_type,record_id) DO NOTHING`).bind(x.id,x.tenantId,x.groupId??null,x.createdBy,JSON.stringify(x),x.updatedAt).run();
@@ -984,9 +1002,9 @@ export class D1PlatformRepository implements PlatformRepository {
   listMarketPurchases(actorId:Id){return this.list<WorkspaceRecord>('workspace_record',"json_extract(data_json,'$.data.marketKind')='MARKET_ORDER' AND json_extract(data_json,'$.data.buyerUserId')=?",[actorId]).then(rows=>rows.filter(r=>r.tags.includes('market-engine')));}
   async getWorkspaceRecord(t:Id,id:Id){const x=await this.byId<WorkspaceRecord>('workspace_record',id);return x?.tenantId===t?x:undefined;}
   listWorkspaceRecords(t:Id,moduleId?:string,g?:Id){
-    if(moduleId&&g)return this.list<WorkspaceRecord>('workspace_record','tenant_id=? AND group_id=?',[t,g]).then(xs=>xs.filter(x=>x.moduleId===moduleId));
+    if(moduleId&&g)return this.list<WorkspaceRecord>('workspace_record',"tenant_id=? AND group_id=? AND json_extract(data_json,'$.moduleId')=?",[t,g,moduleId]);
     if(g)return this.list<WorkspaceRecord>('workspace_record','tenant_id=? AND group_id=?',[t,g]);
-    return this.list<WorkspaceRecord>('workspace_record','tenant_id=?',[t]).then(xs=>moduleId?xs.filter(x=>x.moduleId===moduleId):xs);
+    return moduleId?this.list<WorkspaceRecord>('workspace_record',"tenant_id=? AND json_extract(data_json,'$.moduleId')=?",[t,moduleId]):this.list<WorkspaceRecord>('workspace_record','tenant_id=?',[t]);
   }
 
   private async firstByScope<T>(type:string,where:string,values:unknown[]):Promise<T|undefined>{return this.parse<T>(await this.db.prepare(`SELECT data_json FROM platform_records WHERE record_type=? AND ${where} LIMIT 1`).bind(type,...values).first<PlatformRecordRow>());}

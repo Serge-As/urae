@@ -1,3 +1,10 @@
+## Six lots de l’audit — candidate v44 en qualification
+
+Le fondateur autorise le 1 novembre 2026 les six lots décrits dans `docs/implementation/SIX_LOTS_AUDIT_2026-11-01.md`.
+Candidate `1.5.2.44-audit-cockpit` : sources implémentées, 33 contrôles ciblés réussis ; qualification complète et déploiement non encore attestés.
+Propriétaires financiers, deux feuilles, historique, 164 capacités et programmes acquis conservés. Seuls deux index D1 de lecture additifs sont prévus après sauvegarde restaurée et relue dans R2 privé.
+`realMoneyEnabled=false` ; `FIELD_ACCEPTED=NOT_ACCEPTED`. Le runtime v43 vérifié ci-dessous reste la production tant que les preuves v44 ne sont pas obtenues.
+
 ## Huit lots Canopée — livraison vérifiée v43
 
 Les **8 lots / 32 critères autorisés** sont implémentés et déployés :
