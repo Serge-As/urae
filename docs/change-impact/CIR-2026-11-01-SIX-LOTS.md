@@ -18,3 +18,7 @@ Statut : IN_PROGRESS. Qualification puis livraison et preuves exactes encore req
 ## Implémentation et contrôle initial
 
 Les six lots sont présents dans les sources ; voir `docs/implementation/SIX_LOTS_AUDIT_2026-11-01.md`. Propriétaires réutilisés, aucun effacement de donnée. 33 contrôles ciblés passent ; la qualification complète du SHA, le BIR, les deux index additifs et la vérification publique restent requis avant de déclarer livré. La compilation Windows interrompue 0xC0000005 est une preuve négative conservée dans les logs locaux.
+
+## Checkpoint de qualification du 1 novembre
+
+La réponse et le record de correction conservent désormais un booléen de revue défini (repli conservateur pour les notices historiques). Le marqueur vérifie le mode à deux index autorisés, sauvegarde privée restaurée et relue requise. TypeScript corrigé réussi localement. Le run 41299482396 a refusé le checkpoint précédent faute de note CIR/Recall dans sa différence immédiate ; ces notes sont consolidées ici sans réduire le contrôle. Aucun déploiement de cette candidate ; les preuves finales doivent concerner le nouveau SHA complet.
