@@ -302,5 +302,5 @@ test('targeted tranche 7 exposes manager rubric matrix, self-owned dossier and d
   assert.match(detail,/rubricContributionMatrix/);assert.match(detail,/Tableau récapitulatif des contributions/);assert.match(detail,/rubricConfigurationEditor/);
   assert.match(dossier,/Consultation Bureau/);assert.match(dossier,/Votre dossier/);assert.match(dossier,/const self=/);
   assert.match(governance,/loan-matrix-edit-value/);assert.match(governance,/Touchez directement un montant encadré/);assert.match(governance,/data-loan-payment-index/);
-  assert.match(control,/Auto-modification financière/);assert.match(control,/Revue indépendante/);assert.match(control,/actorName/);
+  assert.match(control,/Saisie personnelle enregistrée/);assert.match(control,/contrôler sous 48 h/);assert.match(control,/la comptabilité continue/);assert.match(control,/Revue indépendante/);assert.match(control,/actorName/);
 });

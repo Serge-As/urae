@@ -65,7 +65,7 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
     for(const [mode,fr,en]of[['panorama','Panorama','Overview'],['atelier','Atelier de séance','Meeting workshop'],['journal','Journal du groupe','Group journal']]){const b=make('button','secondary',t(fr,en));b.type='button';b.setAttribute('aria-pressed',String(surface.dataset.composition===mode));b.onclick=()=>{if(mode==='atelier'){navigate('operations',{anchor:'twoSheetWorkspace',sheetMode:'meeting',force:true});return;}surface.dataset.composition=mode;try{localStorage.setItem(compositionKey,mode);}catch{}for(const other of views.querySelectorAll('button'))other.setAttribute('aria-pressed',String(other===b));};views.append(b);}surface.append(views);
 
     const priority=make('section','group-home-priorities');priority.setAttribute('aria-label',t('Priorités du groupe','Group priorities'));priority.setAttribute('aria-busy','true');
-    priority.append(make('p','hint',t('Actualisation des priorités…','Updating priorities…')));surface.append(priority);
+    priority.append(make('p','hint',t('Actualisation des priorités…','Updating priorities…')));
     void prioritiesPromise.then(inbox=>{
       if(!isCurrent())return;priority.replaceChildren(make('span','eyebrow',t('À TRAITER MAINTENANT','NEEDS YOUR ATTENTION')));
       const selected=selectHomePriorities(inbox,group.id,Date.now());
@@ -252,6 +252,8 @@ export function mountGroupHomeUI({app,getGroups,getMembers,getMeetings,navigate,
     const people=make('section','eco-group-people');people.append(make('span','eyebrow',t('UN GROUPE, DES PERSONNES','PEOPLE MAKE THE GROUP')),make('h3','',t('Participer, s’entraider, décider','Participate, support, decide')));
     const figures=make('div','eco-people-figures');for(const [n,label]of [[members.filter(m=>m.status==='active').length,t('membres actifs','active members')],[office.length,t('responsables','managers')],[meetings.filter(m=>m.status==='open').length,t('séances ouvertes','open meetings')]]){const line=make('div');line.append(make('strong','',String(n)),make('span','',label));figures.append(line);}people.append(figures);
     const faces=make('div','eco-member-landmarks');for(const member of members.filter(m=>m.status==='active').slice(0,6)){const a=contextLink(member.displayName,'member',member.id);a.classList.add('eco-member-landmark');faces.append(a);}people.append(faces,action(t('Retrouver tous les membres','Find all members'),'members'),action(t('Ouvrir le forum du groupe','Open group forum'),'ecosystem','communityEnginePanel'));
+    // Keep cash visible before the variable-length task list, including on narrow phones.
+    const financialLandmarks=finance.querySelector('.group-home-metrics,.metrics');if(financialLandmarks)financialLandmarks.after(priority);else finance.append(priority);
     const main=make('div','group-home-main');main.append(finance,next,people);surface.append(main);
     const doors=make('section','group-home-doors');doors.append(make('span','eyebrow',t('FAIRE GRANDIR NOS POSSIBILITÉS','GROW OUR POSSIBILITIES')),make('h3','',t('Entreprendre, échanger, avancer ensemble','Trade, connect and move forward together')));
     const doorGrid=make('div','group-home-door-grid');

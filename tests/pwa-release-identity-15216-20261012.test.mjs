@@ -25,7 +25,15 @@ test('production source release contract is not changed by preview-only cache is
     // Production candidate: retain the real release's existing safety gates.
     assert.match(workflow,/ECO_SYSTEM_DB: eco-system-db/);
     assert.match(workflow,/R2_BUCKET: eco-system-backups/);
-    assert.match(workflow,/Verify code-only marker/);
+    assert.match(workflow,/Verify approved six-lot delivery marker/);
+    assert.match(workflow,/grep -Fxq "release: \$\{EXPECTED_VERSION\}"/);
+    assert.match(workflow,/Restrict schema work to the reviewed read indexes/);
+    assert.match(workflow,/node scripts\/apply-qualified-read-indexes\.mjs/);
+    const backup=workflow.indexOf('name: Verify restorable production backup in existing private R2');
+    const indexes=workflow.indexOf('name: Apply qualified additive read indexes after restored backup');
+    const deploy=workflow.indexOf('name: Deploy qualified Worker and PWA');
+    assert.ok(backup>=0&&backup<indexes&&indexes<deploy,'Restore-qualified private backup must precede the two reviewed indexes and Worker deploy');
+    assert.doesNotMatch(workflow,/d1 migrations apply/);
     assert.ok(workflow.includes("EXPECTED_VERSION: "+contract.release.version));
     assert.doesNotMatch(workflow,/PREVIEW_DB:|PREVIEW_BUCKET:/);
   }
