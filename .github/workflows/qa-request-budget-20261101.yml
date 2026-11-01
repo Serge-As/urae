@@ -1,0 +1,82 @@
+{
+  "name": "Eco v44 - Targeted request budget QA correction",
+  "on": {
+    "push": {
+      "branches": [
+        "codex/qa-request-budget-ea1214af-20261101"
+      ]
+    }
+  },
+  "permissions": {
+    "contents": "read"
+  },
+  "jobs": {
+    "request-budget": {
+      "runs-on": "ubuntu-latest",
+      "timeout-minutes": 15,
+      "container": {
+        "image": "mcr.microsoft.com/playwright:v1.56.1-noble",
+        "options": "--ipc=host"
+      },
+      "defaults": {
+        "run": {
+          "shell": "bash"
+        }
+      },
+      "steps": [
+        {
+          "uses": "actions/checkout@v4",
+          "with": {
+            "fetch-depth": 0
+          }
+        },
+        {
+          "name": "Trust checked-out workspace",
+          "run": "git config --global --add safe.directory \"$GITHUB_WORKSPACE\""
+        },
+        {
+          "uses": "actions/setup-python@v5",
+          "with": {
+            "python-version": "3.12"
+          }
+        },
+        {
+          "uses": "actions/setup-node@v4",
+          "with": {
+            "node-version": "24",
+            "cache": "npm"
+          }
+        },
+        {
+          "name": "Verify unchanged application source",
+          "run": "python3 - <<'PY'\nimport subprocess,json\nbase='ea1214af2d89b875c2e73b2fc2b828d6fa37f345'\nexpected={'tests/browser/request-budget-lot28-20261020.spec.mjs','.github/workflows/qa-request-budget-20261101.yml'}\nchanged=set(subprocess.check_output(['git','diff','--name-only',base,'HEAD'],text=True).splitlines())\nassert changed==expected,(changed,expected)\nprint(json.dumps({'runtimeSourceSha':base,'onlyTestAndQualificationWorkflowChanged':True}))\nPY"
+        },
+        {
+          "run": "npm ci --ignore-scripts"
+        },
+        {
+          "run": "npm run build"
+        },
+        {
+          "name": "Verify corrected request recorder against real local navigation",
+          "run": "node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/request-budget-lot28-20261020.spec.mjs"
+        },
+        {
+          "name": "Bind targeted evidence to runtime and harness sources",
+          "run": "node --input-type=module <<'JS'\nimport {readFileSync,writeFileSync} from 'node:fs';import {execFileSync} from 'node:child_process';import {createHash} from 'node:crypto';\nconst r=JSON.parse(readFileSync('artifacts/browser-isolated/chromium-request-budget-lot28-20261020.json','utf8'));\nif(r.stats.expected!==1||r.stats.unexpected||r.stats.skipped||r.stats.flaky)throw Error('Incomplete qualification');\nconst proof={protocol:'ECO_TARGETED_QA_CORRECTION_1',runtimeSourceSha:'ea1214af2d89b875c2e73b2fc2b828d6fa37f345',harnessSourceSha:execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),onlyTestAndQualificationWorkflowChanged:true,correctedTest:'tests/browser/request-budget-lot28-20261020.spec.mjs',correctedTestSha256:createHash('sha256').update(readFileSync('tests/browser/request-budget-lot28-20261020.spec.mjs')).digest('hex'),passed:r.stats.expected,failed:0,skipped:0,flaky:0,syntheticReadPostBranchAsserted:true,syntheticFinancialPostBranchAsserted:true,financialWritesObserved:0,productionContacted:false,priorNegativeRunId:41355046192};\nwriteFileSync('artifacts/request-budget-qa-proof.json',JSON.stringify(proof,null,2)+'\\n');\nJS"
+        },
+        {
+          "name": "Retain targeted evidence",
+          "if": "always()",
+          "uses": "actions/upload-artifact@v4",
+          "with": {
+            "name": "request-budget-qa-ea1214af",
+            "path": "artifacts/browser-isolated/\nartifacts/request-budget-qa-proof.json",
+            "retention-days": 14,
+            "if-no-files-found": "error"
+          }
+        }
+      ]
+    }
+  }
+}
