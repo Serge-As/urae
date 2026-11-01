@@ -41,3 +41,5 @@ Les index 0020 n’écrivent aucune donnée métier. La procédure refuse toute 
 - 33 tests ciblés réussis, zéro échec/ignoré, comprenant 14 nouveaux scénarios natifs. Les mesures finales et le déploiement doivent encore être attestés.
 
 La revue de membre utilise désormais une mise à jour conditionnelle sur la version persistée de l’avis : une réserve concurrente ne peut pas être écrasée par un accord fondé sur une lecture antérieure. Les offres et priorités se chargent sans retarder les chiffres essentiels de l’accueil.
+
+Contrôles complémentaires locaux : build complet portable réussi après renforcement CAS ; 24 tests ciblés réussis (dont les 17 nouveaux cas). Le premier run GitHub 41298875000 a arrêté la candidate avant déploiement sur une propriété de revue optionnelle dans un enregistrement de correction (TS2322) ; la valeur persistée et la réponse utilisent désormais le booléen calculé, avec repli conservateur. Le marqueur de livraison vérifie explicitement le mode à deux index autorisés au lieu de l’ancien mode sans migration. La qualification complète de la source corrigée reste exigée.

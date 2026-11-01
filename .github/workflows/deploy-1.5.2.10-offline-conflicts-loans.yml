@@ -70,12 +70,13 @@ jobs:
           set -euo pipefail
           test -n "${CLOUDFLARE_ACCOUNT_ID:-}"
           test -n "${CLOUDFLARE_API_TOKEN:-}"
-      - name: Verify code-only marker
+      - name: Verify approved six-lot delivery marker
         shell: bash
         run: |
           set -euo pipefail
-          grep -Fq "db_mutation: none" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
-          grep -Fq "code-only-with-verified-readonly-backup-no-migration" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
+          grep -Fxq "release: ${EXPECTED_VERSION}" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
+          grep -Fxq "mode: qualified-additive-read-indexes-after-restored-private-backup" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
+          grep -Fxq "db_mutation: two scoped read indexes only; no table or financial record rewrite" .github/DEPLOY_ECO_SYSTEM_1_5_2_10_ONCE
       - name: TypeScript qualification
         run: npm run typecheck
       - name: Status · gate-typecheck
@@ -266,7 +267,7 @@ jobs:
             node -e "process.stdout.write(require('crypto').randomBytes(32).toString('base64url'))" | npx --yes wrangler@4 secret put AUTH_LIVE_SIGNING_SECRET --config workers/api/wrangler.ci.toml
           fi
           echo "Financial signing configuration preserved; no existing key was rotated."
-      - name: Deploy Worker and PWA — code only
+      - name: Deploy qualified Worker and PWA
         run: npx --yes wrangler@4 deploy --config workers/api/wrangler.ci.toml
 
       - name: Status · gate-deploy
