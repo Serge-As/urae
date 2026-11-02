@@ -38,3 +38,4 @@ console.log('Portable build OK — Node type transformation; TypeScript typechec
 await import('./bundle-browser-core.mjs');
 await import('./pwa-shell-closure.mjs');
 await import('./public-assets.mjs');
+await import('./build-fiscalibre.mjs');

@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 await import('./generate-offline-capabilities.mjs');
-const RELEASE_VERSION='1.5.2.44-audit-cockpit';
+const RELEASE_VERSION='1.5.2.45-fiscalibre-host';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
@@ -30,3 +30,4 @@ console.log(`Build OK: .build/ (Eco-System ${RELEASE_VERSION}; offline reload + 
 
 await import('./pwa-shell-closure.mjs');
 await import('./public-assets.mjs');
+await import('./build-fiscalibre.mjs');

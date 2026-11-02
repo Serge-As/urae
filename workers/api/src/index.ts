@@ -1,3 +1,4 @@
+import {fiscalibreFetch,fiscalibrePath} from './fiscalibre-host.js';
 import {validateSynthesis} from './synthesis-review.js';
 import { PlatformKernel } from '../../../packages/platform-kernel/src/index.js';
 import {caseCareAdapter} from './care.js';
@@ -84,11 +85,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.44-audit-cockpit';
-const RELEASE_BUILD_ID='eco-system-1.5.2.44-20261101-audit-cockpit';
+const RELEASE_VERSION='1.5.2.45-fiscalibre-host';
+const RELEASE_BUILD_ID='eco-system-1.5.2.45-20261102-fiscalibre-host';
 const RELEASE_SCHEMA_VERSION='d1-additive-20261101-indexes';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15244-audit-cockpit-20261101';
+const RELEASE_PWA_CACHE='eco-system-v15245-fiscalibre-host-20261102';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();
@@ -3810,6 +3811,7 @@ export interface AssetsFetcherLike { fetch(request: Request): Promise<Response> 
 export interface WorkerEnv { AUTH_LIVE_SIGNING_SECRET?:string; RELEASE_COMMIT_SHA?: string; DB?: D1DatabaseLike; ASSETS?: AssetsFetcherLike; ARTIFACTS?: ArtifactStoreLike; AI?: WorkersAILike; GROUP_LIVE_HUB?: DurableObjectNamespaceLike; PREMIUM_LIVE_LEDGER?: string; DATA_USE_PROFILE?: string; COLLECTIVE_LEARNING_PEPPER?: string; IDENTITY_MATCH_PEPPER?: string; FOUNDER_TEAM_ACTORS?: string }
 export default {async fetch(request:Request,env:WorkerEnv={}){
   const url=new URL(request.url);
+  if(fiscalibrePath(url.pathname))return fiscalibreFetch(request,env);
   if(request.method==='GET' && env.ASSETS && url.pathname!=='/health' && !url.pathname.startsWith('/api/')){
     // In Worker-first assets mode, make the public mobile entry point explicit.
     // `/` must always remain a usable PWA door instead of falling through to JSON 404.

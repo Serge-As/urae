@@ -1,0 +1,6 @@
+import {readFile} from 'node:fs/promises';import {createHash} from 'node:crypto';
+const root='https://fiscalibre.sergemimf.workers.dev',expected=process.env.GITHUB_SHA;if(!/^[a-f0-9]{40}$/.test(expected||''))throw Error('Exact source SHA required');
+const healthResponse=await fetch(root+'/health');if(!healthResponse.ok)throw Error('Fiscalibre health unavailable');const health=await healthResponse.json();
+if(health.commitSha!==expected||health.version!=='2.6.0-audit-20261102'||health.submissionEnabled!==false||health.officialApiConfigured!==false)throw Error('Fiscalibre health mismatch');
+const manifest=JSON.parse(await readFile('.build/fiscalibre/asset-manifest.json','utf8'));for(const [path,hash] of Object.entries(manifest.assets)){const res=await fetch(root+path);if(!res.ok)throw Error('Fiscalibre asset unavailable '+path);const bytes=Buffer.from(await res.arrayBuffer());if(createHash('sha256').update(bytes).digest('hex')!==hash)throw Error('Fiscalibre asset mismatch '+path);if(path==='/index.html'&&!res.headers.get('content-security-policy')?.includes("connect-src 'none'"))throw Error('Fiscalibre CSP missing');}
+console.log(JSON.stringify({fiscalibreVerified:true,sourceSha:expected,assets:Object.keys(manifest.assets),independentOrigin:true,submissionEnabled:false}));

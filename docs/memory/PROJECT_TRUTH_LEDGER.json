@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-11-01",
+  "generatedOn": "2026-11-02",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -25,6 +25,19 @@
     "Update this ledger whenever a remote verification, deployment, abandonment or supersession changes project truth."
   ],
   "records": [
+    {
+      "id": "fiscalibre.independent-host.20261102",
+      "scope": "Independent Fiscalibre accounting simulator and login link, no Eco financial authority",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "observedOn": "2026-11-02",
+      "statement": "Version2.6 audit and isolated origin prepared; API disabled, official receipts unknown. Complete exact-source qualification, restored read-only D1/source backup and live asset verification required before deployment claim. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-11-02-FISCALIBRE.md",
+        "tests/fiscalibre-engine.test.mjs",
+        "tests/fiscalibre-provider.test.mjs",
+        "tests/browser/fiscalibre-20261102.spec.mjs"
+      ]
+    },
     {
       "id": "audit.six-lots.20261101",
       "scope": "Six approved audit lots; preserve financial owners and acquired capabilities",

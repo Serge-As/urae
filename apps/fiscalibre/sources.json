@@ -1,0 +1,14 @@
+{
+  "version": "2.6.0-audit-20261102",
+  "reviewedAt": "2026-11-02",
+  "catalogCount": 1340,
+  "catalogSource": "https://plan-comptable-ohada.com/nouvelle-norme-2016/plan-comptable-syscohada-revise.csv",
+  "catalogNature": "Transcription tierce de la nomenclature légale, groupes et sous-comptes inclus ; 10 ajouté depuis le texte légal. Ne prétend pas certifier chaque libellé.",
+  "legalSource": "https://www.ohada.org/acte-uniforme-relatif-au-droit-comptable-et-a-linformation-financiere-audcif/",
+  "correspondence": "AUDCIF/SYSCOHADA révisé, table de correspondance système normal, pages imprimées 1049-1050. Subdivisions partielles à ventiler explicitement.",
+  "cgi": "https://www.impots.cm/index.php/en/node/1333",
+  "cnps": "https://www.cnps.cm/images/parutions/statistiques_annuaire_2024.pdf",
+  "harmonyGuide": "https://www.impots.cm/sites/default/files/documents/GUIDE%20D%27UTILISATION%20DSF%202024.pdf",
+  "harmony": "Raccordement préparé, API et schémas non fournis ; aucune télétransmission active.",
+  "archiveSha256": "d4361d45b22c0c15e40ed445ec3220f711e80494bbe8077921c09d3c6214139e"
+}

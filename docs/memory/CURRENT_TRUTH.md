@@ -1,3 +1,9 @@
+## Fiscalibre — candidate v45 en qualification
+
+Greffe autorisée le 2 novembre 2026 : lien sous connexion/inscription Eco, route Fiscalibre protégée dans Eco, aucun accès aux sessions ni au Ledger Eco. Catalogue 1 340 entrées et audit comptable/fiscal ; connecteur Harmony préparé et désactivé (activation et documentation non fournies).
+
+État : implémentation présente ; contrôles ciblés locaux réalisés ; qualification complète du SHA et livraison encore à prouver. Aucun envoi DGI/CNPS actif. Aucun schéma ou index D1 à appliquer. Production acquise v44 conservée ci-dessous. Voir `docs/change-impact/CIR-2026-11-02-FISCALIBRE.md` et `docs/implementation/FISCALIBRE_2026_11_02.md`. `realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED`.
+
 ## Six lots de l’audit — livraison vérifiée v44
 
 Les six lots autorisés après l’audit annoté sont implémentés et déployés.

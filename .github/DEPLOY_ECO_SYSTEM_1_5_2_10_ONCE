@@ -1,12 +1,12 @@
-Eco-System six audit lots authorized by founder 2026-11-01
-release: 1.5.2.44-audit-cockpit
-date: 2026-11-01
-mode: qualified-additive-read-indexes-after-restored-private-backup
-db_mutation: two scoped read indexes only; no table or financial record rewrite
-baseline_source: 76ef095649d0cf85a7d6e26c4927ae7cb9098652
+Eco-System independent Fiscalibre hosting authorized by founder 2026-11-02
+release: 1.5.2.45-fiscalibre-host
+date: 2026-11-02
+mode: code-only-with-verified-readonly-backup-no-migration
+db_mutation: none; preserve acquired D1 and financial records
+baseline_source: 3bc26691559735276b84a2f6e64d3c147a3749be
 qualification: complete governed CI, Chromium and WebKit on exact source
-scope: compact governance; 48h independent review; home cockpit; static core bundle and local translation; scoped D1 queries; rubric periods, XLSX, optional local readback and closing projection
+scope: independent Fiscalibre origin and login/signup link; accounting and tax audit; no active external declaration API
 backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-11-01-six-audit-lots
+trigger_nonce: 2026-11-02-fiscalibre-independent-host
