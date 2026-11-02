@@ -48,3 +48,8 @@ Le correctif des champs ne suffit pas au débordement de la page operation/op_10
 ### Confinement des zones défilantes WebKit
 
 Le diagnostic f5c432be relève 130 px de scrollWidth sans bloc principal hors écran : les descendants des zones défilantes sont concernés. Établir un contexte de layout et de peinture propre aux conteneurs tablewrap/nav avec contain:inline-size layout paint, en conservant leur défilement. Ajouter un contrôle de déplacement horizontal des tableaux larges ; conserver le seuil racine de 2 px et les captures négatives. Aucun overflow:hidden global ajouté.
+
+
+### Mesure après stabilisation du rendu
+
+La capture 93943091 confirme des blocs principaux dans les 360 px et le diagnostic ne trouve aucun rectangle hors écran hors zones défilantes. Après navigateTo, attendre la stabilisation asynchrone du scrollWidth WebKit avec expect.poll, seuil inchangé de 2 px et délai maximal de cinq secondes. Un débordement persistant reste une erreur bloquante ; le contrôle du défilement des tableaux reste obligatoire. Ne pas affirmer un succès avant le nouveau résultat.
