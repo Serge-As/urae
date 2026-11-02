@@ -10,3 +10,5 @@ backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-11-02-fiscalibre-independent-host
+
+qualification_revision: fiscalibre-webkit-mobile-20261102
