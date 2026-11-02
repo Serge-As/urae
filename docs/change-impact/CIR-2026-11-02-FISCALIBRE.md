@@ -58,3 +58,8 @@ La capture 93943091 confirme des blocs principaux dans les 360 px et le diagnost
 ### Identification de la source du scroll résiduel
 
 La mesure reste à 130 px après stabilisation ; ne pas traiter ce résultat comme une simple attente de rendu. En cas d’échec uniquement, journaliser les dimensions root/body/nav/tablewrap et tester temporairement des styles isolés sur les seules données synthétiques. Rétablir les styles et conserver la valeur originale comme assertion bloquante. Cette instrumentation identifie le propriétaire de l’écart sans modifier les assets ni déclencher une livraison.
+
+
+### Correctif confirmé par expérience isolée
+
+Le run 41514783083 identifie le confinement de fiche : root/body restent à 490 px quand nav ou tableaux sont masqués, et passent à 360 px avec .card{overflow:auto}. Appliquer cette règle aux seules fiches Fiscalibre sous 720 px, avec overflow visible à l’impression. Conserver l’accès horizontal du contenu par un test couvrant à la fois fiches et tableaux larges. Retirer les essais CSS temporaires de diagnostic ; les assertions racine et les captures d’échec restent. Requalification complète et nouvelle livraison nécessaires.
