@@ -23,3 +23,8 @@ Statut initial : IMPLEMENTED_UNVERIFIED ; qualification et livraison à prouver.
 ## Précision directe du fondateur — porte privée dans Eco
 
 Le fondateur précise le même jour : Fiscalibre doit être hébergé dans Eco, ouvert depuis connexion/inscription sans entrer dans Eco, et protégé par son mot de passe de test. La route retenue est `/fiscalibre/` du Worker existant ; aucun second Worker n’est déployé. L’hypothèse d’origine séparée décrite plus haut est remplacée par cette décision. Le HTML compilé est embarqué dans le Worker, jamais dans les assets publics ; le chemin passe avant les routes Eco et le cache PWA le délègue au réseau. La session Fiscalibre porte son propre cookie HttpOnly/Secure/SameSite limité au chemin, sans identité Eco ni écriture D1. La signature réutilise la clé serveur acquise avec un contexte cryptographique distinct, sans rotation. Le mot de passe est vérifié par PBKDF2 salé côté serveur ; le clair n’est pas publié dans les sources ni les journaux. Le dossier actuel reste un atelier local de test.
+
+
+### Correction du formulaire après contrôle navigateur
+
+Qualification native de 47c66702 réussie ; l’essai navigateur révèle une origine null sur le formulaire POST avec Referrer-Policy no-referrer. Politique same-origin pour permettre le formulaire local tout en rejetant les origines externes. Trace négative conservée et qualification obligatoire de la correction avant livraison. Aucun changement de données ou d’authentification Eco.
