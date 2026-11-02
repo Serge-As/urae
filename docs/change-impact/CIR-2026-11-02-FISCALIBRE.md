@@ -53,3 +53,8 @@ Le diagnostic f5c432be relève 130 px de scrollWidth sans bloc principal hors é
 ### Mesure après stabilisation du rendu
 
 La capture 93943091 confirme des blocs principaux dans les 360 px et le diagnostic ne trouve aucun rectangle hors écran hors zones défilantes. Après navigateTo, attendre la stabilisation asynchrone du scrollWidth WebKit avec expect.poll, seuil inchangé de 2 px et délai maximal de cinq secondes. Un débordement persistant reste une erreur bloquante ; le contrôle du défilement des tableaux reste obligatoire. Ne pas affirmer un succès avant le nouveau résultat.
+
+
+### Identification de la source du scroll résiduel
+
+La mesure reste à 130 px après stabilisation ; ne pas traiter ce résultat comme une simple attente de rendu. En cas d’échec uniquement, journaliser les dimensions root/body/nav/tablewrap et tester temporairement des styles isolés sur les seules données synthétiques. Rétablir les styles et conserver la valeur originale comme assertion bloquante. Cette instrumentation identifie le propriétaire de l’écart sans modifier les assets ni déclencher une livraison.
