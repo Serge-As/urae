@@ -26,6 +26,20 @@
   ],
   "records": [
     {
+      "id": "offline.refresh-recovery.20261103",
+      "scope": "Window-scoped cached startup and bounded automatic transport/PWA recovery",
+      "status": "IMPLEMENTED_UNVERIFIED",
+      "observedOn": "2026-11-03",
+      "statement": "v46 candidate: current-window cached restoration, whole-body network deadline, deferred hidden panels, coalesced recovery and resumable byte-verified PWA install. No device storage purge, financial intent merge, schema change, quota bypass or Fiscalibre gate bypass. Full same-source Linux qualification and deployment evidence remain required. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "evidence": [
+        "docs/change-impact/CIR-2026-11-03-REFRESH-OFFLINE.md",
+        "docs/implementation/REFRESH_OFFLINE_2026_11_03.md",
+        "tests/refresh-offline-recovery-20261103.test.mjs",
+        "tests/pwa-interrupted-install-20261103.test.mjs",
+        "tests/browser/refresh-offline-recovery-20261103.spec.mjs"
+      ]
+    },
+    {
       "id": "fiscalibre.independent-host.20261102",
       "scope": "Fiscalibre mounted privately in Eco, autonomous accounting simulator, one-hour absolute session and manager guide",
       "status": "VERIFIED_REMOTE",

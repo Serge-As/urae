@@ -1,3 +1,7 @@
+## Rafraîchissement et reprise automatique — candidate v46 du 3 novembre 2026
+
+Correction demandée pour F5/téléphone, continuité des copies locales, réveils réseau regroupés et installation PWA reprise. Propriétaires Application/Outbox/BrowserWindowScope/service worker conservés ; aucun schéma ou montant financier réel modifié. Fiscalibre conserve la porte autonome et le verrou absolu d'une heure. Version 1.5.2.46-offline-resume en qualification ; la production v45 acquise reste décrite ci-dessous. Voir docs/change-impact/CIR-2026-11-03-REFRESH-OFFLINE.md et docs/implementation/REFRESH_OFFLINE_2026_11_03.md. Qualification complète Linux et vérification du déploiement du nouveau SHA encore nécessaires. realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED.
+
 ## Fiscalibre — version v45 livrée et vérifiée le 3 novembre 2026
 
 Runtime : `541c7239341c1d31de82d11de251f7d663017abb` ; route privée `/fiscalibre/` dans Eco, porte sous connexion/inscription, aucun compte Eco requis. Session absolue d’une heure avec reverrouillage d’onglet ouvert, données locales conservées. Guide 5/13/30/100/7, référentiel 1 340 entrées, audit comptable/fiscal et CMUP. Qualification indépendante et livraison finale : 1 125 natifs, 116 Chromium, 54 WebKit. Backup privé D1/source restauré et relu, publication et vérification des assets du même SHA, puis recette en ligne 360/1 280 px. Trace de l’échec interne WebKit de la première tentative conservée ; aucun affaiblissement du contrôle. Voir `docs/release/evidence/FISCALIBRE_DELIVERY_2026-11-03.json`.

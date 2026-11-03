@@ -28,7 +28,8 @@ test('Android 6 offline shell remains bounded and never force-reloads a live pag
   assert.match(sw,/Scripts\/styles\/assets are cache-first/);
   assert.match(sw,/skipWaiting\(/);
   assert.doesNotMatch(main,/controllerchange[\s\S]{0,600}location\.reload\(/);
-  assert.match(main,/setTimeout\(\(\)=>\{try\{reg\.update\(\)/);
+  assert.match(main,/currentServiceWorkerRegistration\?\.update\(\)\.catch/);
+  assert.match(main,/scheduleConnectivityRecovery/);
   assert.ok(sw.includes('/src/resilience-ui.js'));
 });
 

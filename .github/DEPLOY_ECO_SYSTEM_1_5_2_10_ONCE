@@ -1,22 +1,2 @@
-Eco-System independent Fiscalibre hosting authorized by founder 2026-11-02
-release: 1.5.2.45-fiscalibre-host
-date: 2026-11-03
-mode: code-only-with-verified-readonly-backup-no-migration
-db_mutation: none; preserve acquired D1 and financial records
-baseline_source: 3bc26691559735276b84a2f6e64d3c147a3749be
-qualification: complete governed CI, Chromium and WebKit on exact source
-scope: private Fiscalibre path inside Eco and login/signup link; accounting and tax audit; no active external declaration API
-backup_scope: D1_AND_EXACT_SOURCE_ONLY
-real_money_enabled: false
-field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-11-02-fiscalibre-independent-host
-
-qualification_revision: fiscalibre-webkit-mobile-20261102
-
-scroll_containment_revision: fiscalibre-webkit-20261102
-
-layout_measurement_revision: settled-webkit-20261102
-
-card_overflow_revision: verified-scroller-source-20261102
-
-hourly_manager_revision: 2026-11-03-absolute-hour-and-manager-guide
+Approved refresh/offline recovery delivery: 1.5.2.46-offline-resume
+Qualified exact source only; preserve Fiscalibre, Ledger, all device data, roles and acquired regression gates.

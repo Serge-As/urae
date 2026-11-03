@@ -85,11 +85,11 @@ interface WorkersAILike {
   run?(model:string,input:Record<string,unknown>,options?:Record<string,unknown>):Promise<unknown>;
 }
 
-const RELEASE_VERSION='1.5.2.45-fiscalibre-host';
-const RELEASE_BUILD_ID='eco-system-1.5.2.45-20261102-fiscalibre-host';
+const RELEASE_VERSION='1.5.2.46-offline-resume';
+const RELEASE_BUILD_ID='eco-system-1.5.2.46-20261103-offline-resume';
 const RELEASE_SCHEMA_VERSION='d1-additive-20261101-indexes';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15245-fiscalibre-host-20261102';
+const RELEASE_PWA_CACHE='eco-system-v15246-offline-resume-20261103';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();

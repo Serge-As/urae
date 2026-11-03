@@ -1,12 +1,12 @@
 {
   "contractVersion": 1,
   "release": {
-    "version": "1.5.2.45-fiscalibre-host",
-    "buildId": "eco-system-1.5.2.45-20261102-fiscalibre-host",
+    "version": "1.5.2.46-offline-resume",
+    "buildId": "eco-system-1.5.2.46-20261103-offline-resume",
     "schemaVersion": "d1-additive-20261101-indexes",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15245-fiscalibre-host-20261102",
-    "previousPwaCache": "eco-system-v15244-audit-cockpit-20261101",
+    "pwaCache": "eco-system-v15246-offline-resume-20261103",
+    "previousPwaCache": "eco-system-v15245-fiscalibre-host-20261102",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
   "truthAxes": {

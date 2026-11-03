@@ -13,7 +13,8 @@ test('new service worker refuses to install when any declared startup-shell asse
   assert.match(sw,/RELEASE_ASSET_TIMEOUT/);
   assert.match(sw,/await response\.clone\(\)\.arrayBuffer\(\)/);
   assert.match(sw,/RELEASE_READY/);
-  assert.match(sw,/await caches\.delete\(CACHE\)/);
+  assert.doesNotMatch(sw,/await caches\.delete\(CACHE\)/,'an interrupted candidate retains verified bytes for a later install');
+  assert.match(sw,/installReleaseAsset/);
   assert.match(sw,/throw error/);
 });
 
