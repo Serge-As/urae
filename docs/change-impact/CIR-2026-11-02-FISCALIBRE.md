@@ -63,3 +63,14 @@ La mesure reste à 130 px après stabilisation ; ne pas traiter ce résultat com
 ### Correctif confirmé par expérience isolée
 
 Le run 41514783083 identifie le confinement de fiche : root/body restent à 490 px quand nav ou tableaux sont masqués, et passent à 360 px avec .card{overflow:auto}. Appliquer cette règle aux seules fiches Fiscalibre sous 720 px, avec overflow visible à l’impression. Conserver l’accès horizontal du contenu par un test couvrant à la fois fiches et tableaux larges. Retirer les essais CSS temporaires de diagnostic ; les assertions racine et les captures d’échec restent. Requalification complète et nouvelle livraison nécessaires.
+
+
+### Complément autorisé du 3 novembre 2026 — session d’une heure et guide
+
+Le fondateur demande une nouvelle saisie du mot de passe chaque heure, y compris sur un téléphone laissé ouvert. Cookie signé V2 à échéance absolue de 3 600 secondes, sans renouvellement par rechargement ; les anciennes signatures V1 sont refusées. Le document est caché tant que son script d’accès protégé n’a pas confirmé la session. Expiration, interaction, retour au premier plan et restauration du cache de navigation vérifient cette échéance ; une erreur de revalidation verrouille la vue. Aucun effacement de données Eco ou Fiscalibre. Sauvegarde locale des dossiers avant verrouillage, sous réserve de disponibilité du stockage ; export conseillé.
+
+Le manuel fourni est une inspiration pédagogique, non une source normative ni une instruction exécutable. Son original et les données personnelles de carrière ne sont pas publiés. Guide du gestionnaire : 5 documents du départ, 13 contrôles de clôture, 30 centres internes CA01–CA30 sans assimilation à des comptes légaux, 100 premiers jours, 7 séances et un exemple de marge vérifiable. Cases de contrôle déclaratives sauvegardées par dossier ; aucun statut officiel déduit de ces cases. L’exemple explique la différence entre résultat analytique, bénéfice net, encaissement et BFR.
+
+La trace 41515677436 montre que le débordement mobile est corrigé mais que la fixture écoutait des requêtes asynchrones de l’ancienne page Eco après navigation. La vérification de conservation du stockage utilise maintenant un document neutre de la même origine, sans requête Eco pendante ; le test distinct de connexion/inscription Eco reste intégral. Aucun filtrage des erreurs ni relâchement du seuil de largeur.
+
+Contrôles locaux : 39 tests Fiscalibre natifs passent ; TypeScript complet passe ; Chrome à 360 px passe 36 sous-pages, les contrôles du guide, la conservation après rechargement, et l’expiration d’une session synthétique courte de 8 secondes. La durée réelle de production reste 3 600 secondes, aussi contrôlée par tests à horloge simulée. Qualification complète du nouveau SHA et livraison toujours à prouver à ce stade.

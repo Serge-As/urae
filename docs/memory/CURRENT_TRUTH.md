@@ -1,3 +1,7 @@
+## Fiscalibre — candidate v45, complément du 3 novembre en qualification
+
+Route autonome dans Eco `/fiscalibre/`, porte sous connexion et inscription, session absolue d’une heure avec reverrouillage d’onglet ouvert ; guide du gestionnaire inspiré du manuel privé sans publication de son original. 39 tests Fiscalibre et TypeScript complet réussis localement ; Chrome 360 px : 36 sous-pages, guide, sauvegarde et expiration synthétique vérifiés. La qualification Linux complète, la sauvegarde D1/source relue et la livraison du nouveau SHA restent à prouver. API DGI/CNPS désactivée ; aucune donnée financière Eco modifiée. `realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED`.
+
 ## Fiscalibre — candidate v45 en qualification
 
 Greffe autorisée le 2 novembre 2026 : lien sous connexion/inscription Eco, route Fiscalibre protégée dans Eco, aucun accès aux sessions ni au Ledger Eco. Catalogue 1 340 entrées et audit comptable/fiscal ; connecteur Harmony préparé et désactivé (activation et documentation non fournies).

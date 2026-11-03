@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "generatedOn": "2026-11-02",
+  "generatedOn": "2026-11-03",
   "purpose": "Anti-regression operational truth. Read before asking founder to recreate/configure anything.",
   "allowedStatuses": [
     "ACQUIRED",
@@ -27,15 +27,17 @@
   "records": [
     {
       "id": "fiscalibre.independent-host.20261102",
-      "scope": "Independent Fiscalibre accounting simulator and login link, no Eco financial authority",
+      "scope": "Fiscalibre mounted privately in Eco, autonomous accounting simulator, one-hour absolute session and manager guide",
       "status": "IMPLEMENTED_UNVERIFIED",
-      "observedOn": "2026-11-02",
-      "statement": "Version2.6 audit and isolated origin prepared; API disabled, official receipts unknown. Complete exact-source qualification, restored read-only D1/source backup and live asset verification required before deployment claim. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "observedOn": "2026-11-03",
+      "statement": "Version 2.6 implemented. Browser-local cases, accounting/tax audit and disabled Harmony adapter. One-hour access, foreground/BFCache revalidation, 5/13/30/100/7 manager guidance. Targeted local native 39/39, complete TypeScript and Chrome 360px passed. Exact-source Linux full CI and delivery pending; current acquired runtime v44 preserved. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
       "evidence": [
         "docs/change-impact/CIR-2026-11-02-FISCALIBRE.md",
         "tests/fiscalibre-engine.test.mjs",
         "tests/fiscalibre-provider.test.mjs",
-        "tests/browser/fiscalibre-20261102.spec.mjs"
+        "tests/browser/fiscalibre-20261102.spec.mjs",
+        "tests/fiscalibre-host.test.mjs",
+        "tests/fiscalibre-access.test.mjs"
       ]
     },
     {

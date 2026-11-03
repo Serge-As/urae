@@ -10,5 +10,10 @@
   "cnps": "https://www.cnps.cm/images/parutions/statistiques_annuaire_2024.pdf",
   "harmonyGuide": "https://www.impots.cm/sites/default/files/documents/GUIDE%20D%27UTILISATION%20DSF%202024.pdf",
   "harmony": "Raccordement préparé, API et schémas non fournis ; aucune télétransmission active.",
-  "archiveSha256": "d4361d45b22c0c15e40ed445ec3220f711e80494bbe8077921c09d3c6214139e"
+  "archiveSha256": "d4361d45b22c0c15e40ed445ec3220f711e80494bbe8077921c09d3c6214139e",
+  "pedagogicalManual": {
+    "receivedAt": "2026-11-03",
+    "sha256": "70b4c040c37c28169267b7464cbd00a0bbdd5cefc721ff3a754408662f7f611a",
+    "use": "Inspiration pédagogique seulement ; original privé non distribué ; règles et références confrontées aux sources légales."
+  }
 }
