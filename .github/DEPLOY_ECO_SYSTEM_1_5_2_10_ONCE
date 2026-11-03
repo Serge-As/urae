@@ -1,2 +1,12 @@
-Approved refresh/offline recovery delivery: 1.5.2.46-offline-resume
-Qualified exact source only; preserve Fiscalibre, Ledger, all device data, roles and acquired regression gates.
+Eco-System refresh/offline recovery authorized by founder 2026-11-03
+release: 1.5.2.46-offline-resume
+date: 2026-11-03
+mode: code-only-with-verified-readonly-backup-no-migration
+db_mutation: none; preserve acquired D1 and financial records
+baseline_source: 2b7739f0f0b007b3cac3cf409212476d2e6facaa
+qualification: complete governed CI, Chromium and WebKit on exact source
+scope: scoped local restore, deferred panels, coalesced recovery and coherent resumable PWA cache; preserve independent Fiscalibre
+backup_scope: D1_AND_EXACT_SOURCE_ONLY
+real_money_enabled: false
+field_acceptance: NOT_ACCEPTED
+trigger_nonce: 2026-11-03-refresh-offline-recovery

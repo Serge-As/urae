@@ -2667,6 +2667,12 @@ const refreshGroupContext = async () => {
     await renderGroups();
     journeyUI.refresh();localAssistantUI.refreshContext();
     if(requestedGroup!==app.activeGroup())return;
+    // Bootstrap has already restored the durable Outbox. Paint its scoped
+    // working values before member/meeting renderers create financial cells;
+    // secondary projections must never flash an old zero over a saved intent.
+    ensureFinancialStorageScope();
+    financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
+    financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
     const active = Boolean(app.activeGroup());
     // Role checks must use the NEW group's members, not the previous group's
     // list. Otherwise invited managers temporarily lose finance/Recap access.
