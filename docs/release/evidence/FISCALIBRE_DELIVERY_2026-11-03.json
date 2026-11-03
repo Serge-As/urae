@@ -1,0 +1,215 @@
+{
+  "sourceSha": "541c7239341c1d31de82d11de251f7d663017abb",
+  "version": "1.5.2.45-fiscalibre-host",
+  "qualificationRun": 41597170084,
+  "qualificationConclusion": "success",
+  "deliveryRun": 41597170129,
+  "deliveryAttempt": 2,
+  "deliveryJob": 125792312880,
+  "deliveryConclusion": "success",
+  "native": {
+    "passed": 1125,
+    "failed": 0,
+    "skipped": 0
+  },
+  "webkit": {
+    "passed": 54,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0
+  },
+  "chromium": {
+    "passed": 116,
+    "failed": 0,
+    "skipped": 0,
+    "flaky": 0
+  },
+  "backupVerified": true,
+  "privateR2Key": "eco-system-backups/production-recovery/541c7239341c1d31de82d11de251f7d663017abb.tar.gz",
+  "archiveSha256": "2af8c97fd63bfc1b3b6639d91d723412d2e9621d92d36e5de323eb3fccf95d31",
+  "restoredIntegrity": "ok",
+  "ciPublicAssetsVerified": 104,
+  "publicAssetsVerified": 164,
+  "publicAssetScope": "All 164 assets of the dependency manifest checked independently in Chrome; the manifest itself and 104 selected assets matched exact build bytes in delivery CI.",
+  "mounted": {
+    "fiscalibreVerified": true,
+    "sourceSha": "541c7239341c1d31de82d11de251f7d663017abb",
+    "documentSha256": "94b45c2006324726e258bcfa25277ab53865c742c16d880902a6ffce91b1a09e",
+    "mountedInEco": true,
+    "passwordRequired": true,
+    "sessionMaxAgeSeconds": 3600,
+    "submissionEnabled": false
+  },
+  "artifacts": [
+    {
+      "id": 13213904439,
+      "name": "browser-isolated-qualify-deploy-smoke-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:fb87a016fbfaa4397a130328d78434a94b93e62fe701c0ddc555f4678c079dd5",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13213904439",
+      "createdAt": "2026-11-03T08:06:15Z"
+    },
+    {
+      "id": 13213779474,
+      "name": "production-public-verification-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:fd03f13cb47058c93fbe5d1689e0e92f10078cd9854acda6fcd952f5859bc450",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13213779474",
+      "createdAt": "2026-11-03T08:07:07Z"
+    },
+    {
+      "id": 13213656741,
+      "name": "lot28-effect-mirror-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:787af97ac9e41129bf94611b077a2d1ac1e5c072887b942661fdfb873e64a3d6",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13213656741",
+      "createdAt": "2026-11-03T07:50:35Z"
+    },
+    {
+      "id": 13213523742,
+      "name": "production-recovery-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:b465e208e270c8959cca8e23c607f769b8bbc1f27a0c240c9c6609c6eadbf461",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13213523742",
+      "createdAt": "2026-11-03T08:06:41Z"
+    },
+    {
+      "id": 13213260568,
+      "name": "lot28-effect-mirror-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:fd96fa6707590810e9044d465592403d47a2d68352f5764439ca6dbd0ed8830f",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13213260568",
+      "createdAt": "2026-11-03T07:35:37Z"
+    },
+    {
+      "id": 13213075071,
+      "name": "eco-deployment-recovery-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:77134df3a67258ce8ea46ab00818ad9843af719b2a477e0cb356d3c45d006049",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13213075071",
+      "createdAt": "2026-11-03T07:35:22Z"
+    },
+    {
+      "id": 13213053537,
+      "name": "eco-deployment-recovery-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:176f5be35249a65aeb76ef123f123392fa4a1e8a1903d0ee19f681cfa9dc27da",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13213053537",
+      "createdAt": "2026-11-03T07:50:17Z"
+    },
+    {
+      "id": 13212768534,
+      "name": "browser-isolated-qualify-deploy-smoke-541c7239341c1d31de82d11de251f7d663017abb",
+      "digest": "sha256:caf6d13014e43a12b6b103342990c6d413f49f7ba2632a0302c86bfabf8bf88e",
+      "url": "https://api.github.com/repos/Serge-As/urae/actions/artifacts/13212768534",
+      "createdAt": "2026-11-03T07:38:15Z"
+    }
+  ],
+  "sourceArchiveLocalDownloadVerified": false,
+  "verifiedAt": "2026-11-03T08:26:05.191066+00:00",
+  "appUrl": "https://eco-system.sergemimf.workers.dev/fiscalibre/",
+  "ecoEntryUrl": "https://eco-system.sergemimf.workers.dev/",
+  "onlineBrowser": {
+    "checkedAt": "2026-11-03T08:21:40.455Z",
+    "origin": "https://eco-system.sergemimf.workers.dev",
+    "checks": [
+      {
+        "width": 1280,
+        "privatePassword": true,
+        "reference6593": true,
+        "managerGuide": true,
+        "sessionSeconds": 3600,
+        "reloadDoesNotExtend": true,
+        "logout": true
+      },
+      {
+        "width": 360,
+        "privatePassword": true,
+        "reference6593": true,
+        "managerGuide": true,
+        "sessionSeconds": 3600,
+        "reloadDoesNotExtend": true,
+        "logout": true
+      }
+    ],
+    "errors": [],
+    "documentSha256": "94b45c2006324726e258bcfa25277ab53865c742c16d880902a6ffce91b1a09e",
+    "publicState": {
+      "health": {
+        "ok": true,
+        "service": "tontine-api",
+        "version": "1.5.2.45-fiscalibre-host",
+        "buildId": "eco-system-1.5.2.45-20261102-fiscalibre-host",
+        "commitSha": "541c7239341c1d31de82d11de251f7d663017abb",
+        "schemaVersion": "d1-additive-20261101-indexes",
+        "policyVersion": "live-finance-policy-20261007-event-push-repayment",
+        "pwaCache": "eco-system-v15245-fiscalibre-host-20261102",
+        "now": "2026-11-03T08:21:42.978Z",
+        "realMoneyEnabled": false,
+        "manualCashLedgerEnabled": true,
+        "premiumLiveEnabled": true,
+        "founderControlBound": true,
+        "communityRealtimeBound": true,
+        "artifactStorageBound": true,
+        "artifactStorageMode": "R2",
+        "contextScope": "request"
+      },
+      "fiscalibre": {
+        "app": "Fiscalibre",
+        "version": "2.6.0-audit-20261102",
+        "commitSha": "541c7239341c1d31de82d11de251f7d663017abb",
+        "documentSha256": "94b45c2006324726e258bcfa25277ab53865c742c16d880902a6ffce91b1a09e",
+        "passwordRequired": true,
+        "sessionMaxAgeSeconds": 3600,
+        "submissionEnabled": false,
+        "officialApiConfigured": false,
+        "storage": "browser-local",
+        "realMoneyEnabled": false
+      },
+      "catalog": {
+        "count": 164,
+        "version": "1.5.2.45-fiscalibre-host"
+      }
+    },
+    "entryChecks": {
+      "loginEntry": true,
+      "signupEntry": true,
+      "linkOpensPrivateApp": true
+    }
+  },
+  "localBrowser": {
+    "browser": "Chrome",
+    "privateRoute": true,
+    "phoneWidth": 360,
+    "subpages": 36,
+    "managerClosingChecks": 13,
+    "internalCostCentres": 30,
+    "checklistSurvivesReload": true,
+    "costExampleProfit": 0,
+    "shortSyntheticSessionSeconds": 8,
+    "pageLeftOpenLocks": true,
+    "savedDataPreserved": true,
+    "errors": []
+  },
+  "negativeAttempt": {
+    "sourceSha": "541c7239341c1d31de82d11de251f7d663017abb",
+    "runId": 41597170129,
+    "attempt": 1,
+    "jobId": 125787126803,
+    "fullNative": {
+      "passed": 1125,
+      "failed": 0
+    },
+    "fiscalibreWebKit": {
+      "passed": 6,
+      "failed": 0
+    },
+    "blockingSuite": "tests/browser/consolidated-completion-20261025.spec.mjs",
+    "blockingOperation": "page.reload in existing group fixture",
+    "error": "WebKit encountered an internal error",
+    "productionDeployReached": false,
+    "decision": "Retain negative trace, compare independent same-source qualification, rerun failed full delivery job without code or assertion changes.",
+    "url": "https://github.com/Serge-As/urae/actions/runs/41597170129/attempts/1"
+  },
+  "officialApiConfigured": false,
+  "submissionEnabled": false,
+  "storage": "browser-local",
+  "sessionMaxAgeSeconds": 3600,
+  "realMoneyEnabled": false,
+  "FIELD_ACCEPTED": "NOT_ACCEPTED",
+  "backupScope": "D1_AND_EXACT_SOURCE_ONLY",
+  "completeApplicationBackup": false
+}

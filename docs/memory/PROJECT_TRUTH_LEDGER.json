@@ -28,16 +28,19 @@
     {
       "id": "fiscalibre.independent-host.20261102",
       "scope": "Fiscalibre mounted privately in Eco, autonomous accounting simulator, one-hour absolute session and manager guide",
-      "status": "IMPLEMENTED_UNVERIFIED",
+      "status": "VERIFIED_REMOTE",
       "observedOn": "2026-11-03",
-      "statement": "Version 2.6 implemented. Browser-local cases, accounting/tax audit and disabled Harmony adapter. One-hour access, foreground/BFCache revalidation, 5/13/30/100/7 manager guidance. Targeted local native 39/39, complete TypeScript and Chrome 360px passed. Exact-source Linux full CI and delivery pending; current acquired runtime v44 preserved. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
+      "statement": "v45 delivered at 541c7239341c1d31de82d11de251f7d663017abb: independent qualification and delivery 1125 native/116 Chromium/54 WebKit. Verified mounted one-hour private access, 164 capabilities, exact public assets and private D1/source restored backup. Online Chrome 360/1280px verifies actual password, scope, no sliding expiry, guide, reference and lock. First delivery internal WebKit error preserved; full rerun without code changes passed. Browser-local simulations only; official APIs disabled. realMoneyEnabled=false;FIELD_ACCEPTED=NOT_ACCEPTED.",
       "evidence": [
         "docs/change-impact/CIR-2026-11-02-FISCALIBRE.md",
         "tests/fiscalibre-engine.test.mjs",
         "tests/fiscalibre-provider.test.mjs",
         "tests/browser/fiscalibre-20261102.spec.mjs",
         "tests/fiscalibre-host.test.mjs",
-        "tests/fiscalibre-access.test.mjs"
+        "tests/fiscalibre-access.test.mjs",
+        "docs/release/evidence/FISCALIBRE_DELIVERY_2026-11-03.json",
+        "https://github.com/Serge-As/urae/actions/runs/41597170084",
+        "https://github.com/Serge-As/urae/actions/runs/41597170129"
       ]
     },
     {

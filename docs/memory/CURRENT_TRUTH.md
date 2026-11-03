@@ -1,3 +1,9 @@
+## Fiscalibre — version v45 livrée et vérifiée le 3 novembre 2026
+
+Runtime : `541c7239341c1d31de82d11de251f7d663017abb` ; route privée `/fiscalibre/` dans Eco, porte sous connexion/inscription, aucun compte Eco requis. Session absolue d’une heure avec reverrouillage d’onglet ouvert, données locales conservées. Guide 5/13/30/100/7, référentiel 1 340 entrées, audit comptable/fiscal et CMUP. Qualification indépendante et livraison finale : 1 125 natifs, 116 Chromium, 54 WebKit. Backup privé D1/source restauré et relu, publication et vérification des assets du même SHA, puis recette en ligne 360/1 280 px. Trace de l’échec interne WebKit de la première tentative conservée ; aucun affaiblissement du contrôle. Voir `docs/release/evidence/FISCALIBRE_DELIVERY_2026-11-03.json`.
+
+Harmony/CNPS préparés mais désactivés faute d’accès officiel ; aucune déclaration ou attestation officielle créée. Dossiers locaux au navigateur, pas de synchronisation serveur. Aucun schéma ni donnée financière Eco modifiés. `realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED`. Les états réels, règles sectorielles et formulaires DSF restent à qualifier avec les pièces. L’historique des états de préparation est conservé ci-dessous.
+
 ## Fiscalibre — candidate v45, complément du 3 novembre en qualification
 
 Route autonome dans Eco `/fiscalibre/`, porte sous connexion et inscription, session absolue d’une heure avec reverrouillage d’onglet ouvert ; guide du gestionnaire inspiré du manuel privé sans publication de son original. 39 tests Fiscalibre et TypeScript complet réussis localement ; Chrome 360 px : 36 sous-pages, guide, sauvegarde et expiration synthétique vérifiés. La qualification Linux complète, la sauvegarde D1/source relue et la livraison du nouveau SHA restent à prouver. API DGI/CNPS désactivée ; aucune donnée financière Eco modifiée. `realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED`.
