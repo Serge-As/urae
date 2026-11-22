@@ -61,7 +61,42 @@ const openAssistedEntry=()=>{
   },120);
 };
 
+function installAmbianceControl() {
+  const controls = $('uiModeSelect')?.closest('.ui-mode-controls');
+  if (!controls) return;
+  const label = document.createElement('label');
+  label.htmlFor = 'ecoAmbiance';
+  const select = document.createElement('select');
+  select.id = label.htmlFor;
+  const themes = [
+    ['', 'Canopée officiel', 'Official Canopée'],
+    ['grand-livre', 'Ivoire Grand-Livre', 'Ivory Ledger'],
+    ['nuit-doree', 'Nuit Canopée OLED', 'Canopée OLED Night']
+  ];
+  const localize = () => {
+    const en = document.documentElement.lang.startsWith('en');
+    label.textContent = en ? 'Colour theme' : 'Ambiance';
+    themes.forEach((theme, i) => { select.options[i].textContent = theme[en ? 2 : 1]; });
+  };
+  themes.forEach(([value]) => select.add(new Option('', value)));
+  localize();
+  new MutationObserver(localize).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  controls.append(label, select);
+  const apply = value => {
+    select.value = themes.some(([theme]) => theme === value) ? value : '';
+    if (select.value) document.body.dataset.ecoAmbiance = select.value;
+    else delete document.body.dataset.ecoAmbiance;
+  };
+  const key = 'eco.presentation.ambiance';
+  try { apply(localStorage.getItem(key)); } catch { apply(''); }
+  select.addEventListener('change', () => {
+    apply(select.value);
+    try { localStorage.setItem(key, select.value); } catch {}
+  });
+}
+
 const install=()=>{
+  installAmbianceControl();
   applyUiMode(currentUiMode(),{persist:false});
   for(const select of document.querySelectorAll('#uiModeSelect, #workspaceUiMode')){
     select.value=currentUiMode();

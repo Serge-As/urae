@@ -54,7 +54,7 @@ const mountFounderControlUI=deferredMount(()=>import('./founder-control-ui.js'),
 const mountAssistanceRulebookUI=deferredMount(()=>import('./assistance-rulebook-ui.js'),'mountAssistanceRulebookUI','Eco-System');
 import { mountGroupHomeUI } from './group-home-ui.js';
 import { mountSessionsUI } from './sessions-ui.js';
-import { splitFinancialRubrics, planFinancialRubricLayout } from './smart-grid-view.js';
+import { splitFinancialRubrics, planFinancialRubricLayout, rubricPaletteFamily, connectSheetNavigation } from './smart-grid-view.js';
 const mountBlueprintExecutableUI=deferredMount(()=>import('./blueprint-executable-ui.js'),'mountBlueprintExecutableUI','Eco-System');
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 const mountFinancialLabUI=deferredMount(()=>import('./financial-lab-ui.js'),'mountFinancialLabUI','Eco-System');
@@ -1718,7 +1718,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       matrixMeetingId=selectedMeeting;root.dataset.meetingId=selectedMeeting;
       const numberHead=document.createElement('th');numberHead.textContent=tx('N°','No.');numberHead.className='member-number-column';hr.append(numberHead);
       const memberHead=document.createElement('th');memberHead.textContent=tx('Membre','Member');hr.append(memberHead);
-      for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
+      for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.dataset.rubricFamily=rubricPaletteFamily(r,financialNatureForRubric(r));th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
       const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général membre','Member grand total'):tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
       for(const m of displayMembers){
         const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.replaceChildren(contextLink(String(m.displayName??''),'member',m.id));const roles=document.createElement('small');roles.textContent=m.roles.join(', ');name.append(roles);name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);
@@ -1747,6 +1747,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         toolbar.append(label,contextLink(meetingLabel(meetings.find(x=>x.id===selectedMeeting)),'meeting',selectedMeeting),other,add);root.append(toolbar);
       }
       root.append(presentation,wrap,note);
+    connectSheetNavigation(wrap,table,presentation,tx,fitted);
       if(columnGroups.length>1){
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
@@ -1756,7 +1757,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
     hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
-    for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
+    for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.dataset.rubricFamily=rubricPaletteFamily(r,financialNatureForRubric(r));th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
     const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général séance','Meeting grand total'):tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
     const activeMeetings=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
     for(const meeting of activeMeetings){
@@ -1773,6 +1774,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
     root.append(presentation,wrap,note);
+    connectSheetNavigation(wrap,table,presentation,tx,fitted);
       if(columnGroups.length>1){
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');

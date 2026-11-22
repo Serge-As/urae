@@ -38,3 +38,75 @@ export function sumFinancialRubrics(rubrics, valueForRubric) {
   return (Array.isArray(rubrics) ? rubrics : []).reduce((total, rubric) => total + Number(valueForRubric(rubric) ?? 0), 0);
 }
 
+const paletteFamilies = {
+  ORDINAIRE: ['Ordinaires', 'Ordinary'],
+  EPARGNE: ['Épargne', 'Savings'],
+  SECOURS: ['Solidarité', 'Solidarity'],
+  TONTINE: ['Tontines', 'Tontines'],
+  REMBOURSEMENT: ['Remboursements', 'Repayments'],
+  EMPRUNT: ['Prêts', 'Loans'],
+  MAIN_LEVEE: ['Main levée', 'Levies']
+};
+
+export function rubricPaletteFamily(rubric, financialNature) {
+  if (financialNature === 'LOAN') return 'EMPRUNT';
+  if (financialNature === 'REPAYMENT') return 'REMBOURSEMENT';
+  const kind = rubric.activityPlan?.kind || rubric.facets?.custom?.systemKey;
+  return ({ SAVINGS: 'EPARGNE', SOLIDARITY: 'SECOURS', TONTINE: 'TONTINE',
+    LEVY: 'MAIN_LEVEE', HAND_RAISE: 'MAIN_LEVEE' })[kind] || 'ORDINAIRE';
+}
+
+export function connectSheetNavigation(wrap, table, toolbar, tx, fitted) {
+  const pager = toolbar.querySelector('.eco-smartgrid-navigation');
+  if (pager) {
+    const [previous, next] = pager.querySelectorAll('button');
+    let start;
+    wrap.addEventListener('touchstart', event => {
+      start = null;
+      if (event.touches.length !== 1 || event.target.closest('input,button,select,a,textarea')) return;
+      const touch = event.touches[0];
+      start = { x: touch.clientX, y: touch.clientY, left: wrap.scrollLeft < 2,
+        right: wrap.scrollWidth - wrap.clientWidth - wrap.scrollLeft < 2 };
+    }, { passive: true });
+    wrap.addEventListener('touchcancel', () => { start = null; }, { passive: true });
+    wrap.addEventListener('touchend', event => {
+      const origin = start;
+      start = null;
+      if (!origin || event.touches.length || event.changedTouches.length !== 1) return;
+      const dx = event.changedTouches[0].clientX - origin.x;
+      const dy = event.changedTouches[0].clientY - origin.y;
+      if (Math.abs(dx) < 55 || Math.abs(dx) < 2 * Math.abs(dy)) return;
+      const control = dx < 0 && origin.right ? next : dx > 0 && origin.left ? previous : null;
+      if (control && !control.disabled) control.click();
+    }, { passive: true });
+    return;
+  }
+  if (fitted) return;
+  const headers = Array.from(table.querySelectorAll('thead [data-rubric-family]'));
+  if (!headers.length) return;
+  const rail = document.createElement('div');
+  rail.className = 'eco-family-rail';
+  rail.setAttribute('role', 'group');
+  rail.setAttribute('aria-label', tx('Accès aux familles de rubriques', 'Jump to a category family'));
+  const buttons = new Map();
+  const frozenEdge = () => headers[0].previousElementSibling.getBoundingClientRect().right;
+  for (const header of headers) {
+    const family = header.dataset.rubricFamily;
+    if (buttons.has(family)) continue;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.rubricFamily = family;
+    button.textContent = tx(...paletteFamilies[family]);
+    button.onclick = () => wrap.scrollBy({ left: header.getBoundingClientRect().left - frozenEdge(), behavior: 'instant' });
+    rail.append(button);
+    buttons.set(family, button);
+  }
+  const markVisible = () => {
+    const edge = frozenEdge() + 2;
+    const header = headers.find(cell => cell.getBoundingClientRect().right > edge) || headers.at(-1);
+    for (const [key, button] of buttons) button.setAttribute('aria-pressed', String(key === header.dataset.rubricFamily));
+  };
+  toolbar.append(rail);
+  wrap.addEventListener('scroll', markVisible, { passive: true });
+  requestAnimationFrame(markVisible);
+}
