@@ -28,7 +28,7 @@ const sheetExpenseTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>p
 },{groupId,meetingId,membershipId,rubricId});
 
 const localOutboxState=page=>page.evaluate(async()=>{
-  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('tontine-platform',1);request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+  const db=await new Promise((resolve,reject)=>{const request=indexedDB.open('tontine-platform');request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
   try{
     if(!db.objectStoreNames.contains('outbox'))return[];
     return await new Promise((resolve,reject)=>{const request=db.transaction('outbox','readonly').objectStore('outbox').getAll();request.onsuccess=()=>resolve(request.result??[]);request.onerror=()=>reject(request.error);});
