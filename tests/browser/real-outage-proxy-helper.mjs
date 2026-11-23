@@ -7,9 +7,22 @@ import net from 'node:net';
 export async function realOutageProxy(upstream='http://127.0.0.1:4173'){
  const target=new URL(upstream);if(target.hostname!=='127.0.0.1'||target.port!=='4173')throw Error('SYNTHETIC_LOCAL_ORIGIN_REQUIRED');
  const sockets=new Set(),upgrades=new Set();let port,started=false;
+ let authGate,releaseAuth,heldReads=0;
+ const holdAuth=()=>{
+   if(authGate)throw Error('SESSION_READ_ALREADY_HELD');
+   heldReads=0;
+   authGate=new Promise(resolve=>{releaseAuth=resolve;});
+   return {get reads(){return heldReads;},get pending(){return Boolean(authGate);},release(){
+     if(authGate){authGate=null;releaseAuth();}
+   }};
+ };
  const server=http.createServer(async(req,res)=>{
    try{
      const chunks=[];for await(const chunk of req)chunks.push(chunk);
+     if(authGate && req.method==='GET' && new URL(req.url,upstream).pathname==='/api/v1/auth/session'){
+       heldReads++;await authGate;
+       if(res.destroyed)return;
+     }
      const headers={...req.headers,host:target.host};
      if(headers.origin)headers.origin=upstream;
      if(headers.referer){const source=new URL(headers.referer);headers.referer=upstream+source.pathname+source.search;}
@@ -29,6 +42,6 @@ export async function realOutageProxy(upstream='http://127.0.0.1:4173'){
    });
  });
  const start=async()=>{if(started)return;await new Promise((resolve,reject)=>{server.once('error',reject);server.listen(port??0,'127.0.0.1',()=>{server.removeListener('error',reject);resolve();});});port=server.address().port;started=true;};
- const stop=async()=>{if(!started)return;started=false;const closed=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));for(const socket of [...sockets,...upgrades])socket.destroy();await closed;};
- await start();return{origin:'http://127.0.0.1:'+port,start,stop};
+ const stop=async()=>{if(authGate){authGate=null;releaseAuth();}if(!started)return;started=false;const closed=new Promise((resolve,reject)=>server.close(error=>error?reject(error):resolve()));for(const socket of [...sockets,...upgrades])socket.destroy();await closed;};
+ await start();return{origin:'http://127.0.0.1:'+port,start,stop,holdAuth};
 }

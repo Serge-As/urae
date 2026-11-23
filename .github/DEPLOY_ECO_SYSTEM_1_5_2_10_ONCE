@@ -10,3 +10,4 @@ backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
 trigger_nonce: 2026-11-23-canopee-financial-correction
+qualification_revision: real-session-response-barrier

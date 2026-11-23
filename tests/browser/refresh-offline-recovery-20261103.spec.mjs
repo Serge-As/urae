@@ -3,7 +3,7 @@ import {settleWorkDialog} from './financial-work-mode-helper.mjs';
 import {realOutageProxy} from './real-outage-proxy-helper.mjs';
 const test=baseTest.extend({network:async({},use)=>{
  const proxy=await realOutageProxy();
- try{await use({origin:proxy.origin,setOffline:async offline=>{if(offline)await proxy.stop();else await proxy.start();}});}
+ try{await use({origin:proxy.origin,holdAuth:proxy.holdAuth,setOffline:async offline=>{if(offline)await proxy.stop();else await proxy.start();}});}
  finally{await proxy.stop();}
 }});
 test.setTimeout(120000);
@@ -35,21 +35,13 @@ for(const width of [1280,360])test('cached F5 survives cleared window.name offli
  await expect(page.locator('#accountName')).toContainText('Gestionnaire reprise');await expect(cell.locator('.cell-target-input')).toHaveValue('2750');
  expect(await page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toBe(scope);
  await network.setOffline(false);await page.evaluate(()=>window.dispatchEvent(new Event('online')));await expect(page.locator('#connectivity')).toHaveText(/En ligne · Live$/,{timeout:20000});
- await page.addInitScript(()=>{
-   const send=window.fetch.bind(window);window.__heldAuthReads=0;window.__authReleased=false;
-   let release;const held=new Promise(resolve=>{release=resolve;});window.__releaseAuth=()=>{window.__authReleased=true;release();};
-   window.fetch=(input,init)=>{
-     if(!String(input).endsWith('/api/v1/auth/session'))return send(input,init);
-     window.__heldAuthReads++;
-     return new Promise((resolve,reject)=>{init?.signal?.addEventListener('abort',()=>reject(new DOMException('Aborted','AbortError')),{once:true});void held.then(()=>send(input,init)).then(resolve,reject);});
-   };
- });
+ const gate=network.holdAuth();
  await page.evaluate(()=>{window.name='';});await page.reload({waitUntil:'domcontentloaded'});
  // The server response is still held: restoration cannot depend on its result.
  // A fixed wall-clock promise would measure host load and module downloads too.
   await expect(cell.locator('.cell-target-input')).toHaveValue('2750',{timeout:15000});
- await expect(page.locator('#authScreen')).toBeHidden();expect(await page.evaluate(()=>window.__authReleased)).toBe(false);
- await expect.poll(()=>page.evaluate(()=>window.__heldAuthReads)).toBe(1);await page.evaluate(()=>window.__releaseAuth());
+ await expect(page.locator('#authScreen')).toBeHidden();expect(gate.pending).toBe(true);
+ await expect.poll(()=>gate.reads).toBe(1);gate.release();
  await expect(page.locator('#connectivity')).toHaveText(/En ligne · Live$/,{timeout:20000});await expect(cell.locator('.cell-target-input')).toHaveValue('2750');
 });
 test('network event burst resumes one durable financial intent automatically and leaves no idle polling loop',async({page,network})=>{
