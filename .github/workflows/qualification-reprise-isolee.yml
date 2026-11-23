@@ -1,46 +1,27 @@
-name: Compatibilité de la séance v45 et fusionnée
+name: Eco — contrôle complémentaire des feuilles financières
 on:
   push:
     branches: ['codex/verification-reprise-webkit-20261123']
-    paths: ['.github/workflows/qualification-reprise-isolee.yml']
+    paths: ['tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs']
 permissions:
   contents: read
 jobs:
-  session:
+  finance:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - ref: '541c7239341c1d31de82d11de251f7d663017abb'
-            label: v45-en-service
-          - ref: '911f2048d6ae652f1048cb719c280fbafbdf9c8d'
-            label: fusion
-    name: ${{ matrix.label }}
     timeout-minutes: 12
     container:
-      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
       options: --ipc=host
     env:
       PYTHON: /usr/bin/python3
-    defaults:
-      run:
-        shell: bash
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-      - name: Ouverture et deux rechargements ordinaires
-        run: |
+      - run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
-          git checkout --detach '${{ matrix.ref }}'
-          for f in refresh-offline-recovery-20261103.spec.mjs real-outage-proxy-helper.mjs financial-work-mode-helper.mjs; do
-            git show 911f2048d6ae652f1048cb719c280fbafbdf9c8d:tests/browser/$f > tests/browser/$f
-          done
-          sed -i "s/await page.evaluate(()=>{window.name='';});//g" tests/browser/refresh-offline-recovery-20261103.spec.mjs
           npm ci --ignore-scripts
+          npm install --ignore-scripts --no-save --package-lock=false @playwright/test@1.58.2
           npm run build
-          node scripts/qualify-browser-isolated.mjs --browser=webkit --grep=1280px tests/browser/refresh-offline-recovery-20261103.spec.mjs
+          node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs
