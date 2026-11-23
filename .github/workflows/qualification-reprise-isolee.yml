@@ -7,7 +7,11 @@ permissions:
 jobs:
   reload:
     runs-on: ubuntu-latest
-    timeout-minutes: 18
+    strategy:
+      fail-fast: false
+      matrix:
+        mode: [reload-dom, release-live, native-stack]
+    timeout-minutes: 15
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
       options: --ipc=host
@@ -24,21 +28,51 @@ jobs:
           node-version: '24'
           cache: npm
       - run: git config --global --add safe.directory "$GITHUB_WORKSPACE" && npm ci --ignore-scripts && npm run build
-      - name: Rechargement normal du navigateur
-        id: reference
-        continue-on-error: true
-        run: node scripts/qualify-browser-isolated.mjs --browser=webkit --grep=1280px tests/browser/refresh-offline-recovery-20261103.spec.mjs
-      - name: Délégation des appels API au navigateur
+      - name: Préparer le scénario
+        env:
+          MODE: ${{ matrix.mode }}
         run: |
           python3 - <<'PY'
+          import os
           from pathlib import Path
-          p=Path('apps/web/sw.js')
-          src=p.read_text()
-          assert src.count('    event.respondWith(fetch(event.request));')==1
-          p.write_text(src.replace('    event.respondWith(fetch(event.request));','    // The browser owns network-only API requests.'))
+          mode=os.environ['MODE']
+          if mode=='reload-dom':
+            p=Path('tests/browser/refresh-offline-recovery-20261103.spec.mjs')
+            s=p.read_text()
+            needle="await page.evaluate(()=>{window.name='';});await page.reload({waitUntil:'domcontentloaded'});"
+            replacement="""const beforeReload=await page.evaluate(()=>performance.timeOrigin);
+           await Promise.all([page.waitForEvent('domcontentloaded'),page.evaluate(()=>{window.name='';setTimeout(()=>location.reload(),0);})]);
+           expect(await page.evaluate(()=>performance.timeOrigin)).toBeGreaterThan(beforeReload);"""
+            assert s.count(needle)==2
+            p.write_text(s.replace(needle,replacement,1).replace(needle,replacement.replace('beforeReload','beforeOnlineReload'),1))
+          elif mode=='release-live':
+            p=Path('apps/web/src/identity-live-ui.js')
+            s=p.read_text()
+            needle="  document.addEventListener('visibilitychange',"
+            extra="""  let resumeLive=false;
+            window.addEventListener('pagehide',()=>{resumeLive=wantConnection;wantConnection=false;closeSocket('document-hidden');});
+            window.addEventListener('pageshow',event=>{if(event.persisted && resumeLive){wantConnection=true;resumeLive=false;void connect();}});
+          """
+            assert s.count(needle)==1
+            p.write_text(s.replace(needle,extra+needle))
           PY
+          if [ "$MODE" = native-stack ]; then
+            cat >/tmp/assert.c <<'C'
+          #define _GNU_SOURCE
+          #include <unistd.h>
+          #include <execinfo.h>
+          #include <signal.h>
+          #include <stdlib.h>
+          #include <stdio.h>
+          void _ZSt21__glibcxx_assert_failPKciS0_S0_(const char *f,int l,const char *fn,const char *exp){
+            void *frames[96];int n=backtrace(frames,96);
+            fprintf(stderr,"WEBKIT_ASSERT %s:%d %s %s\n",f,l,fn,exp);
+            backtrace_symbols_fd(frames,n,2);abort();
+          }
+          C
+            cc -shared -fPIC /tmp/assert.c -o /tmp/eco-webkit-assert.so
+            echo "LD_PRELOAD=/tmp/eco-webkit-assert.so" >> "$GITHUB_ENV"
+          fi
           npm run build
-          node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/refresh-offline-recovery-20261103.spec.mjs
-      - name: Mémoire du processus
-        if: always()
-        run: cat /sys/fs/cgroup/memory.events /sys/fs/cgroup/memory.max || true
+      - name: Reprise vérifiée sur le navigateur
+        run: node scripts/qualify-browser-isolated.mjs --browser=webkit --grep=1280px tests/browser/refresh-offline-recovery-20261103.spec.mjs
