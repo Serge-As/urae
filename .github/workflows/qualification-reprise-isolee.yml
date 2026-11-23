@@ -1,23 +1,30 @@
-name: Eco reprise de séance WebKit
+name: Eco — feuille financière et reprise de séance
 on:
   push:
     branches: ['codex/verification-reprise-webkit-20261123']
+    paths: ['tests/browser/canopee-v45-tables.spec.mjs']
 permissions:
   contents: read
 jobs:
-  reload:
+  qualifier:
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        mode: [cache-document, ownership-channel, native-stack]
+        include:
+          - label: chromium
+            image: mcr.microsoft.com/playwright:v1.56.1-noble
+          - label: webkit-gtk
+            image: mcr.microsoft.com/playwright:v1.56.1-noble
+          - label: webkit-wpe
+            image: mcr.microsoft.com/playwright:v1.58.2-noble
+    name: ${{ matrix.label }}
     timeout-minutes: 15
-    container:
-      image: mcr.microsoft.com/playwright:v1.56.1-noble
-      options: --ipc=host
     env:
       PYTHON: /usr/bin/python3
-      DEBUG: pw:browser
+    container:
+      image: ${{ matrix.image }}
+      options: --ipc=host
     defaults:
       run:
         shell: bash
@@ -26,65 +33,19 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '24'
-          cache: npm
-      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE" && npm ci --ignore-scripts && npm run build
-      - name: Préparer le scénario
-        env:
-          MODE: ${{ matrix.mode }}
-        run: |
-          python3 - <<'PY'
-          import os
-          from pathlib import Path
-          mode=os.environ['MODE']
-          if mode=='cache-document':
-            p=Path('apps/web/sw.js')
-            s=p.read_text()
-            assert s.count('if (cached) return cached;')==2
-            p.write_text(s.replace('if (cached) return cached;', 'if (cached) return new Response(await cached.arrayBuffer(), {headers:cached.headers,status:cached.status});',1))
-          elif mode=='ownership-channel':
-            p=Path('packages/application/src/browser-window-scope.ts')
-            s=p.read_text()
-            needle="if(typeof navigator!=='undefined'&&navigator.locks?.request)"
-            assert s.count(needle)==1
-            p.write_text(s.replace(needle, "if(typeof navigator!=='undefined'&&navigator.locks?.request&&Boolean(0))"))
-          elif mode=='reload-dom':
-            p=Path('tests/browser/refresh-offline-recovery-20261103.spec.mjs')
-            s=p.read_text()
-            needle="await page.evaluate(()=>{window.name='';});await page.reload({waitUntil:'domcontentloaded'});"
-            replacement="""const beforeReload=await page.evaluate(()=>performance.timeOrigin);
-           await Promise.all([page.waitForEvent('domcontentloaded'),page.evaluate(()=>{window.name='';setTimeout(()=>location.reload(),0);})]);
-           expect(await page.evaluate(()=>performance.timeOrigin)).toBeGreaterThan(beforeReload);"""
-            assert s.count(needle)==2
-            p.write_text(s.replace(needle,replacement,1).replace(needle,replacement.replace('beforeReload','beforeOnlineReload'),1))
-          elif mode=='release-live':
-            p=Path('apps/web/src/identity-live-ui.js')
-            s=p.read_text()
-            needle="  document.addEventListener('visibilitychange',"
-            extra="""  let resumeLive=false;
-            window.addEventListener('pagehide',()=>{resumeLive=wantConnection;wantConnection=false;closeSocket('document-hidden');});
-            window.addEventListener('pageshow',event=>{if(event.persisted && resumeLive){wantConnection=true;resumeLive=false;void connect();}});
-          """
-            assert s.count(needle)==1
-            p.write_text(s.replace(needle,extra+needle))
-          PY
-          if [ "$MODE" = native-stack ]; then
-            cat >/tmp/assert.c <<'C'
-          #define _GNU_SOURCE
-          #include <unistd.h>
-          #include <execinfo.h>
-          #include <signal.h>
-          #include <stdlib.h>
-          #include <stdio.h>
-          void _ZSt21__glibcxx_assert_failPKciS0_S0_(const char *f,int l,const char *fn,const char *exp){
-            void *frames[96];int n=backtrace(frames,96);
-            fprintf(stderr,"WEBKIT_ASSERT %s:%d %s %s\n",f,l,fn,exp);
-            backtrace_symbols_fd(frames,n,2);abort();
-          }
-          C
-            apt-get update -qq && apt-get install -y -qq gcc libc6-dev >/dev/null
-            cc -shared -fPIC /tmp/assert.c -o /tmp/eco-webkit-assert.so
-            echo "LD_PRELOAD=/tmp/eco-webkit-assert.so" >> "$GITHUB_ENV"
-          fi
+      - run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          npm ci --ignore-scripts
+          if [[ '${{ matrix.label }}' = webkit-wpe ]]; then npm install --ignore-scripts --no-save --package-lock=false @playwright/test@1.58.2; fi
           npm run build
-      - name: Reprise vérifiée sur le navigateur
-        run: node scripts/qualify-browser-isolated.mjs --browser=webkit --grep=1280px tests/browser/refresh-offline-recovery-20261103.spec.mjs
+      - name: Feuille financière et reconnexion
+        run: |
+          if [[ '${{ matrix.label }}' = webkit-gtk ]]; then
+            sed -i 's/workers:1,/workers:1,use:{headless:false},/' playwright.config.mjs
+            xvfb-run -a node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/canopee-v45-tables.spec.mjs
+            xvfb-run -a node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/refresh-offline-recovery-20261103.spec.mjs
+          elif [[ '${{ matrix.label }}' = webkit-wpe ]]; then
+            node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/refresh-offline-recovery-20261103.spec.mjs
+          else
+            node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/canopee-v45-tables.spec.mjs tests/browser/refresh-offline-recovery-20261103.spec.mjs
+          fi
