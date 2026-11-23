@@ -10,7 +10,7 @@ const moneyValue=async locator=>{
 };
 
 const ledgerCellTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>page.evaluate(async({groupId,meetingId,membershipId,rubricId})=>{
-  const response=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/ledger',{headers:{'x-active-group-id':groupId}});
+  const response=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/ledger',{headers:{'x-active-group-id':groupId,'x-eco-window-id':sessionStorage.getItem('eco.window.session.v1')}});
   if(!response.ok)throw new Error('LEDGER_HTTP_'+response.status+':'+await response.text());
   const ledger=await response.json();
   return (ledger.receipts??[])
@@ -19,7 +19,7 @@ const ledgerCellTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>pag
 },{groupId,meetingId,membershipId,rubricId});
 
 const sheetExpenseTotal=async(page,{groupId,meetingId,membershipId,rubricId})=>page.evaluate(async({groupId,meetingId,membershipId,rubricId})=>{
-  const response=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/expenses?scope=SHEET',{headers:{'x-active-group-id':groupId}});
+  const response=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/expenses?scope=SHEET',{headers:{'x-active-group-id':groupId,'x-eco-window-id':sessionStorage.getItem('eco.window.session.v1')}});
   if(!response.ok)throw new Error('EXPENSE_HTTP_'+response.status+':'+await response.text());
   const rows=await response.json();
   return (Array.isArray(rows)?rows:rows.items??[])
@@ -35,63 +35,72 @@ const localOutboxState=page=>page.evaluate(async()=>{
   }finally{db.close();}
 });
 
-test('real financial matrix validates click, Enter, closed-session first entry and offline replay',async({page,context})=>{
+test('real financial matrix validates click, Enter, closed-session first entry and offline replay',async({browser,page,context})=>{
   test.setTimeout(120_000);
   const pageErrors=[];
   page.on('pageerror',error=>pageErrors.push(String(error)));
-  await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  const registration=await browser.newContext();
+  let ids;
+  try {
+    const setup=await registration.newPage();
+    await setup.goto(base+'/',{waitUntil:'domcontentloaded'});
 
-  const ids=await page.evaluate(async({password})=>{
-    const json=async(path,method='GET',body,groupId)=>{
-      let response;
-      try{
-        response=await fetch(path,{
-          method,
-          headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},
-          body:body===undefined?undefined:JSON.stringify(body)
-        });
-      }catch(error){
-        throw new Error(method+' '+path+' -> FETCH_FAILED '+String(error));
+    ids=await setup.evaluate(async({password})=>{
+      const json=async(path,method='GET',body,groupId)=>{
+        let response;
+        try{
+          response=await fetch(path,{
+            method,
+            headers:{...(body===undefined?{}:{'content-type':'application/json'}),...(groupId?{'x-active-group-id':groupId}:{})},
+            body:body===undefined?undefined:JSON.stringify(body)
+          });
+        }catch(error){
+          throw new Error(method+' '+path+' -> FETCH_FAILED '+String(error));
+        }
+        const text=await response.text();
+        let data;try{data=JSON.parse(text);}catch{data=text;}
+        if(!response.ok)throw new Error(method+' '+path+' -> '+response.status+' '+text);
+        return data;
+      };
+
+      const suffix=String(Date.now()),username='finance_e2e_'+suffix;
+      const account=await json('/api/v1/auth/register','POST',{username,password,displayName:'Finance E2E'});
+      const project=await json('/api/v1/group-projects','POST',{name:'Groupe saisie E2E '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:4,nominalContribution:0,currency:'XAF'});
+      const group=await json('/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert','POST',{});
+      const members=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/members','GET',undefined,group.id);
+      const membershipId=members.find(x=>x.userId===account.account.id)?.id??members[0]?.id;
+      if(!membershipId)throw new Error('NO_OWNER_MEMBERSHIP');
+
+      const rubricBody=name=>({
+        name,
+        facets:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
+        source:'GROUP_CUSTOM',
+        operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}
+      });
+      const rubrics=[];
+      for(const name of ['Secours E2E','Collation E2E','Transport E2E','Épargne E2E']){
+        rubrics.push(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',rubricBody(name),group.id));
       }
-      const text=await response.text();
-      let data;try{data=JSON.parse(text);}catch{data=text;}
-      if(!response.ok)throw new Error(method+' '+path+' -> '+response.status+' '+text);
-      return data;
-    };
-
-    const suffix=String(Date.now()),username='finance_e2e_'+suffix;
-    const account=await json('/api/v1/auth/register','POST',{username,password,displayName:'Finance E2E'});
-    const project=await json('/api/v1/group-projects','POST',{name:'Groupe saisie E2E '+suffix,kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:4,nominalContribution:0,currency:'XAF'});
-    const group=await json('/api/v1/group-projects/'+encodeURIComponent(project.id)+'/convert','POST',{});
-    const members=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/members','GET',undefined,group.id);
-    const membershipId=members.find(x=>x.userId===account.account.id)?.id??members[0]?.id;
-    if(!membershipId)throw new Error('NO_OWNER_MEMBERSHIP');
-
-    const rubricBody=name=>({
-      name,
-      facets:{direction:'BIDIRECTIONAL',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},
-      source:'GROUP_CUSTOM',
-      operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}
-    });
-    const rubrics=[];
-    for(const name of ['Secours E2E','Collation E2E','Transport E2E','Épargne E2E']){
-      rubrics.push(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',rubricBody(name),group.id));
-    }
-    const expenseBody=rubricBody('Dépense E2E');expenseBody.facets.direction='OUTFLOW';
-    rubrics.push(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',expenseBody,group.id));
-    const meeting=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/meetings','POST',{title:'Séance E2E ouverte',scheduledAt:'2026-09-25T15:00:00.000Z'},group.id);
-    localStorage.setItem('tontine.activeGroupId',group.id);
-    return{groupId:group.id,membershipId,meetingId:meeting.id,rubricIds:rubrics.map(x=>x.id),username};
-  },{password});
-
+      const expenseBody=rubricBody('Dépense E2E');expenseBody.facets.direction='OUTFLOW';
+      rubrics.push(await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/rubrics','POST',expenseBody,group.id));
+      const meeting=await json('/api/v1/groups/'+encodeURIComponent(group.id)+'/meetings','POST',{title:'Séance E2E ouverte',scheduledAt:'2026-09-25T15:00:00.000Z'},group.id);
+      return{groupId:group.id,membershipId,meetingId:meeting.id,rubricIds:rubrics.map(x=>x.id),username};
+    },{password});
+  } finally { await registration.close(); }
+  await page.goto(base+'/',{waitUntil:'domcontentloaded'});
+  await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),ids.groupId);
   // Use the real login surface once so the device receives the salted PBKDF2
   // offline credential mirror. API-only registration is intentionally not
   // sufficient for a cold offline restart.
   await page.locator('[data-auth-mode="login"]').click();
   await page.locator('#authUsername').fill(ids.username);
   await page.locator('#authPassword').fill(password);
-  await page.locator('#authSubmit').click();
-  await expect(page.locator('#authScreen')).toBeHidden();
+  const [login]=await Promise.all([
+    page.waitForResponse(response=>new URL(response.url()).pathname==='/api/v1/auth/login'&&response.request().method()==='POST'),
+    page.locator('#authSubmit').click()
+  ]);
+  expect(login.ok()).toBe(true);
+  await expect(page.locator('#authScreen')).toBeHidden({timeout:30000});
   await expect(page.locator('#accountName')).toContainText('Finance E2E');
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#authScreen')).toBeHidden();
@@ -274,7 +283,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   if(!expenseSynced){
     const outbox=(await localOutboxState(page)).filter(x=>['FINANCIAL_SHEET_ENTRY_V1','FINANCIAL_CELL_CORRECTION_PROPOSAL_V1'].includes(String(x.type))).map(x=>({id:x.id,type:x.type,status:x.status,attempts:x.attempts,lastError:x.lastError,lastResult:x.lastResult,createdAt:x.createdAt,updatedAt:x.updatedAt,idempotencyKey:x.idempotencyKey,payload:x.payload}));
     const diagnostics=await page.evaluate(async({groupId})=>{
-      const ledgerResponse=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/ledger',{headers:{'x-active-group-id':groupId}});
+      const ledgerResponse=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/ledger',{headers:{'x-active-group-id':groupId,'x-eco-window-id':sessionStorage.getItem('eco.window.session.v1')}});
       const ledger=ledgerResponse.ok?await ledgerResponse.json():{status:ledgerResponse.status,text:await ledgerResponse.text()};
       return{online:navigator.onLine,activeGroup:localStorage.getItem('tontine.activeGroupId'),selectorValue:document.querySelector('#activeGroupSelect')?.value??'',selectorText:document.querySelector('#activeGroupSelect')?.selectedOptions?.[0]?.textContent??'',errorText:document.querySelector('#errorBox')?.textContent??'',ledgerSummary:ledger?.summary??null};
     },{groupId:ids.groupId});
