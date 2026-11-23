@@ -60,7 +60,7 @@ test('network event burst resumes one durable financial intent automatically and
  expect(calls.filter(x=>x.path.endsWith('/outbox/apply')).length).toBeLessThanOrEqual(2);
   await expect(page.locator('#connectivity')).toHaveText(/En ligne · Live$/,{timeout:30000});
  const first=calls.length;await page.waitForTimeout(4500);const settled=calls.length;await page.waitForTimeout(4500);expect(calls.length-settled).toBeLessThanOrEqual(1);
- expect(settled-first).toBeLessThan(15);
+ console.log('RECOVERY_CALLS',JSON.stringify({before:calls.slice(0,first),catchup:calls.slice(first,settled),idle:calls.slice(settled)}));expect(settled-first).toBeLessThan(15);
  // Fiscalibre uses its separate HTTPS fixture in the acquired gate. It must
  // never be placed in this public shell's cache, including after recovery.
  expect(await page.evaluate(async()=>{for(const name of await caches.keys())for(const r of await(await caches.open(name)).keys())if(new URL(r.url).pathname.startsWith('/fiscalibre/'))return true;return false;})).toBe(false);
