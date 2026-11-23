@@ -179,8 +179,17 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await enterCell.locator('.cell-target-input').fill('2000');
   await enterCell.locator('.cell-target-input').press('Enter');await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[1]))).toBe(2000);
-  await expect(enterCell).toHaveAttribute('data-save-state','CONFIRMED',{timeout:30000});
-  await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[1]})).toBe(2000);
+  // A live redraw can replace the transient cell status. Verify the durable result.
+  try {
+    await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[1]}),{timeout:30000}).toBe(2000);
+  } catch(error) {
+    console.log('ENTER_DIAGNOSTIC',await enterCell.evaluate(el=>({
+      cell:el.textContent, state:el.dataset.saveState, connectivity:document.querySelector('#connectivity')?.textContent,
+      dialogs:[...document.querySelectorAll('dialog[open]')].map(x=>x.textContent?.slice(0,120)),
+      traces:JSON.parse(localStorage.getItem('eco.financialCellTrace')||'[]').slice(-8).map(({type,status,target,current,error})=>({type,status,target,current,error}))
+    })));
+    throw error;
+  }
 
   await page.evaluate(async({groupId,meetingId})=>{
     const r=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/meetings/'+encodeURIComponent(meetingId)+'/close',{
