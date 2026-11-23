@@ -1,8 +1,8 @@
-name: Contrôle des deux démarrages Canopée
+name: Contrôle de la persistance financière
 on:
   push:
     branches: ['codex/verification-reprise-webkit-20261123']
-    paths: ['tests/browser/canopee-reperes-20261026.spec.mjs']
+    paths: ['tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs','packages/application/src/index.ts']
 permissions:
   contents: read
 jobs:
@@ -24,5 +24,4 @@ jobs:
           npm ci --ignore-scripts
           npm install --ignore-scripts --no-save --package-lock=false @playwright/test@1.58.2
           npm run build
-          node scripts/qualify-browser-isolated.mjs --browser=webkit '--grep=financial startup presentation' tests/browser/canopee-reperes-20261026.spec.mjs
-          node scripts/qualify-browser-isolated.mjs --browser=chromium '--grep=financial startup presentation' tests/browser/canopee-reperes-20261026.spec.mjs
+          node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/financial-cell-e2e-1.5.2.4.spec.mjs
