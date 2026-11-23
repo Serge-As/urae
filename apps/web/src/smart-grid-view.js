@@ -66,6 +66,26 @@ export function rubricPaletteFamily(rubric, financialNature) {
 }
 
 export function connectSheetNavigation(wrap, table, toolbar, tx, fitted) {
+  if (!fitted) {
+    // Native focus scrolling does not account for frozen identity/total cells.
+    wrap.addEventListener('focusin', event => {
+      const input = event.target.closest('.cell-target-input');
+      if (!input) return;
+      requestAnimationFrame(() => {
+        if (document.activeElement !== input) return;
+        const cell = input.closest('td');
+        const identity = cell.parentElement.querySelector('th:last-of-type');
+        const total = cell.parentElement.querySelector('.table-row-total');
+        const left = identity.getBoundingClientRect().right;
+        const right = total && getComputedStyle(total).position === 'sticky'
+          ? total.getBoundingClientRect().left : wrap.getBoundingClientRect().left + wrap.clientWidth;
+        const rect = cell.getBoundingClientRect();
+        const start = rect.width <= right - left ? rect : input.getBoundingClientRect();
+        if (start.left < left) wrap.scrollLeft += start.left - left;
+        else if (start.right > right) wrap.scrollLeft += start.right - right;
+      });
+    });
+  }
   const pager = toolbar.querySelector('.eco-smartgrid-navigation');
   if (pager) {
     const [previous, next] = pager.querySelectorAll('button');

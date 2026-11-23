@@ -68,19 +68,13 @@ function installAmbianceControl() {
   label.htmlFor = 'ecoAmbiance';
   const select = document.createElement('select');
   select.id = label.htmlFor;
+  label.textContent = 'Ambiance';
   const themes = [
-    ['', 'Canopée officiel', 'Official Canopée'],
-    ['grand-livre', 'Ivoire Grand-Livre', 'Ivory Ledger'],
-    ['nuit-doree', 'Nuit Canopée OLED', 'Canopée OLED Night']
+    ['', 'Canopée officiel'],
+    ['grand-livre', 'Ivoire Grand-Livre'],
+    ['nuit-doree', 'Nuit Canopée OLED']
   ];
-  const localize = () => {
-    const en = document.documentElement.lang.startsWith('en');
-    label.textContent = en ? 'Colour theme' : 'Ambiance';
-    themes.forEach((theme, i) => { select.options[i].textContent = theme[en ? 2 : 1]; });
-  };
-  themes.forEach(([value]) => select.add(new Option('', value)));
-  localize();
-  new MutationObserver(localize).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] });
+  themes.forEach(([value, name]) => select.add(new Option(name, value)));
   controls.append(label, select);
   const apply = value => {
     select.value = themes.some(([theme]) => theme === value) ? value : '';

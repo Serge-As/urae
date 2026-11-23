@@ -11,6 +11,11 @@ const families = [
 async function seedMeeting(page) {
   await page.goto('http://127.0.0.1:4173/');
   await expect.poll(() => page.evaluate(() => sessionStorage.getItem('eco.window.session.v1'))).toBeTruthy();
+  const language = page.locator('#authLanguageSelect');
+  await language.selectOption('en');
+  await expect(page.locator('label[for="ecoAmbiance"]')).toHaveText('Colour theme');
+  await language.selectOption('fr');
+  await expect(page.locator('label[for="ecoAmbiance"]')).toHaveText('Ambiance');
   await page.evaluate(async families => {
     let groupId;
     async function post(url, data) {
@@ -76,11 +81,19 @@ test('real meeting sheets retain fitted parts, gestures, editable amounts and ac
   await expect(rail.locator('button')).toHaveCount(7);
   await rail.locator('[data-rubric-family="EMPRUNT"]').click();
   await expect.poll(()=>wrap.evaluate(el=>el.scrollLeft)).toBeGreaterThan(0);
+  await rail.locator('[data-rubric-family="ORDINAIRE"]').click();
+  const firstEntry = table.locator('.matrix-cell-entry').first();
+  const edit = firstEntry.locator('input');
+  await edit.click();
+  await edit.fill('2500');
+  await firstEntry.locator('.cell-validate').click();
+  await page.getByRole('button', {name:'En réunion', exact:true}).click();
+  await expect(firstEntry.locator('.cell-current')).toHaveText(/2\s?500/);
   for (const themeValue of ['', 'grand-livre', 'nuit-doree']) {
     if (themeValue) await selectTheme(themeValue);
     await expect(table).toBeVisible();
     await wrap.evaluate(el=>el.scrollLeft=0);
-    await wrap.scrollIntoViewIfNeeded();
+    await wrap.evaluate(el=>el.scrollIntoView({block:'center'}));
     await wrap.screenshot({path:'artifacts/tableaux-v45/'+browserName+'-'+(themeValue||'officiel')+'-1280.png'});
   }
   await page.reload();
@@ -90,15 +103,26 @@ test('real meeting sheets retain fitted parts, gestures, editable amounts and ac
   await expect(table).toBeVisible();
   const cell = table.locator('.matrix-cell-entry').first();
   const input = cell.locator('input');
+  await wrap.evaluate(el=>{ el.scrollLeft=28; });
+  await input.click();
+  await expect(input).toBeFocused();
   await input.fill('12345678');
   await expect(input).toHaveValue('12345678');
   const sizes = await cell.evaluate(el=>{
     const input=el.querySelector('input'), button=el.querySelector('.cell-validate');
-    const s=getComputedStyle(input), c=document.createElement('canvas').getContext('2d'); c.font=s.font;
-    const inner=input.clientWidth-parseFloat(s.paddingLeft)-parseFloat(s.paddingRight);
-    return {h:el.getBoundingClientRect().height, b:button.getBoundingClientRect().width, fits:c.measureText(input.value).width<=inner};
+    const style=getComputedStyle(input), ctx=document.createElement('canvas').getContext('2d');
+    ctx.font=style.fontWeight+' '+style.fontSize+' '+style.fontFamily;
+    const inner=input.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
+    const identity=el.closest('tr').querySelector('th:last-of-type').getBoundingClientRect();
+    const bounds=input.getBoundingClientRect();
+    return {height:el.getBoundingClientRect().height, target:button.getBoundingClientRect().width,
+      text:ctx.measureText(input.value).width, inner, exposed:bounds.left>=identity.right-1};
   });
-  expect(sizes.h).toBeLessThan(95); expect(sizes.b).toBeGreaterThanOrEqual(44); expect(sizes.fits).toBe(true);
+  expect(sizes.height).toBeLessThan(95);
+  expect(sizes.target).toBeGreaterThanOrEqual(44);
+  expect(sizes.text+1).toBeLessThanOrEqual(sizes.inner);
+  expect(sizes.exposed).toBe(true);
+  await wrap.evaluate(el=>el.scrollIntoView({block:'center',inline:'nearest'}));
   await wrap.screenshot({path:'artifacts/tableaux-v45/'+browserName+'-officiel-360.png'});
   const total=table.locator('.table-grand-total');
   await expect(total).toBeVisible();

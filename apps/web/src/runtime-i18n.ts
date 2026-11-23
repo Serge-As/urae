@@ -3,6 +3,10 @@ import {messages} from './i18n.js';
 export type RuntimeLocale = 'fr'|'en';
 
 const EXTRA_FR_EN: Record<string,string> = {
+  'Ambiance':'Colour theme',
+  'Canopée officiel':'Official Canopée',
+  'Ivoire Grand-Livre':'Ivory Ledger',
+  'Nuit Canopée OLED':'Canopée OLED Night',
   'Votre carrefour de services':'Your service hub',
   'Trouvez ce dont votre groupe a besoin':'Find what your group needs',
   'Séances, finances, entraide, commerce et opportunités : ouvrez le service adapté. Les fonctions encore en préparation sont indiquées pour vous permettre de choisir en connaissance de cause.':'Meetings, finances, mutual support, commerce and opportunities: open the service you need. Features still in preparation are identified so you can make an informed choice.',
