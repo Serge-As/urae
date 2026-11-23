@@ -1,0 +1,44 @@
+name: Eco reprise de séance WebKit
+on:
+  push:
+    branches: ['codex/verification-reprise-webkit-20261123']
+permissions:
+  contents: read
+jobs:
+  reload:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    container:
+      image: mcr.microsoft.com/playwright:v1.56.1-noble
+      options: --ipc=host
+    env:
+      PYTHON: /usr/bin/python3
+      DEBUG: pw:browser
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: npm
+      - run: git config --global --add safe.directory "$GITHUB_WORKSPACE" && npm ci --ignore-scripts && npm run build
+      - name: Rechargement normal du navigateur
+        id: reference
+        continue-on-error: true
+        run: node scripts/qualify-browser-isolated.mjs --browser=webkit --grep=1280px tests/browser/refresh-offline-recovery-20261103.spec.mjs
+      - name: Délégation des appels API au navigateur
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path('apps/web/sw.js')
+          src=p.read_text()
+          assert src.count('    event.respondWith(fetch(event.request));')==1
+          p.write_text(src.replace('    event.respondWith(fetch(event.request));','    // The browser owns network-only API requests.'))
+          PY
+          npm run build
+          node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/refresh-offline-recovery-20261103.spec.mjs
+      - name: Mémoire du processus
+        if: always()
+        run: cat /sys/fs/cgroup/memory.events /sys/fs/cgroup/memory.max || true
