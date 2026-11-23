@@ -455,6 +455,11 @@ body.eco-canopee .group-home-priorities .group-home-priority.is-critical{border-
   body.eco-canopee .group-home-door { padding-inline-end: 24px; min-height: 84px; }
   body.eco-canopee .group-home-door-arrow { color: var(--sheet-gold); }
   body.eco-canopee .eco-tontine-timeline>li { background: var(--sheet-paper); color: var(--sheet-ink); border-top-color: var(--sheet-gold); }
+  @media (max-width: 640px) {
+    body.eco-canopee.ui-mode-visual .canonical-financial-matrix td[data-rubric-id] { padding-block: 2px; }
+    /* The original financial grid forces its padding. Reserve room for the debt label. */
+    body.eco-canopee.ui-mode-visual .canonical-financial-matrix .matrix-cell-entry { padding: 1px !important; }
+  }
   @media (min-width: 900px) {
     body.eco-canopee :is(.metrics,.group-home-metrics,.group-home-door-grid) { grid-template-columns: repeat(4,minmax(0,1fr)); }
   }

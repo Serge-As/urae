@@ -7,3 +7,5 @@ La sélection d’ambiance appartient aux préférences locales. Ses libellés p
 La géométrie des colonnes se lit sur une feuille visible. Une feuille de largeur nulle conserve le dernier repère connu.
 
 La version affichée demeure 1.5.2.45. Le paquet Canopée a sa propre identité de construction et de cache. Le transfert entre les deux présentations utilise le mécanisme de mise à jour hors ligne existant.
+
+Pour éprouver la compacité, mesurer la cellule du tableau, et non le seul éditeur qu’elle contient. Les messages de conflit continuent à disposer de la hauteur nécessaire.

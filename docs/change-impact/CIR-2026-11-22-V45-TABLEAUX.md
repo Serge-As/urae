@@ -7,3 +7,5 @@ Au démarrage, le traducteur existant prend aussi en charge les libellés d’am
 Une feuille momentanément masquée conserve sa famille visible. Le test couvre le retour à la feuille après un changement d’ambiance.
 
 La révision cosmétique utilise un cache distinct de la v45 déjà installée. Un téléchargement interrompu peut ainsi abandonner ses propres fichiers. Le cache antérieur, les brouillons et la file des écritures restent disponibles. Aucune migration de données.
+
+À 360 px en mode Visuel, le contrôle de hauteur porte sur la cellule entière, y compris lorsque la ligne comporte une rubrique de prêt.

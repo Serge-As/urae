@@ -116,7 +116,7 @@ test('real meeting sheets retain fitted parts, gestures, editable amounts and ac
     const inner=input.clientWidth-parseFloat(style.paddingLeft)-parseFloat(style.paddingRight);
     const identity=el.closest('tr').querySelector('th:last-of-type').getBoundingClientRect();
     const bounds=input.getBoundingClientRect();
-    return {height:el.getBoundingClientRect().height, target:button.getBoundingClientRect().width,
+    return {height:el.closest('td').getBoundingClientRect().height, target:button.getBoundingClientRect().width,
       text:ctx.measureText(input.value).width, inner, exposed:bounds.left>=identity.right-1};
   });
   expect(sizes.height).toBeLessThan(95);
