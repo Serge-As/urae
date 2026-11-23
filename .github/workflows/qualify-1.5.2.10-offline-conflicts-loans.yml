@@ -64,6 +64,8 @@ jobs:
   browser-critical:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    env:
+      PYTHON: /usr/bin/python3
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
       options: --ipc=host
@@ -101,7 +103,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: browser-isolated-${{ github.job }}-${{ github.sha }}
-          path: artifacts/browser-isolated/
+          path: |
+            artifacts/browser-isolated/
+            artifacts/tableaux-v45/
           retention-days: 14
           if-no-files-found: warn
       - name: Upload failure evidence

@@ -51,9 +51,18 @@ const paletteFamilies = {
 export function rubricPaletteFamily(rubric, financialNature) {
   if (financialNature === 'LOAN') return 'EMPRUNT';
   if (financialNature === 'REPAYMENT') return 'REMBOURSEMENT';
-  const kind = rubric.activityPlan?.kind || rubric.facets?.custom?.systemKey;
-  return ({ SAVINGS: 'EPARGNE', SOLIDARITY: 'SECOURS', TONTINE: 'TONTINE',
-    LEVY: 'MAIN_LEVEE', HAND_RAISE: 'MAIN_LEVEE' })[kind] || 'ORDINAIRE';
+  const kind = String(rubric.activityPlan?.kind || rubric.facets?.custom?.systemKey || '').toUpperCase();
+  const family = { SAVINGS: 'EPARGNE', EPARGNE: 'EPARGNE', SOLIDARITY: 'SECOURS', SECOURS: 'SECOURS',
+    TONTINE: 'TONTINE', LEVY: 'MAIN_LEVEE', HAND_RAISE: 'MAIN_LEVEE', MAIN_LEVEE: 'MAIN_LEVEE' };
+  if (Object.hasOwn(family, kind)) return family[kind];
+  if (kind && kind !== 'CONTRIBUTION' && kind !== 'OTHER') return 'ORDINAIRE';
+  // Older sheets can predate activity plans. These labels only select an ink colour.
+  const label = String(rubric.name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim().toLowerCase();
+  if (/^(?:epargne|savings?)\b/.test(label)) return 'EPARGNE';
+  if (/^(?:secours|solidarite|solidarity|assurance|insurance)\b/.test(label)) return 'SECOURS';
+  if (/^tontine(?:\b|\d)/.test(label)) return 'TONTINE';
+  if (/^(?:main[ -]levee|hand raise|levy)\b/.test(label)) return 'MAIN_LEVEE';
+  return 'ORDINAIRE';
 }
 
 export function connectSheetNavigation(wrap, table, toolbar, tx, fitted) {
@@ -63,7 +72,7 @@ export function connectSheetNavigation(wrap, table, toolbar, tx, fitted) {
     let start;
     wrap.addEventListener('touchstart', event => {
       start = null;
-      if (event.touches.length !== 1 || event.target.closest('input,button,select,a,textarea')) return;
+      if (wrap.querySelector('.cell-target-input:focus') || event.touches.length !== 1 || event.target.closest('input,button,select,a,textarea')) return;
       const touch = event.touches[0];
       start = { x: touch.clientX, y: touch.clientY, left: wrap.scrollLeft < 2,
         right: wrap.scrollWidth - wrap.clientWidth - wrap.scrollLeft < 2 };
