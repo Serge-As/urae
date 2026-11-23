@@ -183,6 +183,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   try {
     await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[1]}),{timeout:30000}).toBe(2000);
   } catch(error) {
+    console.log('ENTER_OUTBOX', (await localOutboxState(page)).filter(item=>item.payload?.rubricId===ids.rubricIds[1]).map(item=>({type:item.type, status:item.status, result:item.lastResult?.status, reason:item.lastResult?.reason||item.lastResult?.error, anchor:!!item.payload?.clockAnchorId})));
     console.log('ENTER_DIAGNOSTIC',await enterCell.evaluate(el=>({
       cell:el.textContent, state:el.dataset.saveState, connectivity:document.querySelector('#connectivity')?.textContent,
       dialogs:[...document.querySelectorAll('dialog[open]')].map(x=>x.textContent?.slice(0,120)),
