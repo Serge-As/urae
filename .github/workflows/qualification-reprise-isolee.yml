@@ -2,7 +2,7 @@ name: Eco — feuille financière et reprise de séance
 on:
   push:
     branches: ['codex/verification-reprise-webkit-20261123']
-    paths: ['tests/browser/canopee-v45-tables.spec.mjs']
+    paths: ['tests/browser/refresh-offline-recovery-20261103.spec.mjs']
 permissions:
   contents: read
 jobs:
@@ -11,19 +11,13 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - label: chromium
-            image: mcr.microsoft.com/playwright:v1.56.1-noble
-          - label: webkit-gtk
-            image: mcr.microsoft.com/playwright:v1.56.1-noble
-          - label: webkit-wpe
-            image: mcr.microsoft.com/playwright:v1.58.2-noble
-    name: ${{ matrix.label }}
-    timeout-minutes: 15
+        transport: [actuel, direct]
+    name: ${{ matrix.transport }}
+    timeout-minutes: 12
     env:
       PYTHON: /usr/bin/python3
     container:
-      image: ${{ matrix.image }}
+      image: mcr.microsoft.com/playwright:v1.58.2-noble
       options: --ipc=host
     defaults:
       run:
@@ -36,16 +30,8 @@ jobs:
       - run: |
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
           npm ci --ignore-scripts
-          if [[ '${{ matrix.label }}' = webkit-wpe ]]; then npm install --ignore-scripts --no-save --package-lock=false @playwright/test@1.58.2; fi
+          npm install --ignore-scripts --no-save --package-lock=false @playwright/test@1.58.2
+          if [[ '${{ matrix.transport }}' = direct ]]; then sed -i '/^    event.respondWith(fetch(event.request));$/d' apps/web/sw.js; fi
           npm run build
-      - name: Feuille financière et reconnexion
-        run: |
-          if [[ '${{ matrix.label }}' = webkit-gtk ]]; then
-            sed -i 's/workers:1,/workers:1,use:{headless:false},/' playwright.config.mjs
-            xvfb-run -a node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/canopee-v45-tables.spec.mjs
-            xvfb-run -a node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/refresh-offline-recovery-20261103.spec.mjs
-          elif [[ '${{ matrix.label }}' = webkit-wpe ]]; then
-            node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/refresh-offline-recovery-20261103.spec.mjs
-          else
-            node scripts/qualify-browser-isolated.mjs --browser=chromium tests/browser/canopee-v45-tables.spec.mjs tests/browser/refresh-offline-recovery-20261103.spec.mjs
-          fi
+      - name: Mesurer les appels après reconnexion
+        run: node scripts/qualify-browser-isolated.mjs --browser=webkit tests/browser/refresh-offline-recovery-20261103.spec.mjs
