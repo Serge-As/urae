@@ -205,17 +205,45 @@ test('returning to group home and manually refreshing show the latest canonical 
   expect(writes).toEqual([base+path+'/contributions/cash',base+path+'/contributions/cash']);const ledger=await api(page,path+'/ledger','GET',undefined,group.id);expect(ledger.summary.cashBalance).toBe(1750);expect(ledger.entries).toHaveLength(3);
 });
 
+// A returning browser with an authentication cookie can have no offline mirror yet.
+// Keep the same account, route and scroll state while exercising this cold start.
+const startupTest=test.extend({
+  coldSession:async({browser},use)=>{
+    let context;
+    try {
+      await use(async source=>{
+        const navigation=await source.evaluate(()=>({url:location.href,state:history.state,name:window.name}));
+        // Leaving the real sheet persists its scroll state via its normal pagehide handler.
+        await source.goto(base+'/health');
+        const storage=await source.evaluate(()=>Object.entries(sessionStorage));
+        context=await browser.newContext({viewport:source.viewportSize(),serviceWorkers:'block',
+          storageState:await source.context().storageState({indexedDB:false})});
+        const page=await context.newPage();
+        await page.goto(base+'/health');
+        await page.evaluate(({navigation,storage})=>{
+          for(const [key,value] of storage)sessionStorage.setItem(key,value);
+          window.name=navigation.name;
+          history.replaceState(navigation.state,'',navigation.url);
+        },{navigation,storage});
+        return page;
+      });
+    } finally { if(context)await context.close(); }
+  }
+});
+
 test.describe('financial startup presentation',()=>{
 // Control API latency in this fixture. Installed PWA recovery is exercised by
 // the separate real-origin-shutdown scenario below.
 test.use({serviceWorkers:'block'});
-test('late startup does not reclaim the viewport or a pressed notebook action after the user navigates',async({page})=>{
+startupTest('late startup does not reclaim the viewport or a pressed notebook action after the user navigates',async({page:seed,coldSession})=>{
+  let page=seed;
   await page.setViewportSize({width:1280,height:720});await page.goto(base);
   await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);
   await api(page,'/api/v1/auth/register','POST',{username:'canopee_startup_'+Date.now(),password:'Synthetic-canopee-startup-20261027!',displayName:'Démarrage synthétique'});
   const project=await api(page,'/api/v1/group-projects','POST',{name:'Groupe synthétique de navigation',kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:1,nominalContribution:0,currency:'XAF'});
   const group=await api(page,'/api/v1/group-projects/'+project.id+'/convert','POST',{}),path='/api/v1/groups/'+group.id;
   await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),group.id);await page.reload();await expect(page.locator('#authScreen')).toBeHidden();await page.waitForLoadState('networkidle');
+  page=await coldSession(page);
   let releaseOptional,blocked=false;const gate=new Promise(resolve=>releaseOptional=resolve);
   await page.route('**'+path+'/trash',async route=>{blocked=true;await gate;await route.continue();});
   try{
@@ -234,7 +262,8 @@ test('late startup does not reclaim the viewport or a pressed notebook action af
   }finally{releaseOptional();await page.mouse.up();await page.unrouteAll({behavior:'wait'});}
 });
 
-test('financial F5 restores the saved column as soon as the sheet is ready, while an optional panel is still loading',async({page})=>{
+startupTest('financial F5 restores the saved column as soon as the sheet is ready, while an optional panel is still loading',async({page:seed,coldSession})=>{
+  let page=seed;
   await page.setViewportSize({width:390,height:820});await page.goto(base);
   await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);
   await api(page,'/api/v1/auth/register','POST',{username:'canopee_column_'+Date.now(),password:'Synthetic-canopee-column-20261026!',displayName:'Colonne conservée'});
@@ -244,10 +273,12 @@ test('financial F5 restores the saved column as soon as the sheet is ready, whil
   await api(page,path+'/rubrics','POST',{name:'Contribution fictive de contrôle',facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}},group.id);
   await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),group.id);await page.reload();
   await expect(page.locator('#authScreen')).toBeHidden();await page.locator('#mainNav [data-view="operations"]').first().click();
-  const wrap=page.locator('#meetingMatrix .canonical-financial-wrap');await expect(wrap).toBeVisible({timeout:35000});await page.waitForLoadState('networkidle');
+  let wrap=page.locator('#meetingMatrix .canonical-financial-wrap');await expect(wrap).toBeVisible({timeout:35000});await page.waitForLoadState('networkidle');
   await page.locator('#meetingMatrix').getByRole('button',{name:'Vue intégrale',exact:true}).click();
   const before=await wrap.evaluate(node=>{node.scrollLeft=node.scrollWidth;return node.scrollLeft;});expect(before).toBeGreaterThan(0);
   const ledger=await api(page,path+'/ledger','GET',undefined,group.id),writes=[];
+  page=await coldSession(page);
+  wrap=page.locator('#meetingMatrix .canonical-financial-wrap');
   page.on('request',r=>{if(!['GET','HEAD'].includes(r.method())&&/\/financial-cells|\/outbox\/apply|\/contributions|\/expenses|\/ledger\//.test(r.url()))writes.push(r.url());});
   let releaseMembers,releaseOptional,membersBlocked=false,optionalBlocked=false;
   const membersGate=new Promise(resolve=>releaseMembers=resolve),optionalGate=new Promise(resolve=>releaseOptional=resolve);
