@@ -124,6 +124,7 @@ export function connectSheetNavigation(wrap, table, toolbar, tx, fitted) {
     if (buttons.has(family)) continue;
     const button = document.createElement('button');
     button.type = 'button';
+    button.setAttribute('aria-pressed', String(buttons.size === 0));
     button.dataset.rubricFamily = family;
     button.textContent = tx(...paletteFamilies[family]);
     button.onclick = () => wrap.scrollBy({ left: header.getBoundingClientRect().left - frozenEdge(), behavior: 'instant' });
@@ -131,6 +132,7 @@ export function connectSheetNavigation(wrap, table, toolbar, tx, fitted) {
     buttons.set(family, button);
   }
   const markVisible = () => {
+    if (!wrap.clientWidth) return;
     const edge = frozenEdge() + 2;
     const header = headers.find(cell => cell.getBoundingClientRect().right > edge) || headers.at(-1);
     for (const [key, button] of buttons) button.setAttribute('aria-pressed', String(key === header.dataset.rubricFamily));

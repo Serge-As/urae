@@ -93,6 +93,7 @@ test('real meeting sheets retain fitted parts, gestures, editable amounts and ac
     if (themeValue) await selectTheme(themeValue);
     await expect(table).toBeVisible();
     await wrap.evaluate(el=>el.scrollLeft=0);
+    await expect(rail.locator('[aria-pressed="true"]')).toHaveAttribute('data-rubric-family', 'ORDINAIRE');
     await wrap.evaluate(el=>el.scrollIntoView({block:'center'}));
     await wrap.screenshot({path:'artifacts/tableaux-v45/'+browserName+'-'+(themeValue||'officiel')+'-1280.png'});
   }
