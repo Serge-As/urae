@@ -10,7 +10,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        mode: [reload-dom, release-live, native-stack]
+        mode: [cache-document, ownership-channel, native-stack]
     timeout-minutes: 15
     container:
       image: mcr.microsoft.com/playwright:v1.56.1-noble
@@ -36,7 +36,18 @@ jobs:
           import os
           from pathlib import Path
           mode=os.environ['MODE']
-          if mode=='reload-dom':
+          if mode=='cache-document':
+            p=Path('apps/web/sw.js')
+            s=p.read_text()
+            assert s.count('if (cached) return cached;')==2
+            p.write_text(s.replace('if (cached) return cached;', 'if (cached) return new Response(await cached.arrayBuffer(), {headers:cached.headers,status:cached.status});',1))
+          elif mode=='ownership-channel':
+            p=Path('packages/application/src/browser-window-scope.ts')
+            s=p.read_text()
+            needle="if(typeof navigator!=='undefined'&&navigator.locks?.request)"
+            assert s.count(needle)==1
+            p.write_text(s.replace(needle, "if(typeof navigator!=='undefined'&&navigator.locks?.request&&Boolean(0))"))
+          elif mode=='reload-dom':
             p=Path('tests/browser/refresh-offline-recovery-20261103.spec.mjs')
             s=p.read_text()
             needle="await page.evaluate(()=>{window.name='';});await page.reload({waitUntil:'domcontentloaded'});"
@@ -70,6 +81,7 @@ jobs:
             backtrace_symbols_fd(frames,n,2);abort();
           }
           C
+            apt-get update -qq && apt-get install -y -qq gcc libc6-dev >/dev/null
             cc -shared -fPIC /tmp/assert.c -o /tmp/eco-webkit-assert.so
             echo "LD_PRELOAD=/tmp/eco-webkit-assert.so" >> "$GITHUB_ENV"
           fi
