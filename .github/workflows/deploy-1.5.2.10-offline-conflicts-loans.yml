@@ -21,8 +21,8 @@ env:
   ECO_SYSTEM_HEALTH: https://eco-system.sergemimf.workers.dev/health
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
   EXPECTED_VERSION: 1.5.2.45-fiscalibre-host
-  EXPECTED_BUILD: eco-system-1.5.2.45-20261102-fiscalibre-host
-  EXPECTED_CACHE: eco-system-v15245-fiscalibre-host-20261102
+  EXPECTED_BUILD: eco-system-1.5.2.45-20261123-canopee-tableaux
+  EXPECTED_CACHE: eco-system-v15245-canopee-tableaux-20261123
   MIN_CAPABILITIES: 164
 
 jobs:

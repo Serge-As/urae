@@ -5,3 +5,5 @@ Source de référence en ligne 541c7239. Les maquettes v46 fournissent les réf�
 La sélection d’ambiance appartient aux préférences locales. Ses libellés passent par le dictionnaire français/anglais commun pour éviter une boucle lors de la restauration de la page.
 
 La géométrie des colonnes se lit sur une feuille visible. Une feuille de largeur nulle conserve le dernier repère connu.
+
+La version affichée demeure 1.5.2.45. Le paquet Canopée a sa propre identité de construction et de cache. Le transfert entre les deux présentations utilise le mécanisme de mise à jour hors ligne existant.

@@ -5,3 +5,5 @@ Base de production 541c7239341c1d31de82d11de251f7d663017abb. Les préférences d
 Au démarrage, le traducteur existant prend aussi en charge les libellés d’ambiance. Un second observateur de langue provoquait des mises à jour en boucle lors de la qualification de la première révision.
 
 Une feuille momentanément masquée conserve sa famille visible. Le test couvre le retour à la feuille après un changement d’ambiance.
+
+La révision cosmétique utilise un cache distinct de la v45 déjà installée. Un téléchargement interrompu peut ainsi abandonner ses propres fichiers. Le cache antérieur, les brouillons et la file des écritures restent disponibles. Aucune migration de données.

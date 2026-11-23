@@ -1,6 +1,7 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15245-fiscalibre-host-20261102';
-const PREVIOUS_CACHE = 'eco-system-v15244-audit-cockpit-20261101';
+const CACHE = 'eco-system-v15245-canopee-tableaux-20261123';
+const PREVIOUS_CACHE = 'eco-system-v15245-fiscalibre-host-20261102';
+const PRIOR_AUDIT_CACHE = 'eco-system-v15244-audit-cockpit-20261101';
 const PRIOR_CANOPEE_CACHE = 'eco-system-v15242-canopee-reperes-20261026';
 const PRIOR_PROGRAMME_CACHE = 'eco-system-v15241-programme-audit-20261025';
 const PRIOR_DOCUMENT_CACHE = 'eco-system-v15240-document-recovery-20261025';
@@ -148,7 +149,7 @@ self.addEventListener('activate', event => {
     // Keep one known previous coherent release for operator rollback/recovery.
     // Never delete the immediately previous cache during the same activation.
     for (const name of names) {
-      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== PRIOR_CANOPEE_CACHE && name !== PRIOR_PROGRAMME_CACHE && name !== PRIOR_DOCUMENT_CACHE && name !== PRIOR_COMMON_CACHE && name !== PRIOR_REVIEW_CACHE && name !== PRIOR_PRODUCTIVE_CACHE && name !== PRIOR_FINANCIAL_CACHE && name !== PRIOR_TEMPORAL_PILOTS_CACHE && name !== PRIOR_BUSINESS_CACHE && name !== PRIOR_GROUPS_CACHE && name !== PRIOR_CARE_CACHE && name !== PRIOR_NOTIFICATION_CACHE && name !== PRIOR_PERSONAL_COMMERCE_CACHE && name !== PRIOR_COMMERCIAL_CACHE && name !== PRIOR_ASSISTANT_CACHE && name !== PRIOR_PERSONAL_COCKPIT_CACHE && name !== PRIOR_RESOURCE_CACHE && name !== PRIOR_REHEARSAL_CACHE && name !== PRIOR_STABLE_NAVIGATION_CACHE && name !== PRIOR_NAVIGATION_RELEASE_CACHE && name !== PRIOR_NAVIGATION_CACHE && name !== PRIOR_WORKSPACE_CACHE && name !== PRIOR_REDESIGN_CACHE && name !== PRIOR_COCKPIT_CACHE && name !== LEGACY_RECOVERY_CACHE && name !== INSTALLED_RECOVERY_CACHE && name !== PRIOR_SOURCE_RECOVERY_CACHE && name !== PRIOR_CONVERGENCE_CACHE) {
+      if (name.startsWith('eco-system-') && name !== CACHE && name !== PREVIOUS_CACHE && name !== PRIOR_AUDIT_CACHE && name !== PRIOR_CANOPEE_CACHE && name !== PRIOR_PROGRAMME_CACHE && name !== PRIOR_DOCUMENT_CACHE && name !== PRIOR_COMMON_CACHE && name !== PRIOR_REVIEW_CACHE && name !== PRIOR_PRODUCTIVE_CACHE && name !== PRIOR_FINANCIAL_CACHE && name !== PRIOR_TEMPORAL_PILOTS_CACHE && name !== PRIOR_BUSINESS_CACHE && name !== PRIOR_GROUPS_CACHE && name !== PRIOR_CARE_CACHE && name !== PRIOR_NOTIFICATION_CACHE && name !== PRIOR_PERSONAL_COMMERCE_CACHE && name !== PRIOR_COMMERCIAL_CACHE && name !== PRIOR_ASSISTANT_CACHE && name !== PRIOR_PERSONAL_COCKPIT_CACHE && name !== PRIOR_RESOURCE_CACHE && name !== PRIOR_REHEARSAL_CACHE && name !== PRIOR_STABLE_NAVIGATION_CACHE && name !== PRIOR_NAVIGATION_RELEASE_CACHE && name !== PRIOR_NAVIGATION_CACHE && name !== PRIOR_WORKSPACE_CACHE && name !== PRIOR_REDESIGN_CACHE && name !== PRIOR_COCKPIT_CACHE && name !== LEGACY_RECOVERY_CACHE && name !== INSTALLED_RECOVERY_CACHE && name !== PRIOR_SOURCE_RECOVERY_CACHE && name !== PRIOR_CONVERGENCE_CACHE) {
         try { await caches.delete(name); } catch (_) {}
       }
     }
