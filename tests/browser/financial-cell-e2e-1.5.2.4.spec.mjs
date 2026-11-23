@@ -179,11 +179,12 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await enterCell.locator('.cell-target-input').fill('2000');
   await enterCell.locator('.cell-target-input').press('Enter');await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[1]))).toBe(2000);
+  await expect(enterCell).toHaveAttribute('data-save-state','CONFIRMED',{timeout:30000});
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[1]})).toBe(2000);
 
   await page.evaluate(async({groupId,meetingId})=>{
     const r=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/meetings/'+encodeURIComponent(meetingId)+'/close',{
-      method:'POST',headers:{'content-type':'application/json','x-active-group-id':groupId},body:'{}'
+      method:'POST',headers:{'content-type':'application/json','x-active-group-id':groupId,'x-eco-window-id':sessionStorage.getItem('eco.window.session.v1')},body:'{}'
     });
     if(!r.ok)throw new Error('CLOSE_HTTP_'+r.status+':'+await r.text());
   },ids);
@@ -198,7 +199,7 @@ test('real financial matrix validates click, Enter, closed-session first entry a
 
   const open2=await page.evaluate(async({groupId})=>{
     const r=await fetch('/api/v1/groups/'+encodeURIComponent(groupId)+'/meetings',{
-      method:'POST',headers:{'content-type':'application/json','x-active-group-id':groupId},
+      method:'POST',headers:{'content-type':'application/json','x-active-group-id':groupId,'x-eco-window-id':sessionStorage.getItem('eco.window.session.v1')},
       body:JSON.stringify({title:'Séance E2E offline',scheduledAt:'2026-09-25T16:00:00.000Z'})
     });
     if(!r.ok)throw new Error('MEETING2_HTTP_'+r.status+':'+await r.text());
