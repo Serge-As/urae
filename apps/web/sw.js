@@ -1,5 +1,5 @@
 // A new cache identity is mandatory, even for a patch-level app release.
-const CACHE = 'eco-system-v15245-canopee-tableaux-20261123';
+const CACHE = 'eco-system-v15246-canopee-reunion-20261123';
 const PREVIOUS_CACHE = 'eco-system-v15245-fiscalibre-host-20261102';
 const PRIOR_AUDIT_CACHE = 'eco-system-v15244-audit-cockpit-20261101';
 const PRIOR_CANOPEE_CACHE = 'eco-system-v15242-canopee-reperes-20261026';
@@ -39,8 +39,8 @@ const RELEASE_READY = '/__eco_release_ready__';
 // before this worker may install. Optional business/community panels can fail
 // independently without replacing an already-working release.
 const ESSENTIAL_SHELL = [
-  '/', '/index.html', '/styles.css?v=15245', '/canopee.css?v=15245', '/manifest.webmanifest',
-  '/src/ui-modes.js?v=15245', '/src/field-hardening.js?v=15245', '/src/main.js?v=15245', '/src/i18n.js', '/src/runtime-i18n.js',
+  '/', '/index.html', '/styles.css?v=15246', '/canopee.css?v=15246', '/manifest.webmanifest',
+  '/src/ui-modes.js?v=15246', '/src/field-hardening.js?v=15246', '/src/main.js?v=15246', '/src/i18n.js', '/src/runtime-i18n.js',
   '/src/resilience-ui.js', '/src/group-home-ui.js', '/src/sessions-ui.js',
   '/src/detail-ui.js', '/src/member-control-ui.js', '/src/loan-simulation-ui.js', '/src/business-studio-ui.js', '/src/core-economic-learning-ui.js',
   '/packages/application/src/index.js', '/packages/contracts/src/index.js',
@@ -56,7 +56,7 @@ const ESSENTIAL_SHELL = [
 ];
 
 const OPTIONAL_SHELL = [
-  '/src/voice-entry-bootstrap.js?v=15245', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
+  '/src/voice-entry-bootstrap.js?v=15246', '/src/voice-entry-ui.js', '/src/expense-recap-ui.js',
   '/src/member-dossier-ui.js', '/src/documents-ui.js', '/src/contextual-group-ui.js',
   '/src/blueprint-executable-ui.js', '/src/community-blueprint-presets.js',
   '/src/financial-lab-ui.js', '/src/completion-ui.js', '/src/advanced-ui.js',
@@ -110,6 +110,25 @@ const fetchReleaseAsset = async path => {
   }finally{if(timer)clearTimeout(timer);}
 };
 
+const installReleaseAsset=async(cache,path)=>{
+  // An interrupted candidate is reusable only after byte verification against
+  // this exact build. It is never eligible for navigation before RELEASE_READY.
+  const expected=GENERATED_ASSET_HASHES[new URL(path,self.location.origin).pathname];
+  if(expected&&self.crypto?.subtle){
+    try{
+      const saved=await cache.match(path);
+      if(saved){const bytes=await saved.clone().arrayBuffer(),digest=await self.crypto.subtle.digest('SHA-256',bytes);
+        if([...new Uint8Array(digest)].map(v=>v.toString(16).padStart(2,'0')).join('')===expected)return;}
+    }catch{}
+  }
+  let lastError;
+  for(let attempt=0;attempt<3;attempt++){
+    try{const response=await fetchReleaseAsset(path);await cache.put(path,response.clone());return;}
+    catch(error){lastError=error;if(attempt<2)await new Promise(resolve=>setTimeout(resolve,500*(attempt+1)));}
+  }
+  throw lastError;
+};
+
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
     // A fresh cache identity is essential: never partially overwrite the
@@ -121,8 +140,10 @@ self.addEventListener('install', event => {
     // fetched and stored. Download in bounded parallel batches for slow links.
     for (let offset=0; offset<APP_SHELL.length; offset+=6) {
       const batch=APP_SHELL.slice(offset,offset+6);
-      const fetched=await Promise.all(batch.map(async path=>[path,await fetchReleaseAsset(path)]));
-      for(const [path,response] of fetched)await cache.put(path,response.clone());
+      // Keep all cache writes alive even when another item fails; otherwise the
+      // browser can terminate this worker before valid siblings finish storing.
+      const results=await Promise.all(batch.map(async path=>{try{await installReleaseAsset(cache,path);return null;}catch(error){return error;}}));
+      const failed=results.find(error=>error);if(failed)throw failed;
     }
     // Written strictly last: activation is forbidden for a partial shell.
     await cache.put(RELEASE_READY, new Response(JSON.stringify({cache:CACHE,installedAt:new Date().toISOString(),assets:APP_SHELL.length}), {
@@ -132,12 +153,17 @@ self.addEventListener('install', event => {
     // handler must never reload an editing session or discard its Outbox.
     await self.skipWaiting();
     } catch (error) {
-      // Roll back an incomplete candidate ONLY. Never delete the previous
-      // release cache, IndexedDB, Outbox, drafts, or any canonical financial data.
-      await caches.delete(CACHE);
+      // Retain verified downloads for the next genuine connectivity event.
+      // No marker is written, so this partial candidate cannot activate. Never
+      // delete the installed release, IndexedDB, Outbox or user drafts.
       throw error;
     }
   })());
+});
+
+self.addEventListener('message',event=>{
+  if(event.data?.type!=='CLAIM_CLIENTS')return;
+  event.waitUntil((async()=>{const cache=await caches.open(CACHE);if(await cache.match(RELEASE_READY))await self.clients.claim();})());
 });
 
 self.addEventListener('activate', event => {
@@ -160,7 +186,7 @@ const cachedShell = async request => {
   const cache = await caches.open(CACHE);
   const url = new URL(request.url);
   // A versioned request must only match that exact version. Falling back from
-  // main.js?v=15245 to an older /main.js was the source of mixed-release UI.
+  // main.js?v=15246 to an older /main.js was the source of mixed-release UI.
   if(url.search)return await cache.match(request);
   return await cache.match(url.pathname);
 };

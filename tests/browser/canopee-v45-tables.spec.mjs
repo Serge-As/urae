@@ -48,6 +48,22 @@ test('real meeting sheets retain fitted parts, gestures, editable amounts and ac
   await mkdir('artifacts/tableaux-v45', { recursive: true });
   await page.setViewportSize({ width: 1280, height: 850 });
   await seedMeeting(page);
+  await page.setViewportSize({width:680,height:740});
+  await page.locator('#sessionsNavBtn').click();
+  const picker=page.locator('.session-picker-row');
+  await expect(picker).toBeVisible();
+  const geometry=await picker.evaluate(el=>{
+    const select=el.querySelector('select').getBoundingClientRect();
+    const detail=el.querySelector('button').getBoundingClientRect();
+    const create=document.querySelector('#sessionsCreateBtn').getBoundingClientRect();
+    return {header:document.querySelector('.topbar').getBoundingClientRect().height,
+      sameRow:Math.abs(detail.bottom-select.bottom)<5, detail:detail.width, create:create.width, row:el.clientWidth};
+  });
+  expect(geometry.header).toBeLessThan(132);
+  expect(geometry.sameRow).toBe(true);
+  expect(Math.max(geometry.detail,geometry.create)).toBeLessThan(geometry.row*.65);
+  console.log('SESSION_CONTROLS_680',JSON.stringify(geometry));
+  await page.setViewportSize({width:1280,height:850});
   const theme = page.locator('#ecoAmbiance');
   await expect(theme).toHaveValue('');
   // Reach the preference via the real dashboard panel.

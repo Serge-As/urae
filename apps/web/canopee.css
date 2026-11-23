@@ -464,3 +464,58 @@ body.eco-canopee .group-home-priorities .group-home-priority.is-critical{border-
     body.eco-canopee :is(.metrics,.group-home-metrics,.group-home-door-grid) { grid-template-columns: repeat(4,minmax(0,1fr)); }
   }
 }
+
+/* Session controls share a line when space allows. Keep enlarged modes intact. */
+@media screen {
+  .eco-financial-reason {
+    width: min(27rem, calc(100% - 2rem)); padding: 1.2rem; box-sizing: border-box;
+    color: var(--sheet-ink); background: var(--sheet-paper); border: 1px solid var(--sheet-rule);
+    border-block-start: 3px solid var(--sheet-gold); border-radius: 12px;
+  }
+  .eco-financial-reason::backdrop { background: rgb(15 30 23 / 55%); }
+  .eco-financial-reason h2 { color: inherit; font-size: 1.15rem; margin: 0; }
+  .eco-financial-reason p { font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .eco-financial-reason label { display: grid; gap: .3rem; }
+  .eco-financial-reason input { width: 100%; min-width: 0; }
+  .eco-financial-reason .actions { justify-content: flex-end; margin-top: .9rem; }
+  body.ui-mode-visual .sessions-selector-panel { padding: 12px 14px; }
+  body.ui-mode-visual .sessions-selector-panel .panel-head { margin-bottom: 6px; }
+  body.ui-mode-visual .sessions-selector-panel .session-picker-row {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 6px 10px; margin: 6px 0 10px;
+  }
+  body.ui-mode-visual .session-picker-row label { flex: 1 1 14rem; min-width: 0; gap: 3px; }
+  body.ui-mode-visual .session-picker-row button,
+  body.ui-mode-visual #sessionsCreateBtn { justify-self: start; align-self: end; width: auto; min-width: 0; padding-inline: 12px; }
+  body.ui-mode-visual #sessionsCreateForm {
+    display: grid; grid-template-columns: repeat(auto-fit,minmax(min(100%,10.5rem),1fr));
+    align-items: end; gap: 6px 10px; padding-block-start: .6rem; border-top: 1px solid var(--sheet-rule);
+  }
+  body.ui-mode-visual #sessionsCreateForm label { min-width: 0; gap: 3px; }
+  body.ui-mode-visual .session-timeline-strip { gap: 6px; padding-block: 2px 5px; }
+  body.ui-mode-visual .session-timeline-card { flex: 0 1 14rem; min-width: min(10rem,65vw); min-height: 0; padding: 6px 9px; }
+  body.ui-mode-visual #sessionsTabs { gap: 4px; padding-block: 3px 6px; }
+  body.ui-mode-visual #sessionsTabs button { min-height: 40px; min-width: 0; padding: 5px 10px; white-space: nowrap; border-radius: 7px; }
+  body.ui-mode-visual #sessionsTabs button.active { box-shadow: inset 0 -3px var(--sheet-gold); }
+  body.ui-mode-visual #sessionsWorkspace .session-safety-toolbar {
+    display:flex; flex-wrap:wrap; align-items:center; gap:5px 8px; padding:8px 10px;
+  }
+  body.ui-mode-visual #sessionsWorkspace .session-safety-toolbar button { flex:0 1 auto; width:auto; }
+}
+@media (min-width:541px) and (max-width:860px) {
+  body.eco-canopee.ui-mode-visual .topbar {
+    display: grid; grid-template-columns: auto minmax(0,1fr) auto; align-items:center;
+    gap: 4px 10px; padding: 5px 12px; height:auto; min-height:0;
+  }
+  body.eco-canopee.ui-mode-visual .topbar .brand { grid-area:1/1; min-width:0; gap:6px; }
+  body.eco-canopee.ui-mode-visual .topbar .top-context { grid-area:1/2/2/4; width:100%; min-width:0; }
+  body.eco-canopee.ui-mode-visual .topbar #activeGroupSelect { min-width:0; width:100%; max-width:100%; }
+  body.eco-canopee.ui-mode-visual .topbar .top-actions { grid-column:1/-1; display:flex; gap:4px 8px; align-items:center; flex-wrap:wrap; }
+  body.eco-canopee.ui-mode-visual .topbar .top-actions #connectivity { margin-inline-start:auto; }
+  body.eco-canopee.ui-mode-visual .topbar :is(select,button) { padding-block:3px; min-height:36px; }
+}
+@media(max-width:860px) {
+  body.ui-mode-visual #mainNav .nav-btn b[data-mobile-label]::after { content:none; }
+}
+@media(pointer:coarse) {
+  body.ui-mode-visual :is(#sessionsTabs,.session-picker-row,.session-safety-toolbar,.topbar) :is(button,select) { min-height:44px; }
+}

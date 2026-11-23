@@ -58,3 +58,11 @@ Le manuel fourni est une inspiration pédagogique, non une source normative ni u
 La trace 41515677436 montre que le débordement mobile est corrigé mais que la fixture écoutait des requêtes asynchrones de l’ancienne page Eco après navigation. La vérification de conservation du stockage utilise maintenant un document neutre de la même origine, sans requête Eco pendante ; le test distinct de connexion/inscription Eco reste intégral. Aucun filtrage des erreurs ni relâchement du seuil de largeur.
 
 Contrôles locaux : 39 tests Fiscalibre natifs passent ; TypeScript complet passe ; Chrome à 360 px passe 36 sous-pages, les contrôles du guide, la conservation après rechargement, et l’expiration d’une session synthétique courte de 8 secondes. La durée réelle de production reste 3 600 secondes, aussi contrôlée par tests à horloge simulée. Qualification complète du nouveau SHA et livraison toujours à prouver à ce stade.
+
+
+### Livraison vérifiée du 3 novembre 2026
+
+Runtime : `541c7239341c1d31de82d11de251f7d663017abb` ; route privée `/fiscalibre/` dans Eco, porte sous connexion/inscription, aucun compte Eco requis. Session absolue d’une heure avec reverrouillage d’onglet ouvert, données locales conservées. Guide 5/13/30/100/7, référentiel 1 340 entrées, audit comptable/fiscal et CMUP. Qualification indépendante et livraison finale : 1 125 natifs, 116 Chromium, 54 WebKit. Backup privé D1/source restauré et relu, publication et vérification des assets du même SHA, puis recette en ligne 360/1 280 px. Trace de l’échec interne WebKit de la première tentative conservée ; aucun affaiblissement du contrôle. Voir `docs/release/evidence/FISCALIBRE_DELIVERY_2026-11-03.json`.
+
+Harmony/CNPS préparés mais désactivés faute d’accès officiel ; aucune déclaration ou attestation officielle créée. Dossiers locaux au navigateur, pas de synchronisation serveur. Aucun schéma ni donnée financière Eco modifiés. `realMoneyEnabled=false ; FIELD_ACCEPTED=NOT_ACCEPTED`. Les états réels, règles sectorielles et formulaires DSF restent à qualifier avec les pièces. L’historique des états de préparation est conservé ci-dessous.
+

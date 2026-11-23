@@ -8,7 +8,10 @@ export function browserWindowScope():BrowserWindowScope{
   if(typeof window==='undefined'||typeof sessionStorage==='undefined')return{id:undefined,ready:Promise.resolve()};
   const existing=scopes.get(window);if(existing)return existing;
   let saved:string|null=null;try{saved=sessionStorage.getItem('eco.window.session.v1');}catch{}
-  const scope:BrowserWindowScope={id:saved&&/^[a-f0-9]{32}$/.test(saved)&&window.name==='eco-window:'+saved?saved:randomId(),ready:Promise.resolve()};
+  // Browsers can clear window.name after cross-origin navigation. sessionStorage
+  // belongs to this tab and survives reload; live ownership below still rotates
+  // a cloned label before any authenticated request or local account is read.
+  const scope:BrowserWindowScope={id:saved&&/^[a-f0-9]{32}$/.test(saved)?saved:randomId(),ready:Promise.resolve()};
   const persist=()=>{try{sessionStorage.setItem('eco.window.session.v1',scope.id!);window.name='eco-window:'+scope.id;}catch{}};
   persist();scopes.set(window,scope);
   let ready!:()=>void;scope.ready=new Promise<void>(resolve=>{ready=resolve;});
