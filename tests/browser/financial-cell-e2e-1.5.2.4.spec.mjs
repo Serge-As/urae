@@ -88,7 +88,6 @@ test('real financial matrix validates click, Enter, closed-session first entry a
     },{password});
   } finally { await registration.close(); }
   await page.goto(base+'/',{waitUntil:'domcontentloaded'});
-  await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),ids.groupId);
   // Use the real login surface once so the device receives the salted PBKDF2
   // offline credential mirror. API-only registration is intentionally not
   // sufficient for a cold offline restart.
@@ -102,6 +101,10 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   expect(login.ok()).toBe(true);
   await expect(page.locator('#authScreen')).toBeHidden({timeout:30000});
   await expect(page.locator('#accountName')).toContainText('Finance E2E');
+  const groupSelect=page.locator('#activeGroupSelect');
+  await expect(groupSelect.locator('option[value="'+ids.groupId+'"]')).toHaveCount(1);
+  await groupSelect.selectOption(ids.groupId);
+  await expect(groupSelect).toHaveValue(ids.groupId);
   await page.reload({waitUntil:'domcontentloaded'});
   await expect(page.locator('#authScreen')).toBeHidden();
   await page.locator('button[data-view="operations"]').first().click();
