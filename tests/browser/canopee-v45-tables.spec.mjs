@@ -105,6 +105,39 @@ test('real meeting sheets retain fitted parts, gestures, editable amounts and ac
   await firstEntry.locator('.cell-validate').click();
   await page.getByRole('button', {name:'En réunion', exact:true}).click();
   await expect(firstEntry.locator('.cell-current')).toHaveText(/2\s?500/);
+  // Read back the same member, meeting and rubric through the canonical ledger.
+  const coordinates = await firstEntry.evaluate(el => ({
+    groupId: localStorage.getItem('tontine.activeGroupId'), meetingId: el.dataset.meetingId,
+    membershipId: el.dataset.membershipId, rubricId: el.dataset.rubricId
+  }));
+  const ledgerAmount = () => page.evaluate(async ids => {
+    const response = await fetch('/api/v1/groups/' + encodeURIComponent(ids.groupId) + '/ledger', {
+      headers: { 'x-active-group-id': ids.groupId, 'x-eco-window-id': sessionStorage.getItem('eco.window.session.v1') }
+    });
+    if (!response.ok) throw Error('Ledger HTTP ' + response.status);
+    const ledger = await response.json();
+    return ledger.receipts.filter(row => row.membershipId === ids.membershipId &&
+      row.meetingId === ids.meetingId && row.rubricId === ids.rubricId)
+      .reduce((total, row) => total + Number(row.netAmount), 0);
+  }, coordinates);
+  const review = page.locator('.eco-financial-reason');
+  const changeAmount = async (amount, confirm) => {
+    await edit.fill(String(amount));
+    await firstEntry.locator('.cell-validate').click();
+    await expect(review).toBeVisible();
+    if (confirm) await review.getByRole('textbox').fill('Correction du montant de séance');
+    await review.getByRole('button', {name: confirm ? 'Confirmer' : 'Annuler', exact: true}).click();
+    await expect(review).toBeHidden();
+  };
+  await expect.poll(ledgerAmount).toBe(2500);
+  await changeAmount(5000, true);
+  await expect.poll(ledgerAmount).toBe(5000);
+  await changeAmount(4000, false);
+  await expect(firstEntry.locator('.cell-current')).toHaveText(/5\s?000/);
+  await expect.poll(ledgerAmount).toBe(5000);
+  await changeAmount(4000, true);
+  await expect(firstEntry.locator('.cell-current')).toHaveText(/4\s?000/);
+  await expect.poll(ledgerAmount).toBe(4000);
   for (const themeValue of ['', 'grand-livre', 'nuit-doree']) {
     if (themeValue) await selectTheme(themeValue);
     await expect(table).toBeVisible();
@@ -116,6 +149,8 @@ test('real meeting sheets retain fitted parts, gestures, editable amounts and ac
   await page.reload();
   await expect(page.locator('body')).toHaveAttribute('data-eco-ambiance','nuit-doree');
   await selectTheme('');
+  await expect(firstEntry.locator('.cell-current')).toHaveText(/4\s?000/);
+  await expect.poll(ledgerAmount).toBe(4000);
   await page.setViewportSize({width:360,height:800});
   await expect(table).toBeVisible();
   const cell = table.locator('.matrix-cell-entry').first();
