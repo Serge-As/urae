@@ -18,6 +18,7 @@ on:
       - 'codex/canopee-eight-lots-20261029'
       - 'codex/audit-six-lots-20261101'
       - 'codex/fiscalibre-20261102'
+      - 'codex/v45-cosmetique-seule'
   workflow_dispatch:
 
 permissions:
