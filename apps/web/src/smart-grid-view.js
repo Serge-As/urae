@@ -79,8 +79,10 @@ export function markRubricHeader(header, mark, tx) {
   const flow = mark.flow === 'out' ? tx('Sortie', 'Outflow') : mark.flow === 'in' ? tx('Entrée', 'Inflow') : '';
   const caption = document.createElement('small');
   caption.className = 'rubric-key';
-  caption.textContent = flow || family;
+  caption.dataset.caption = flow || family;
+  caption.setAttribute('aria-hidden', 'true');
   header.title = [family, flow].filter(Boolean).join(' · ');
+  header.setAttribute('aria-description', header.title);
   header.append(caption);
 }
 

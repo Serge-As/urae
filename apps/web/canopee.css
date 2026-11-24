@@ -518,6 +518,7 @@ body.eco-canopee .group-home-priorities .group-home-priority.is-critical{border-
     box-shadow:inset 0 -4px var(--rubric-band);
     padding-block:5px 8px; vertical-align:middle;
   }
+  .meeting-matrix thead .rubric-key::after { content:attr(data-caption); }
   .meeting-matrix thead .rubric-key {
     display:block; margin-top:1px; font:normal .75em/1.15 system-ui,sans-serif; color:#fff;
   }
