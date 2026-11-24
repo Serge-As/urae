@@ -19,6 +19,7 @@ on:
       - 'codex/audit-six-lots-20261101'
       - 'codex/canopee-v45-tableaux-20261122'
       - 'codex/fiscalibre-20261102'
+      - 'codex/canopee-integration-v45-20261124'
   workflow_dispatch:
 
 permissions:

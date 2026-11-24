@@ -22,7 +22,7 @@ env:
   ECO_SYSTEM_CATALOG: https://eco-system.sergemimf.workers.dev/api/v1/product/capabilities
   EXPECTED_VERSION: 1.5.2.46-offline-resume
   EXPECTED_BUILD: eco-system-1.5.2.46-20261123-canopee-reunion
-  EXPECTED_CACHE: eco-system-v15246-canopee-reunion-20261123
+  EXPECTED_CACHE: eco-system-v15246-canopee-rubriques-20261124
   MIN_CAPABILITIES: 164
 
 jobs:

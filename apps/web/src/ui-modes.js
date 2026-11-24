@@ -1,3 +1,4 @@
+import {restoreSheetAppearance, followAppAppearance} from './table-preferences.js';
 let STORAGE_KEY='eco.uiMode';
 window.addEventListener('eco:preference-scope',event=>{const actor=event.detail?.actorId,tenant=event.detail?.tenantId;if(!actor)return;STORAGE_KEY='eco.uiMode.'+encodeURIComponent(JSON.stringify([tenant,actor]));applyUiMode(currentUiMode(),{persist:false,announce:true});});
 const VALID=new Set(['visual','senior','assisted']);
@@ -85,12 +86,14 @@ function installAmbianceControl() {
   try { apply(localStorage.getItem(key)); } catch { apply(''); }
   select.addEventListener('change', () => {
     apply(select.value);
+    followAppAppearance();
     try { localStorage.setItem(key, select.value); } catch {}
   });
 }
 
 const install=()=>{
   installAmbianceControl();
+  restoreSheetAppearance();
   applyUiMode(currentUiMode(),{persist:false});
   for(const select of document.querySelectorAll('#uiModeSelect, #workspaceUiMode')){
     select.value=currentUiMode();

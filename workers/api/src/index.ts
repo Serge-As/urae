@@ -89,7 +89,7 @@ const RELEASE_VERSION='1.5.2.46-offline-resume';
 const RELEASE_BUILD_ID='eco-system-1.5.2.46-20261123-canopee-reunion';
 const RELEASE_SCHEMA_VERSION='d1-additive-20261101-indexes';
 const RELEASE_POLICY_VERSION='live-finance-policy-20261007-event-push-repayment';
-const RELEASE_PWA_CACHE='eco-system-v15246-canopee-reunion-20261123';
+const RELEASE_PWA_CACHE='eco-system-v15246-canopee-rubriques-20261124';
 
 const defaultRepo = new InMemoryPlatformRepository();
 const defaultReferralBudgets = new InMemoryReferralBudgetStore();

@@ -9,5 +9,42 @@ export function tablePreferenceControls({scope,preferences,rubrics,onApply,tx}){
   for(const r of rubrics){const l=make('label'),check=make('input');check.type='checkbox';check.value=r.id;check.checked=!preferences.columns||preferences.columns.includes(r.id);l.append(check,document.createTextNode(r.name));list.append(l);}
   const apply=make('button',tx('Appliquer','Apply')),reset=make('button',tx('Tout afficher','Show all'));apply.type=reset.type='button';apply.className=reset.className='secondary';
   const save=value=>{try{sessionStorage.setItem('eco.table.'+scope,JSON.stringify(value));}catch{}onApply();};
-  apply.onclick=()=>{const selected=[...list.querySelectorAll('input:checked')].map(x=>x.value);if(!selected.length){summary.textContent=tx('Gardez au moins une rubrique','Keep at least one category');columns.open=true;return;}save({query:search.value,sort:sort.value,columns:selected.length===rubrics.length?null:selected});};search.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();apply.click();}});sort.onchange=()=>apply.click();reset.onclick=()=>save({query:'',sort:'number',columns:null});bar.append(searchLabel,sortLabel,columns,apply,reset);return bar;
+  apply.onclick=()=>{const selected=[...list.querySelectorAll('input:checked')].map(x=>x.value);if(!selected.length){summary.textContent=tx('Gardez au moins une rubrique','Keep at least one category');columns.open=true;return;}save({query:search.value,sort:sort.value,columns:selected.length===rubrics.length?null:selected});};search.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();apply.click();}});sort.onchange=()=>apply.click();reset.onclick=()=>save({query:'',sort:'number',columns:null});bar.append(searchLabel,sortLabel,columns,apply,reset,appearancePicker(tx));return bar;
+}
+
+const appearances = [
+  ['canopee', 'Canopée', 'Canopy'],
+  ['ivory', 'Ivoire grand-livre', 'Ivory ledger'],
+  ['night', 'Nuit Canopée', 'Canopy night']
+];
+
+function applySheetAppearance(name) {
+  const value = appearances.some(([id]) => id === name) ? name : 'canopee';
+  document.body.dataset.sheetAppearance = value;
+  for (const select of document.querySelectorAll('select.eco-sheet-appearance')) select.value = value;
+}
+
+export function restoreSheetAppearance() {
+  let saved;
+  try { saved = sessionStorage.getItem('eco.sheet.appearance'); } catch {}
+  applySheetAppearance(saved || ({'grand-livre':'ivory','nuit-doree':'night'}[document.body.dataset.ecoAmbiance] || 'canopee'));
+}
+
+export function followAppAppearance() {
+  try { sessionStorage.removeItem('eco.sheet.appearance'); } catch {}
+  restoreSheetAppearance();
+}
+
+function appearancePicker(tx) {
+  const label = make('label', tx('Ambiance du tableau', 'Table appearance'));
+  const select = make('select');
+  select.className = 'eco-sheet-appearance';
+  for (const [id, fr, en] of appearances) select.add(new Option(tx(fr, en), id));
+  select.value = document.body.dataset.sheetAppearance || 'canopee';
+  select.onchange = () => {
+    applySheetAppearance(select.value);
+    try { sessionStorage.setItem('eco.sheet.appearance', select.value); } catch {}
+  };
+  label.append(select);
+  return label;
 }

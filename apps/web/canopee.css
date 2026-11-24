@@ -519,3 +519,106 @@ body.eco-canopee .group-home-priorities .group-home-priority.is-critical{border-
 @media(pointer:coarse) {
   body.ui-mode-visual :is(#sessionsTabs,.session-picker-row,.session-safety-toolbar,.topbar) :is(button,select) { min-height:44px; }
 }
+
+/* The band belongs to the column. Cell outlines and author colours belong to the editor. */
+@media screen {
+  [data-rubric-mark="ordinary"]  { --rubric-head:#614a21; --rubric-band:#e1b765; }
+  [data-rubric-mark="savings"]   { --rubric-head:#204c74; --rubric-band:#81b8ee; }
+  [data-rubric-mark="solidarity"]{ --rubric-head:#20565e; --rubric-band:#75c9d3; }
+  [data-rubric-mark="tontine"]   { --rubric-head:#285335; --rubric-band:#8cc983; }
+  [data-rubric-mark="repayment"] { --rubric-head:#12574d; --rubric-band:#78d5b5; }
+  [data-rubric-mark="loan"]      { --rubric-head:#782c3a; --rubric-band:#f1a1ac; }
+  [data-rubric-mark="levy"]      { --rubric-head:#503566; --rubric-band:#d0a7e6; }
+  [data-rubric-mark="assistance"]{ --rubric-head:#634260; --rubric-band:#e9b0d4; }
+  [data-rubric-mark="other"]     { --rubric-head:#434e55; --rubric-band:#b2c2ca; }
+  body.eco-canopee :is(.meeting-matrix,.canonical-financial-matrix) thead th[data-rubric-mark] {
+    background:var(--rubric-head); color:#fff; border-top-color:var(--rubric-band);
+    box-shadow:inset 0 -4px var(--rubric-band);
+    padding-block:5px 8px; vertical-align:middle;
+  }
+  .meeting-matrix thead .rubric-key::after { content:attr(data-caption); }
+  .meeting-matrix thead .rubric-key {
+    display:block; margin-top:1px; font:normal .75em/1.15 system-ui,sans-serif; color:#fff;
+  }
+  body.eco-canopee .canonical-financial-matrix thead th[data-rubric-mark] .eco-context-link { color:#fff; }
+  body.eco-canopee .rubric-family-jump { width:auto; max-width:100%; justify-self:start; }
+
+  body[data-sheet-appearance="ivory"] .meeting-matrix {
+    --paper-even:#f3ead6; --paper-odd:#fffaf0; --reading-ink:#362d1e;
+    --eco-sheet-rule:#d4c6a8; --eco-sheet-totals:#ece1c6; --eco-sheet-ink:#432f18;
+  }
+  body[data-sheet-appearance="night"] .meeting-matrix {
+    --paper-even:#24382e; --paper-odd:#192a23; --reading-ink:#f3f6ee;
+    --eco-sheet-rule:#465e51; --eco-sheet-totals:#34493a; --eco-sheet-ink:#f4f5e4;
+  }
+  body.eco-canopee:is([data-sheet-appearance="ivory"],[data-sheet-appearance="night"]) .meeting-matrix tbody tr {
+    --eco-row-paper:var(--paper-odd); color:var(--reading-ink);
+  }
+  body.eco-canopee:is([data-sheet-appearance="ivory"],[data-sheet-appearance="night"]) .meeting-matrix tbody tr:nth-child(even) { --eco-row-paper:var(--paper-even); }
+  body.eco-canopee:is([data-sheet-appearance="ivory"],[data-sheet-appearance="night"]) .meeting-matrix tbody tr:not(.table-total-row,.eco-filtered-total)>:is(th,td):not(.table-row-total) {
+    background-color:var(--eco-row-paper);
+  }
+  body.eco-canopee[data-sheet-appearance="night"] .meeting-matrix tbody th :is(small,.eco-context-link) { color:#e5eedf; }
+  body.eco-canopee[data-sheet-appearance="night"] .canonical-financial-matrix :is(.table-row-total,.table-grand-total) {
+    background:#34493a !important; color:#f4f5e4;
+  }
+  body.eco-canopee[data-sheet-appearance="night"] .canonical-financial-matrix tbody tr:not(.table-total-row,.eco-filtered-total) > td[data-rubric-id]:not(.table-row-total) {
+    background-color:#edf1eb; color:#193a2b;
+  }
+  body.eco-canopee .canonical-financial-matrix tbody tr:not(.table-total-row,.eco-filtered-total) > td[data-rubric-mark]:not(.table-row-total) {
+    border-inline-end-color:color-mix(in srgb,var(--rubric-band) 52%,var(--sheet-rule));
+  }
+}
+
+/* Compact mouse controls; touch and assisted controls retain their own target sizes. */
+@media screen and (pointer:fine) {
+  body.eco-canopee.ui-mode-visual :is(#sessionsTabs,#sessionsWorkspace .session-safety-toolbar,.session-picker-row,.sessions-selector-panel,.eco-smartgrid-toolbar,.eco-navigation-context,.topbar) :is(button,select),
+  body.eco-canopee.ui-mode-visual #appBackBtn {
+    box-sizing:border-box; min-height:30px; height:auto; min-width:0;
+    padding:4px 8px; border-radius:6px; font-size:13px; line-height:1.25;
+  }
+  body.eco-canopee.ui-mode-visual #sessionsTabs button { min-height:30px; padding:4px 8px; font-weight:650; }
+  body.eco-canopee.ui-mode-visual #sessionsWorkspace .session-safety-toolbar {
+    gap:4px 6px; padding:5px 8px; margin:5px 0 8px;
+  }
+  body.eco-canopee.ui-mode-visual :is(.eco-navigation-context,.topbar) { padding-block:5px; }
+  body.eco-canopee.ui-mode-visual #appBackBtn { min-height:30px; }
+}
+@media screen and (min-width:861px) and (pointer:fine) {
+  body.eco-canopee.ui-mode-visual #mainNav .nav-btn { min-height:32px; padding:3px 8px; gap:8px; }
+  body.eco-canopee.ui-mode-visual #mainNav .nav-btn>span { width:23px; height:23px; }
+}
+@media screen and (pointer:coarse) {
+  body.eco-canopee.ui-mode-visual #sessionsWorkspace .session-safety-toolbar { padding:4px 6px; gap:2px 5px; }
+  body.eco-canopee.ui-mode-visual :is(#sessionsTabs,.session-safety-toolbar) button { padding-inline:7px; min-height:44px; }
+}
+
+@media screen {
+  body.eco-canopee .canonical-financial-matrix[data-fitted="false"] :is(thead th:last-child, td.table-row-total, td.table-grand-total) {
+    min-width:var(--work-total,108px); overflow-wrap:normal; word-break:normal;
+  }
+  body.eco-canopee .canonical-financial-matrix[data-fitted="false"] :is(.table-row-total,.table-grand-total,.table-total-row td),
+  body.eco-canopee .canonical-financial-matrix[data-fitted="false"] :is(.table-row-total,.table-grand-total) button {
+    white-space:nowrap;
+  }
+}
+
+/* Navigation and secondary actions in the group and its community services. */
+@media screen and (pointer:fine) {
+  body.eco-canopee.ui-mode-visual :is(#groupHomeContent, #personalShopsPanel, #groupStorefront,
+    #communityHubList, #communityPostList, #adCampaignList, #adProspectList) .actions {
+    gap:4px 8px; align-items:center; flex-wrap:wrap;
+  }
+  body.eco-canopee.ui-mode-visual :is(#groupHomeContent, #personalShopsPanel, #groupStorefront,
+    #communityHubList, #communityPostList, #adCampaignList, #adProspectList) .actions > button[type="button"] {
+    min-height:32px; height:auto; flex:0 1 auto; max-width:100%;
+    padding:4px 9px; font-size:13px; line-height:1.3; white-space:normal;
+  }
+}
+
+@media screen and (min-width:601px) {
+  .eco-family-rail + .rubric-family-jump { display:none; }
+}
+@media screen and (max-width:600px) {
+  .eco-family-rail:has(+ .rubric-family-jump) { display:none; }
+}

@@ -5,7 +5,7 @@
     "buildId": "eco-system-1.5.2.46-20261123-canopee-reunion",
     "schemaVersion": "d1-additive-20261101-indexes",
     "policyVersion": "live-finance-policy-20261007-event-push-repayment",
-    "pwaCache": "eco-system-v15246-canopee-reunion-20261123",
+    "pwaCache": "eco-system-v15246-canopee-rubriques-20261124",
     "previousPwaCache": "eco-system-v15245-fiscalibre-host-20261102",
     "commitShaAuthority": "DEPLOYMENT_WORKFLOW_GITHUB_SHA_AND_PRODUCTION_HEALTH"
   },
