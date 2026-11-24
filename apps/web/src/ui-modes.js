@@ -1,3 +1,4 @@
+import {restoreSheetAppearance} from './table-preferences.js';
 let STORAGE_KEY='eco.uiMode';
 window.addEventListener('eco:preference-scope',event=>{const actor=event.detail?.actorId,tenant=event.detail?.tenantId;if(!actor)return;STORAGE_KEY='eco.uiMode.'+encodeURIComponent(JSON.stringify([tenant,actor]));applyUiMode(currentUiMode(),{persist:false,announce:true});});
 const VALID=new Set(['visual','senior','assisted']);
@@ -62,6 +63,7 @@ const openAssistedEntry=()=>{
 };
 
 const install=()=>{
+  restoreSheetAppearance();
   applyUiMode(currentUiMode(),{persist:false});
   for(const select of document.querySelectorAll('#uiModeSelect, #workspaceUiMode')){
     select.value=currentUiMode();
