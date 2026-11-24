@@ -62,6 +62,8 @@ jobs:
           retention-days: 30
 
   browser-critical:
+    env:
+      PYTHON: /usr/bin/python3
     runs-on: ubuntu-latest
     timeout-minutes: 45
     container:
