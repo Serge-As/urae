@@ -1,13 +1,11 @@
-Eco-System refresh/offline recovery authorized by founder 2026-11-23
-release: 1.5.2.46-offline-resume
-date: 2026-11-23
+Eco-System Canopée cosmetic release authorized by founder
+release: 1.5.2.45-fiscalibre-host
+date: 2026-11-25
 mode: code-only-with-verified-readonly-backup-no-migration
 db_mutation: none; preserve acquired D1 and financial records
 baseline_source: 541c7239341c1d31de82d11de251f7d663017abb
 qualification: complete governed CI, Chromium and WebKit on exact source
-scope: scoped local restore, deferred panels, coalesced recovery and coherent resumable PWA cache; compact Canopée session controls, traceable amount corrections and independent Fiscalibre
+scope: compact shell, accessible table appearance and rubric navigation on the deployed v45
 backup_scope: D1_AND_EXACT_SOURCE_ONLY
 real_money_enabled: false
 field_acceptance: NOT_ACCEPTED
-trigger_nonce: 2026-11-23-canopee-financial-correction
-qualification_revision: verified-financial-adjustment-and-webkit-resume
