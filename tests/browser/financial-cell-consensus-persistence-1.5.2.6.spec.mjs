@@ -42,8 +42,9 @@ test('closed-session offline target becomes the canonical value after synchroniz
   await expect(cell).toBeVisible();
 
   await context.setOffline(true);
+  page.once('dialog',dialog=>dialog.accept('Correction hors ligne de séance clôturée'));
   await cell.locator('.cell-target-input').fill('1000');
-  await cell.locator('.cell-validate').click();await settleWorkDialog(page,'Correction hors ligne de séance clôturée');
+  await cell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>amountFrom(cell)).toBe(1000);
   await expect(cell).toContainText(/synchro en attente/i);
 

@@ -54,7 +54,7 @@ const mountFounderControlUI=deferredMount(()=>import('./founder-control-ui.js'),
 const mountAssistanceRulebookUI=deferredMount(()=>import('./assistance-rulebook-ui.js'),'mountAssistanceRulebookUI','Eco-System');
 import { mountGroupHomeUI } from './group-home-ui.js';
 import { mountSessionsUI } from './sessions-ui.js';
-import { splitFinancialRubrics, planFinancialRubricLayout, rubricPaletteFamily, connectSheetNavigation } from './smart-grid-view.js';
+import { splitFinancialRubrics, planFinancialRubricLayout, rubricMark, markRubricHeader, addFamilyJump } from './smart-grid-view.js';
 const mountBlueprintExecutableUI=deferredMount(()=>import('./blueprint-executable-ui.js'),'mountBlueprintExecutableUI','Eco-System');
 import { mountCommunityBlueprintPresets } from './community-blueprint-presets.js';
 const mountFinancialLabUI=deferredMount(()=>import('./financial-lab-ui.js'),'mountFinancialLabUI','Eco-System');
@@ -206,7 +206,7 @@ let modules = [];
 let applicationStartup = Promise.resolve();
 let selectedLot = 'ALL';
 let deferredInstallPrompt;
-const CAHIER_VERSION = '1.5.2.46-offline-resume';
+const CAHIER_VERSION = '1.5.2.45-fiscalibre-host';
 const $ = (s) => { const e = document.querySelector(s); if (!e)
     throw new Error(`UI_ELEMENT_NOT_FOUND:${s}`); return e; };
 const val = (id) => document.getElementById(id).value.trim();
@@ -611,6 +611,7 @@ const founderControlUI = mountFounderControlUI({ app, notify: toast, showError: 
 const assistanceRulebookUI = mountAssistanceRulebookUI({ app, notify: toast, showError: fail, isManager });
 const groupHomeUI = mountGroupHomeUI({ app, getGroups:()=>groups, getMembers:()=>members, getMeetings:()=>meetings, navigate:go, fmt, showError:fail });
 const sessionsUI = mountSessionsUI({
+  getRubricMark: r => rubricMark(r, financialNatureForRubric(r)),
     app,getGroups:()=>groups,getMembers:()=>members,getMeetings:()=>meetings,getRubrics:()=>rubrics,navigate:go,
     openDetail:(type,id)=>detailUI.open(type,id),showError:fail,notify:toast,
     reloadMeetings:async()=>{await renderMeetings();}
@@ -1298,38 +1299,6 @@ const showFinancialEntryPosition=(holder,position,delta=0)=>{
   if(position.kind==='REPAYMENT')hint.textContent=prefix+(position.totalDue===0?tx('Dette apurée · restant dû : 0 F CFA. Aucun nouveau remboursement.','Debt cleared · remaining due: 0 XAF. No further repayment.'):tx('Dette due : ','Debt due: ')+fmt(position.totalDue)+tx(' · capital ',' · principal ')+fmt(position.principal)+tx(' · intérêts dus ',' · due interest ')+fmt(position.interest)+tx(' · autres dettes ',' · other debts ')+fmt(position.otherDebt)+(delta?tx(' · restant après la saisie en attente : ',' · remaining after the pending entry: ')+fmt(position.totalDue-delta):''));
   else if(position.applies)hint.textContent=prefix+(!position.eligible?tx('Non inscrit à cette tontine · aucune nouvelle cotisation.','Not enrolled in this tontine · no new contribution.'):!position.configured?tx('Participation reconnue ; montant par part à préciser dans les règles de la tontine.','Participation found; set the per-share amount in tontine rules.'):tx('Par séance : ','Per meeting: ')+fmt(position.periodic)+' · '+position.sessions+tx(' séance(s), cumul attendu : ',' meeting(s), expected total: ')+fmt(position.expectedCumulative)+' · '+(position.coveredByAdvance?tx('déjà couvert par avance : ','already covered by prepayment: ')+fmt(position.coveredByAdvance)+' · ':'')+(position.remainingDue?tx('reste à cotiser : ','still to contribute: ')+fmt(position.remainingDue):position.advance?tx('avance : ','prepaid: ')+fmt(position.advance):tx('à jour','up to date')));
 };
-// Use an in-page dialog so the same financial review works in embedded browsers.
-const reviewFinancialInput=({title,context,suggestion})=>new Promise(resolve=>{
-  const dialog=document.createElement('dialog');
-  dialog.className='eco-financial-reason';
-  dialog.setAttribute('aria-label',title);
-  const form=document.createElement('form');
-  form.method='dialog';
-  const heading=document.createElement('h2');heading.textContent=title;
-  const detail=document.createElement('p');detail.textContent=context;
-  form.append(heading,detail);
-  let field;
-  if(suggestion!==undefined){
-    const label=document.createElement('label');label.textContent=tx('Motif de la correction','Reason for adjustment');
-    field=document.createElement('input');field.value=suggestion;field.required=true;
-    label.append(field);form.append(label);
-  }
-  const actions=document.createElement('div');actions.className='actions';
-  const cancel=document.createElement('button');cancel.type='button';cancel.className='secondary';cancel.textContent=tx('Annuler','Cancel');
-  cancel.onclick=()=>dialog.close();
-  const confirm=document.createElement('button');confirm.type='submit';confirm.className='primary';confirm.textContent=tx('Confirmer','Confirm');
-  form.onsubmit=event=>{
-    event.preventDefault();
-    if(field&&!field.value.trim()){field.focus();return;}
-    dialog.close('confirmed');
-  };
-  actions.append(cancel,confirm);form.append(actions);dialog.append(form);document.body.append(dialog);
-  dialog.addEventListener('close',()=>{
-    const value=dialog.returnValue==='confirmed'?(field?field.value.trim():true):null;
-    dialog.remove();resolve(value);
-  },{once:true});
-  dialog.showModal();(field??cancel).focus();field?.select();
-});
 const submitFinancialCellElement=async validate=>{
     const holder=validate?.closest?.('.matrix-cell-entry');
     const input=holder?.querySelector?.('.cell-target-input');
@@ -1345,11 +1314,6 @@ const submitFinancialCellElement=async validate=>{
     holder.classList.remove('is-conflict');holder.dataset.submitting='1';
     let localComplete;const localSubmission={meetingId,membershipId,done:new Promise(resolve=>{localComplete=resolve;})};financialLocalSubmissions.set(cellKey,localSubmission);
     const nature=financialNatureForRubric(rubric),signedCurrent=exactCellAmount(membershipId,rubricId,meetingId),current=Math.abs(signedCurrent),previousIcon=validate.textContent;
-    const submissionScope=JSON.stringify([app.currentTenant(),app.currentActor(),app.activeGroup()]);
-    const baselineVersion=exactCellVersion(membershipId,rubricId,meetingId);
-    const reviewContext=memberDisplay(member)+' · '+rubric.name;
-    let reviewedInDialog=false;
-    const askReview=options=>{reviewedInDialog=true;return reviewFinancialInput(options);};
     let target=Number.NaN,optimisticStaged=false;
     const setCellState=(state,message='')=>{
       const selector=financialLiveSelector({meetingId,membershipId,rubricId}),cells=new Set([holder,...document.querySelectorAll(selector)]);
@@ -1385,25 +1349,21 @@ const submitFinancialCellElement=async validate=>{
       }
       const meeting=meetings.find(x=>x.id===meetingId);let reason='';
       if(target!==current&&(current>0||meeting?.status==='closed')){
-        reason=await askReview({title:tx('Confirmer la correction','Confirm adjustment'),context:reviewContext+' · '+fmt(current)+' → '+fmt(target),suggestion:tx('Correction de la valeur de la cellule','Cell value correction')})??'';
+        reason=prompt(tx(`Motif de la modification ${fmt(current)} → ${fmt(target)} :`,`Reason for change ${fmt(current)} → ${fmt(target)}:`),tx('Correction de la valeur de la cellule','Cell value correction'))??'';
         if(!reason.trim()){setCellState('IDLE');return;}
       }
       if(entryPosition?.kind==='TONTINE'&&entryPosition.applies&&target>current){
         if(!entryPosition.eligible)throw Error(tx('Ce membre n’est pas inscrit à cette tontine. Vérifiez ses participations avant de cotiser.','This member is not enrolled in this tontine. Check participation before collecting.'));
         if(entryPosition.configured&&target>entryPosition.maximumWithoutAdvance){
           const surplus=target-entryPosition.maximumWithoutAdvance;
-          if(!await askReview({title:tx('Confirmer l’avance','Confirm prepayment'),context:reviewContext+' · '+tx('Avance pour les prochaines séances','Prepayment for upcoming meetings')+' · '+fmt(surplus)})){setCellState('IDLE');return;}
+          if(!window.confirm(tx('Le surplus de '+fmt(surplus)+' sera une avance pour les prochaines séances. Confirmer cette avance ?','The extra '+fmt(surplus)+' will prepay future meetings. Confirm this prepayment?'))){setCellState('IDLE');return;}
           reason='[AVANCE] '+(reason||tx('Avance déclarée pour les séances suivantes','Declared prepayment for future meetings'));
         }else if(entryPosition.configured&&target!==entryPosition.periodic&&!reason){
-          reason=await askReview({title:tx('Cotisation différente du montant prévu','Contribution differs from scheduled amount'),context:reviewContext+' · '+fmt(entryPosition.periodic)+' → '+fmt(target),suggestion:entryPosition.arrearsBefore?tx('Rappel de cotisations','Arrears payment'):tx('Cotisation partielle','Partial contribution')})??'';
+          reason=prompt(tx('Montant différent de la cotisation normale '+fmt(entryPosition.periodic)+'. Motif (rappel, paiement partiel…) :','Amount differs from the usual '+fmt(entryPosition.periodic)+'. Reason (arrears, partial payment…):'),entryPosition.arrearsBefore?tx('Rappel de cotisations','Arrears payment'):tx('Cotisation partielle','Partial contribution'))??'';
           if(!reason.trim()){setCellState('IDLE');return;}
         }
       }
       if(!await financialVoice.before({amount:target,memberName:members.find(x=>x.id===membershipId)?.displayName,rubricName:rubric.name})){setCellState('IDLE');return;}
-      if(submissionScope!==JSON.stringify([app.currentTenant(),app.currentActor(),app.activeGroup()]) ||
-         (reviewedInDialog && (exactCellVersion(membershipId,rubricId,meetingId)!==baselineVersion || exactCellAmount(membershipId,rubricId,meetingId)!==signedCurrent))){
-        throw Error(tx('Le contexte ou le montant a changé. Relisez la cellule avant de confirmer.','The context or amount changed. Review the cell before confirming.'));
-      }
       validate.disabled=true;input.disabled=true;validate.textContent='…';holder.classList.add('is-saving');
       let result;
       const displayTarget=(nature==='LOAN'||nature==='OUTFLOW')?-target:target;
@@ -1687,6 +1647,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     let panelIndex=0;
     try{panelIndex=Math.max(0,Math.min(columnGroups.length-1,Number(sessionStorage.getItem(panelKey))||0));}catch{}
     const visibleRubrics=columnGroups[panelIndex]??activeRubrics;
+    const rubricMarks = new Map(visibleRubrics.map(r => [r.id, rubricMark(r, financialNatureForRubric(r))]));
     const presentation= document.createElement('div');presentation.className='eco-smartgrid-toolbar';
     const title=document.createElement('strong');title.textContent=tx('Affichage des rubriques','Rubric display');
     const presets=document.createElement('div');presets.className='eco-smartgrid-parts';
@@ -1759,12 +1720,12 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
       matrixMeetingId=selectedMeeting;root.dataset.meetingId=selectedMeeting;
       const numberHead=document.createElement('th');numberHead.textContent=tx('N°','No.');numberHead.className='member-number-column';hr.append(numberHead);
       const memberHead=document.createElement('th');memberHead.textContent=tx('Membre','Member');hr.append(memberHead);
-      for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.dataset.rubricFamily=rubricPaletteFamily(r,financialNatureForRubric(r));th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
+      for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.append(contextLink(r.name,'rubric',r.id));markRubricHeader(th,rubricMarks.get(r.id),tx);hr.append(th);}
       const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général membre','Member grand total'):tx('Total membre','Member total');hr.append(totalHead);head.append(hr);table.append(head);
       for(const m of displayMembers){
         const tr=document.createElement('tr'),number=document.createElement('th'),name=document.createElement('th');number.className='member-number-column';number.textContent=String(Number(m.memberNumber)||'—');name.replaceChildren(contextLink(String(m.displayName??''),'member',m.id));const roles=document.createElement('small');roles.textContent=m.roles.join(', ');name.append(roles);name.title=String(m.displayName??'')+(m.roles.length?' · '+m.roles.join(', '):'');tr.append(number,name);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(m.id,r.id,selectedMeeting),0);
         tr.dataset.membershipId=m.id;
-        for(const r of visibleRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
+        for(const r of visibleRubrics){const value=exactCellAmount(m.id,r.id,selectedMeeting);const td=document.createElement('td');td.dataset.rubricId=r.id;td.dataset.rubricFamily=rubricMarks.get(r.id).family;td.append(makeFinancialEntryCell({member:m,rubric:r,meetingId:selectedMeeting,editable:Boolean(editable&&isManager())}));tr.append(td);}
         const total=document.createElement('td');total.className='table-row-total';total.append(financialNumberButton({label:tx('Total membre · ','Member total · ')+m.displayName,total:rowTotal,rows:activeRubrics.map(r=>({label:r.name,id:r.id,type:'rubric',amount:exactCellAmount(m.id,r.id,selectedMeeting)})),fmt,tx,period:meetingLabel(meetings.find(x=>x.id===selectedMeeting))}));tr.append(total);body.append(tr);
       }
       const totalRow=document.createElement('tr');totalRow.className='table-total-row';const totalLabel=document.createElement('th');totalLabel.colSpan=2;totalLabel.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(totalLabel);
@@ -1788,7 +1749,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
         toolbar.append(label,contextLink(meetingLabel(meetings.find(x=>x.id===selectedMeeting)),'meeting',selectedMeeting),other,add);root.append(toolbar);
       }
       root.append(presentation,wrap,note);
-    connectSheetNavigation(wrap,table,presentation,tx,fitted);
+    if(parts===1 && !fitted) addFamilyJump(wrap,table,presentation,tx);
       if(columnGroups.length>1){
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
@@ -1798,13 +1759,13 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     const member=activeMembers.find(x=>x.id===membershipId);
     if(!member){root.innerHTML='<div class="empty-state">'+tx('Aucune fiche individuelle accessible.','No individual sheet available.')+'</div>';return;}
     hr.append(document.createElement('th'));hr.firstChild.textContent=tx('Séance','Meeting');
-    for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.dataset.rubricFamily=rubricPaletteFamily(r,financialNatureForRubric(r));th.append(contextLink(r.name,'rubric',r.id));hr.append(th);}
+    for(const r of visibleRubrics){const th=document.createElement('th');th.scope='col';th.append(contextLink(r.name,'rubric',r.id));markRubricHeader(th,rubricMarks.get(r.id),tx);hr.append(th);}
     const totalHead=document.createElement('th');totalHead.textContent=columnGroups.length>1?tx('Total général séance','Meeting grand total'):tx('Total séance','Meeting total');hr.append(totalHead);head.append(hr);table.append(head);
     const activeMeetings=meetings.filter(x=>x.status!=='cancelled').slice().sort((a,b)=>String(a.scheduledAt??a.openedAt).localeCompare(String(b.scheduledAt??b.openedAt)));
     for(const meeting of activeMeetings){
       const tr=document.createElement('tr'),th=document.createElement('th');th.append(contextLink(meetingLabel(meeting)+(meeting.status==='closed'?' · '+tx('clôturée','closed'):''),'meeting',meeting.id));th.scope='row';tr.append(th);const rowTotal=activeRubrics.reduce((sum,r)=>sum+exactCellAmount(member.id,r.id,meeting.id),0);
       tr.dataset.meetingId=meeting.id;
-      for(const r of visibleRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);const td=document.createElement('td');td.dataset.rubricId=r.id;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
+      for(const r of visibleRubrics){const value=exactCellAmount(member.id,r.id,meeting.id);const td=document.createElement('td');td.dataset.rubricId=r.id;td.dataset.rubricFamily=rubricMarks.get(r.id).family;td.append(makeFinancialEntryCell({member,rubric:r,meetingId:meeting.id,editable:Boolean(editable&&isManager())}));tr.append(td);}
       const total=document.createElement('td');total.className='table-row-total';total.textContent=fmt(rowTotal);tr.append(total);body.append(tr);
     }
     const totalRow=document.createElement('tr');totalRow.className='table-total-row';const label=document.createElement('th');label.textContent=tx('TOTAL COLONNES','COLUMN TOTALS');totalRow.append(label);
@@ -1815,7 +1776,7 @@ const renderCanonicalFinancialTable=({root,mode='meeting',meetingId='',membershi
     totalRow.append(grandTd);body.append(totalRow);table.append(body);wrap.append(table);
     const note=document.createElement('p');note.className='truth-notice';note.textContent=tx('Cette fiche utilise exactement le même éditeur financier que la feuille de séance. Les totaux de chaque rubrique figurent sur la dernière ligne.','This sheet uses exactly the same financial editor as the meeting sheet. Totals for every rubric appear on the last row.');
     root.append(presentation,wrap,note);
-    connectSheetNavigation(wrap,table,presentation,tx,fitted);
+    if(parts===1 && !fitted) addFamilyJump(wrap,table,presentation,tx);
       if(columnGroups.length>1){
         const explanation=document.createElement('p');explanation.className='eco-smartgrid-explanation';
         explanation.textContent=tx('Les sous-totaux des colonnes concernent uniquement cette partie. Les totaux généraux des membres et de la feuille comprennent toutes les rubriques, même masquées.','Column subtotals apply only to this part. Member and sheet grand totals include all rubrics, including hidden parts.');
@@ -2358,44 +2319,16 @@ const renderTrash=async()=>{
     }catch(e){fail(e);}
 };
 document.querySelector('#trashRefreshBtn')?.addEventListener('click',()=>void renderTrash());
-// Existing owners load their projections when their view is useful. A background
-// panel cannot hold F5 or invalidate the already restored financial workspace.
-const optionalRefreshViews={
- 'role-dashboards':['dashboard'],'personal-cockpit':['dashboard'],
- 'applications':['discovery','launch','backoffice'],'completion':['finance','ecosystem'],
- 'advanced':['finance','ecosystem'],'community-shop':['ecosystem'],'misc-rubrics':['operations','finance'],
- 'pairing':['members','settings'],'sovereign-offline':['inbox','settings'],
- 'interest-community':['ecosystem'],'ad-manager':['ecosystem'],'temporal-commerce':['ecosystem'],
- 'visual-media':['ecosystem'],'partner-ads':['ecosystem'],'ad-surfaces':['ecosystem'],
- 'visual-media-presenter':['ecosystem'],'tontine-manager':['finance','operations'],
- 'savings-yield':['finance'],'assistance-rulebook':['finance'],'external-programs':['ecosystem'],
- 'blueprint':['ecosystem'],'financial-lab':['finance'],'resilience':['settings'],
- 'founder-control':['settings'],'trash':['settings','backoffice']
-};
-const deferredOptionalRefreshes=new Map();
-const refreshOptionalOfflineSafe=async(label,fn,options={})=>{
-    const views=optionalRefreshViews[label];
-    if(options.deferHidden&&views&&!views.includes(activeViewName())){
-        deferredOptionalRefreshes.set(label,{fn,scope:JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()])});return;
-    }
+const refreshOptionalOfflineSafe=async(label,fn)=>{
     try{return await fn();}
     catch(error){
-        if(error instanceof Error && error.message==='NETWORK_UNAVAILABLE'){
+        if(!navigator.onLine && error instanceof Error && error.message==='NETWORK_UNAVAILABLE'){
             console.info('Offline optional section skipped:',label);
             return;
         }
         throw error;
     }
 };
-window.addEventListener('eco:view-changed',event=>{
-    const scope=JSON.stringify([app.currentActor(),app.currentTenant(),app.activeGroup()]);
-    for(const [label,entry] of deferredOptionalRefreshes){
-        if(entry.scope!==scope){deferredOptionalRefreshes.delete(label);continue;}
-        if(!optionalRefreshViews[label]?.includes(event.detail?.view))continue;
-        deferredOptionalRefreshes.delete(label);
-        void refreshOptionalOfflineSafe(label,entry.fn).catch(fail);
-    }
-});
 window.addEventListener('eco:view-changed',event=>{
     if(event.detail?.view!=='dashboard'||hydratedDashboardScope!==dashboardScope())return;
     // Refresh the existing projections when the user returns or refreshes Home.
@@ -2679,7 +2612,6 @@ window.addEventListener('eco:financial-live-update',event=>{
 });
 
 const refreshGroupContext = async () => {
-    deferredOptionalRefreshes.clear();
     window.dispatchEvent(new CustomEvent('eco:context-changed'));recoveryWorkspace.clearForContext();
     const requestedGroup=app.activeGroup(),requestedDashboardScope=dashboardScope();
     hydratedDashboardScope='';
@@ -2710,12 +2642,6 @@ const refreshGroupContext = async () => {
     await renderGroups();
     journeyUI.refresh();localAssistantUI.refreshContext();
     if(requestedGroup!==app.activeGroup())return;
-    // Bootstrap has already restored the durable Outbox. Paint its scoped
-    // working values before member/meeting renderers create financial cells;
-    // secondary projections must never flash an old zero over a saved intent.
-    ensureFinancialStorageScope();
-    financialPendingTargets=new Map((app.pendingFinancialCellTargets?.()??[]).map(x=>[financialCellKey(x.membershipId,x.rubricId,x.meetingId),x]));
-    financialPendingSheetEntries=app.pendingFinancialSheetEntries?.()??[];
     const active = Boolean(app.activeGroup());
     // Role checks must use the NEW group's members, not the previous group's
     // list. Otherwise invited managers temporarily lose finance/Recap access.
@@ -2730,7 +2656,7 @@ const refreshGroupContext = async () => {
     $('#membersContent').style.display = active ? 'block' : 'none';
     $('#noActiveGroupMembers').style.display = active ? 'none' : 'block';
     const manage=active && isManager();
-    if(!active){await refreshOptionalOfflineSafe('group-home',()=>groupHomeUI.refresh());await refreshOptionalOfflineSafe('sessions-home',()=>sessionsUI.refresh(),{deferHidden:true});}
+    if(!active){await refreshOptionalOfflineSafe('group-home',()=>groupHomeUI.refresh());await refreshOptionalOfflineSafe('sessions-home',()=>sessionsUI.refresh());}
     $('#backOfficeContent').style.display = manage ? 'block' : 'none';
     $('#noActiveGroupBackoffice').style.display = manage ? 'none' : 'block';
     $('#noActiveGroupBackoffice').textContent = active&&!manage ? tx('Le Back-office est réservé aux responsables habilités du groupe.','Back office is restricted to authorized group managers.') : tx('Sélectionnez ou créez d’abord un groupe.','Select or create a group first.');
@@ -2741,52 +2667,52 @@ const refreshGroupContext = async () => {
     if (active) {
         await renderMeetings();
         if(requestedGroup!==app.activeGroup())return;
-        if(manage&&!app.isRestoringCachedWorkspace?.()){
-          await refreshOptionalOfflineSafe('official-loan-rubric',()=>app.ensureOfficialLoanRubric(),{deferHidden:true});
-          await refreshOptionalOfflineSafe('official-repayment-rubric',()=>app.ensureOfficialRepaymentRubric(),{deferHidden:true});
+        if(manage){
+          await refreshOptionalOfflineSafe('official-loan-rubric',()=>app.ensureOfficialLoanRubric());
+          await refreshOptionalOfflineSafe('official-repayment-rubric',()=>app.ensureOfficialRepaymentRubric());
         }
         await renderLivingRules();
-        await refreshOptionalOfflineSafe('group-home',()=>groupHomeUI.refresh(),{deferHidden:true});
-        await refreshOptionalOfflineSafe('sessions-home',()=>sessionsUI.refresh(),{deferHidden:true});
+        await refreshOptionalOfflineSafe('group-home',()=>groupHomeUI.refresh());
+        await refreshOptionalOfflineSafe('sessions-home',()=>sessionsUI.refresh());
         if(manage)await renderLedger();
         else{receiptPositions=[];financialSheetEvents=[];financialPendingSheetEntries=[];financialCellVersions=new Map();$('#ledgerMetrics').replaceChildren();$('#receiptList').textContent='Votre relevé individuel est accessible depuis la liste des membres.';}
     }
     if(requestedDashboardScope!==dashboardScope())return;
     hydratedDashboardScope=requestedDashboardScope;
-    await refreshOptionalOfflineSafe('role-dashboards',()=>roleDashboardsUI.refresh(),{deferHidden:true});
-    if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications,{deferHidden:true});else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
-    await refreshOptionalOfflineSafe('universe',renderUniverse,{deferHidden:true});
-    await refreshOptionalOfflineSafe('inbox',renderInbox,{deferHidden:true});
-    await refreshOptionalOfflineSafe('completion',()=>completionUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('advanced',()=>advancedUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts,{deferHidden:true});
+    await refreshOptionalOfflineSafe('role-dashboards',()=>roleDashboardsUI.refresh());
+    if(!active || manage)await refreshOptionalOfflineSafe('applications',renderApplications);else $('#applicationsBox').textContent='Les candidatures sont gérées par les responsables du groupe.';
+    await refreshOptionalOfflineSafe('universe',renderUniverse);
+    await refreshOptionalOfflineSafe('inbox',renderInbox);
+    await refreshOptionalOfflineSafe('completion',()=>completionUI.refresh());
+    await refreshOptionalOfflineSafe('advanced',()=>advancedUI.refresh());
+    await refreshOptionalOfflineSafe('identity-live',()=>identityLiveUI.refresh());
+    await refreshOptionalOfflineSafe('financial-alerts',renderFinancialAlerts);
     if(active&&manage)ensureFinancialSnapshotPolling();
-    await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications,{deferHidden:true});
-    await refreshOptionalOfflineSafe('notification-center',()=>renderNotificationCenter({background:true}),{deferHidden:true});
-    await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh(),{deferHidden:true});
-    if(document.getElementById('personalShopsPanel')?.open)await refreshOptionalOfflineSafe('personal-shops',()=>refreshPersonalShops?.(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('sovereign-offline',()=>sovereignOfflineUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh(personalDirectory),{deferHidden:true});
-    if(activeViewName()==='recap'&&requestedGroup===app.activeGroup())await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('temporal-commerce',()=>temporalCommerceUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('visual-media',()=>visualMediaStudio.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('partner-ads',()=>partnerAdsUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('ad-surfaces',()=>adSurfacesUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('visual-media-presenter',()=>visualMediaPresenter.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('tontine-manager',()=>tontineManagerUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('savings-yield',()=>savingsYieldUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('assistance-rulebook',()=>assistanceRulebookUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('external-programs',()=>externalProgramsUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('blueprint',()=>blueprintExecutableUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('financial-lab',()=>financialLabUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('resilience',()=>resilienceUI.refresh(),{deferHidden:true});
-    await refreshOptionalOfflineSafe('founder-control',()=>founderControlUI.refresh(),{deferHidden:true});
-    if(manage)await refreshOptionalOfflineSafe('trash',renderTrash,{deferHidden:true});
+    await refreshOptionalOfflineSafe('urgent-notifications',renderUrgentNotifications);
+    await refreshOptionalOfflineSafe('notification-center',()=>renderNotificationCenter({background:true}));
+    await refreshOptionalOfflineSafe('community-shop',()=>communityShopUI.refresh());
+    if(document.getElementById('personalShopsPanel')?.open)await refreshOptionalOfflineSafe('personal-shops',()=>refreshPersonalShops?.());
+    await refreshOptionalOfflineSafe('misc-rubrics',()=>miscRubricUI.refresh());
+    await refreshOptionalOfflineSafe('pairing',()=>pairingUI.refresh());
+    await refreshOptionalOfflineSafe('sovereign-offline',()=>sovereignOfflineUI.refresh());
+    await refreshOptionalOfflineSafe('personal-cockpit',()=>personalCockpitUI.refresh(personalDirectory));
+    if(activeViewName()==='recap'&&requestedGroup===app.activeGroup())await refreshOptionalOfflineSafe('recap',()=>recapUI.refresh());
+    await refreshOptionalOfflineSafe('interest-community',()=>interestCommunityUI.refresh());
+    await refreshOptionalOfflineSafe('ad-manager',()=>adManagerUI.refresh());
+    await refreshOptionalOfflineSafe('temporal-commerce',()=>temporalCommerceUI.refresh());
+    await refreshOptionalOfflineSafe('visual-media',()=>visualMediaStudio.refresh());
+    await refreshOptionalOfflineSafe('partner-ads',()=>partnerAdsUI.refresh());
+    await refreshOptionalOfflineSafe('ad-surfaces',()=>adSurfacesUI.refresh());
+    await refreshOptionalOfflineSafe('visual-media-presenter',()=>visualMediaPresenter.refresh());
+    await refreshOptionalOfflineSafe('tontine-manager',()=>tontineManagerUI.refresh());
+    await refreshOptionalOfflineSafe('savings-yield',()=>savingsYieldUI.refresh());
+    await refreshOptionalOfflineSafe('assistance-rulebook',()=>assistanceRulebookUI.refresh());
+    await refreshOptionalOfflineSafe('external-programs',()=>externalProgramsUI.refresh());
+    await refreshOptionalOfflineSafe('blueprint',()=>blueprintExecutableUI.refresh());
+    await refreshOptionalOfflineSafe('financial-lab',()=>financialLabUI.refresh());
+    await refreshOptionalOfflineSafe('resilience',()=>resilienceUI.refresh());
+    await refreshOptionalOfflineSafe('founder-control',()=>founderControlUI.refresh());
+    if(manage)await refreshOptionalOfflineSafe('trash',renderTrash);
 };
 const refreshAll = async () => { await refreshGroupContext(); renderOutbox(); renderCompatibility(); renderKernel(); renderModules(); renderEcosystemHighlights(); renderDomainHubs(); await detailUI.openFromLocation?.(); };
 const openEcoShareIntent=async intent=>{
@@ -3278,7 +3204,6 @@ document.querySelectorAll('[data-eco-language-control]').forEach(control=>{
     });
 });
 let onlineResumePromise=null,onlineResumeRequested=false;
-let sessionRevalidationNeeded=false,sessionRevalidationRejected=false,visibleRecoveryNeeded=false;
 let networkRecoveryNeeded=navigator.onLine===false;
 const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
     if(onlineResumePromise){onlineResumeRequested=true;return onlineResumePromise;}
@@ -3286,18 +3211,6 @@ const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
     const preserved=captureNavState();persistNavState(preserved);
     onlineResumePromise=(async()=>{renderConnectivity();try{
         if(navigator.onLine===false){networkRecoveryNeeded=true;return;}
-        if(app.isRestoringCachedWorkspace?.()){networkRecoveryNeeded=true;return;}
-        if(app.serverBudgetState?.().blocked||sessionRevalidationRejected)return;
-        if(sessionRevalidationNeeded){
-            const actor=app.currentActor(),tenant=app.currentTenant();
-            const session=await app.authStatus({requireServer:true});
-            if(!session.authenticated||!session.account){
-                sessionRevalidationRejected=true;networkRecoveryNeeded=true;
-                toast(tx('Connexion serveur à renouveler. Vos copies et saisies locales restent conservées.','Server sign-in needs renewal. Your local copies and edits are preserved.'));return;
-            }
-            if(session.account.id!==actor||session.account.tenantId!==tenant){sessionRevalidationRejected=true;showAuth(tx('Reconnectez ce compte pour reprendre sa synchronisation.','Sign in to this account to resume its synchronization.'));return;}
-            sessionRevalidationNeeded=false;
-        }
         if(!(await reviewOfflineFinancialBacklog(forceConfrontation))){networkRecoveryNeeded=true;renderConnectivity();return;}
         const pendingBefore=(app.outboxItems?.()??[]).filter(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status??'')));
         const beforeSync=pendingTargetSnapshot(),beforeSheetSync=pendingSheetSnapshot();
@@ -3343,18 +3256,6 @@ const resumeOnline=({forceConfrontation=false,relayFerry=false}={})=>{
         if(otherConfirmed){
             if(app.activeGroup())await refreshGroupContext();else await renderGroups();
         }
-        if(visibleRecoveryNeeded&&!otherConfirmed){
-            // Live values can converge while typing; structural redraw waits
-            // until the existing editor releases focus. Never erase a draft.
-            if(document.activeElement?.matches('input,textarea,select,[contenteditable="true"]')){
-                if(app.activeGroup()&&isManager())await pollCanonicalFinancialSnapshot();
-            }else{
-                const before=captureNavState(),revision=navigationInteractionRevision;
-                await refreshVisibleBusinessSurface(before);
-                if(revision===navigationInteractionRevision&&activeViewName()===before.view)restoreNavState(before);
-                visibleRecoveryNeeded=false;
-            }
-        }
         networkRecoveryNeeded=false;
         // Background recovery must not navigate. The manager may have changed
         // tabs or focused another cell while the server was answering.
@@ -3377,16 +3278,9 @@ const eventDrivenConnectivityRecovery=(event)=>{
     if(['focus','pageshow','visibilitychange'].includes(String(event?.type??'')))app.forceTransportRetry?.();
     renderConnectivity();
     const pending=(app.outboxItems?.()??[]).some(item=>!['CONFIRMED','CANCELLED'].includes(String(item.status)));
-    if(navigator.onLine&&(pending||networkRecoveryNeeded))scheduleConnectivityRecovery();
+    if(navigator.onLine&&(pending||networkRecoveryNeeded))void resumeOnline();
 };
-let connectivityRecoveryTimer,currentServiceWorkerRegistration;
-const scheduleConnectivityRecovery=()=>{
-    if(connectivityRecoveryTimer||navigator.onLine===false)return;
-    connectivityRecoveryTimer=setTimeout(()=>{connectivityRecoveryTimer=undefined;void resumeOnline();void currentServiceWorkerRegistration?.update().catch(()=>{});},400);
-};
-window.addEventListener('online',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;visibleRecoveryNeeded=true;sessionRevalidationNeeded=true;scheduleConnectivityRecovery();});
-if(navigator.connection?.addEventListener)navigator.connection.addEventListener('change',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;visibleRecoveryNeeded=true;sessionRevalidationNeeded=true;scheduleConnectivityRecovery();});
-document.addEventListener('focusout',()=>{if(visibleRecoveryNeeded&&navigator.onLine!==false){networkRecoveryNeeded=true;scheduleConnectivityRecovery();}});
+window.addEventListener('online',()=>{app.forceTransportRetry?.();networkRecoveryNeeded=true;void resumeOnline({relayFerry:true});});
 window.addEventListener('eco:transport-retry-ready',eventDrivenConnectivityRecovery);
 window.addEventListener('offline',()=>{networkRecoveryNeeded=true;offlineConfrontationDeferred=false;persistNavState(captureNavState());renderConnectivity();});
 window.addEventListener('pageshow',eventDrivenConnectivityRecovery);
@@ -3408,7 +3302,7 @@ window.addEventListener('eco:manager-relay-updated',()=>{void(async()=>{
     await hydrateRelayFinancialReviews();
     renderMeetingMatrix();renderIndividualSheetMatrix();renderAllCanonicalFinancialHosts();
   })().catch(error=>console.info('Relay local projection refresh deferred',error));});
-window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;visibleRecoveryNeeded=true;sessionRevalidationNeeded=true;scheduleConnectivityRecovery();});
+window.addEventListener('eco:server-budget-expired',()=>{networkRecoveryNeeded=true;void resumeOnline();});
 window.addEventListener('eco:live-connected',()=>{
     void app.repairFinancialLiveDelivery?.().catch(e=>{if(String(e.message)!=='FORBIDDEN_SCOPE')console.info('Financial delivery repair deferred',e);});
     // The authenticated socket itself proves real server reachability. Clear a
@@ -3463,8 +3357,6 @@ async function ensureCurrentServiceWorker(){
             window.dispatchEvent(new CustomEvent('eco:service-worker-updated',{detail:{version:CAHIER_VERSION}}));
         },{once:false});
         const reg=await navigator.serviceWorker.register('/sw.js',{scope:'/',updateViaCache:'none'});
-        currentServiceWorkerRegistration=reg;
-        if(!navigator.serviceWorker.controller&&reg.active)reg.active.postMessage({type:'CLAIM_CLIENTS'});
         try{if(navigator.storage&&navigator.storage.persist)await navigator.storage.persist();}catch{}
         try{
             if('periodicSync' in reg)await reg.periodicSync.register('eco-system-outbox',{minInterval:12*60*60*1000});
@@ -3474,12 +3366,11 @@ async function ensureCurrentServiceWorker(){
         }catch{}
         // Never reload a live session because a worker changed. On old Android,
         // a forced reload during loss of network can destroy the usable cached page.
-        // register() already checks for an update. Do not immediately repeat it.
+        if(navigator.onLine)setTimeout(()=>{try{reg.update();}catch{}},5000);
     }catch{}
 }
 
 async function start() {
-    sessionRevalidationRejected=false;
     const startupInteractionRevision=navigationInteractionRevision;
     document.body.classList.add('auth-restoring');
     renderConnectivity();
@@ -3489,9 +3380,7 @@ async function start() {
     let authenticatedSession=false;
     try {
         bootStage('AUTH_SESSION');
-        const cachedSession=await app.restoreCachedSession?.();
-        const session=cachedSession??await app.authStatus();
-        if(cachedSession){sessionRevalidationNeeded=true;visibleRecoveryNeeded=true;networkRecoveryNeeded=true;}
+        const session=await app.authStatus();
         if(!session.authenticated||!session.account){showAuth(session.offline?tx('Aucun compte local n’existe encore. Créez votre compte maintenant : Internet n’est pas nécessaire.','No local account exists yet. Create your account now: Internet is not required.'):undefined,session.offline?'register':undefined);return;}
         authenticatedSession=true;bootStage('AUTHENTICATED');window.dispatchEvent(new CustomEvent('eco:preference-scope',{detail:{actorId:app.currentActor(),tenantId:app.currentTenant()}}));
         window.dispatchEvent(new CustomEvent('eco:core-ready'));
@@ -3502,13 +3391,13 @@ async function start() {
           claim.hidden=session.registrationState!=='LOCAL_PENDING_REGISTRATION';claim.disabled=session.registrationState==='LOCAL_PENDING_REGISTRATION'&&!navigator.onLine;
           claim.textContent=navigator.onLine?tx('Finaliser le compte local','Finalize local account'):tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');
         }
-        bootStage('LOCAL_WORKSPACE');await app.bootstrap({session});
+        bootStage('LOCAL_WORKSPACE');await app.bootstrap();
         const shareIntent=parseEcoShareIntent();
         try{
             const catalog=await app.productCatalog();
             modules=catalog.capabilities;
         }catch(error){
-            if(!(error instanceof Error&&error.message==='NETWORK_UNAVAILABLE'))throw error;
+            if(!(navigator.onLine===false&&error instanceof Error&&error.message==='NETWORK_UNAVAILABLE'))throw error;
             console.info('Offline product catalog snapshot unavailable; core group workspace remains usable.');
         }
         populateWorkspaceModules();
@@ -3548,10 +3437,7 @@ async function start() {
         }
         bootStage('FAILED');fail(e);
     }
-    finally {
-        app.finishCachedWorkspaceRestore?.();settleStartup();
-        if(authenticatedSession&&networkRecoveryNeeded&&navigator.onLine!==false)scheduleConnectivityRecovery();
-    }
+    finally { settleStartup(); }
 }
 
 async function showStatement(membershipId){
@@ -3621,6 +3507,4 @@ $('#logoutBtn').addEventListener('click',async()=>{try{await app.logout();docume
 window.addEventListener('offline',()=>{renderConnectivity();const claim=document.querySelector('#claimLocalAccountBtn');if(claim&&!claim.hidden){claim.disabled=true;claim.textContent=tx('Compte local · Internet requis pour finaliser','Local account · Internet needed to finalize');}});
 // Authentication and the first usable workspace take precedence over shell
 // installation downloads, especially on a slow phone or a cold browser profile.
-// PWA installation must not wait for authentication or optional panel reads.
-void ensureCurrentServiceWorker();
-void start();
+void start().finally(()=>void ensureCurrentServiceWorker());

@@ -30,7 +30,7 @@ async function setup(page,context){
  }
  return{ids,second};
 }
-async function enter(page,ids,value){const reason=await amount(cell(page,ids))>0?'Correction vérifiée':undefined;await cell(page,ids).locator('.cell-target-input').fill(String(value));await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page,reason);}
+async function enter(page,ids,value){if(await amount(cell(page,ids))>0)page.once('dialog',d=>d.accept('Correction vérifiée'));await cell(page,ids).locator('.cell-target-input').fill(String(value));await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);}
 
 test('two accounts in one browser keep their own identity, drafts, live amounts, review approval and F5 position',async({page,context})=>{
  const {ids,second}=await setup(page,context);
