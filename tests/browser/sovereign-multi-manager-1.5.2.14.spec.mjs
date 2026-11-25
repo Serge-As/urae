@@ -12,9 +12,9 @@ const api=(page,path,method='GET',body,groupId)=>page.evaluate(async({path,metho
 },{path,method,body,groupId});
 const cell=(page,ids)=>page.locator(`#meetingMatrix .matrix-cell-entry[data-membership-id="${ids.membershipId}"][data-rubric-id="${ids.rubricId}"][data-meeting-id="${ids.meetingId}"]`);
 const enter=async(page,ids,value)=>{
-  const reason=await amount(cell(page,ids))>0?'Correction vérifiée entre gestionnaires':undefined;
+  if(await amount(cell(page,ids))>0)page.once('dialog',d=>d.accept('Correction vérifiée entre gestionnaires'));
   await cell(page,ids).locator('.cell-target-input').fill(String(value));
-  await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page,reason);
+  await cell(page,ids).locator('.cell-validate').click();await settleWorkDialog(page);
 };
 async function setup(page,browser){
   await page.goto(base);await expect.poll(()=>page.evaluate(()=>sessionStorage.getItem('eco.window.session.v1'))).toMatch(/^[a-f0-9]{32}$/);const suffix=Date.now()+'_'+Math.floor(Math.random()*100000);

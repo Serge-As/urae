@@ -43,8 +43,7 @@ try{
   if(extras.length)throw Error('Untracked source: '+extras.join(', '));
   await mkdir(scratch,{recursive:true});await mkdir(output,{recursive:true});
   const installed=JSON.parse(await readFile(path.join(repo,'node_modules','@playwright','test','package.json'),'utf8'));
-  const expected=JSON.parse(await readFile(path.join(repo,'package.json'),'utf8')).devDependencies['@playwright/test'];
-  if(installed.version!==expected)throw Error('Install the pinned Playwright '+expected+' to run this diagnostic.');
+  if(installed.version!=='1.56.1')throw Error('The already qualified Playwright 1.56.1 installation is required.');
   const testArgs=scope==='sovereign-chromium'
     ?['node_modules/@playwright/test/cli.js','test','tests/browser/eco-system-webkit-sovereign-offline-1.5.2.9.spec.mjs','--browser=chromium','--workers=1']
     :['node_modules/@playwright/test/cli.js','test','tests/browser/sovereign-multi-manager-1.5.2.14.spec.mjs','--browser=chromium','--workers=1','--grep','distinct managers see typing'];

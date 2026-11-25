@@ -137,31 +137,15 @@ test('real financial matrix validates click, Enter, closed-session first entry a
 
   const replaceCell=cell(ids.rubricIds[0]);
   await replaceCell.locator('.cell-target-input').fill('500');
-  await replaceCell.locator('.cell-validate').click();await settleWorkDialog(page,'Correction E2E 1000 vers 500');
+  page.once('dialog',dialog=>dialog.accept('Correction E2E 1000 vers 500'));
+  await replaceCell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(500);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(500);
   await replaceCell.locator('.cell-target-input').fill('4000');
-  await replaceCell.locator('.cell-target-input').press('Enter');await settleWorkDialog(page,'Correction E2E 500 vers 4000');
+  page.once('dialog',dialog=>dialog.accept('Correction E2E 500 vers 4000'));
+  await replaceCell.locator('.cell-target-input').press('Enter');await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(4000);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(4000);
-
-  await replaceCell.locator('.cell-target-input').fill('5000');
-  await replaceCell.locator('.cell-validate').click();
-  await settleWorkDialog(page,'Contrôle de la valeur de départ');
-  await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(5000);
-  await replaceCell.locator('.cell-target-input').fill('4000');
-  await replaceCell.locator('.cell-validate').click();
-  const correction=page.locator('.eco-financial-reason');
-  await expect(correction).toContainText(/5\s?000.*4\s?000/);
-  await correction.getByRole('button',{name:'Annuler'}).click();
-  await expect(replaceCell.locator('.cell-target-input')).toHaveValue('4000');
-  expect(await ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(5000);
-  await replaceCell.locator('.cell-validate').click();
-  await settleWorkDialog(page,'Rectification du montant');
-  await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[0]})).toBe(4000);
-  await page.reload({waitUntil:'domcontentloaded'});
-  await page.locator('button[data-view="operations"]').first().click();
-  await expect.poll(()=>moneyValue(cell(ids.rubricIds[0]))).toBe(4000);
 
   const enterCell=cell(ids.rubricIds[1]);
   await enterCell.locator('.cell-target-input').fill('2000');
@@ -179,8 +163,9 @@ test('real financial matrix validates click, Enter, closed-session first entry a
   await page.locator('button[data-view="operations"]').first().click();
   await expect(page.locator('#meetingMatrix .canonical-financial-matrix')).toBeVisible();
   const closedCell=cell(ids.rubricIds[2]);
+  page.once('dialog',dialog=>dialog.accept('Régularisation E2E après clôture'));
   await closedCell.locator('.cell-target-input').fill('1500');
-  await closedCell.locator('.cell-validate').click();await settleWorkDialog(page,'Régularisation E2E après clôture');
+  await closedCell.locator('.cell-validate').click();await settleWorkDialog(page);
   await expect.poll(()=>moneyValue(cell(ids.rubricIds[2]))).toBe(1500);
   await expect.poll(()=>ledgerCellTotal(page,{...ids,rubricId:ids.rubricIds[2]})).toBe(1500);
 

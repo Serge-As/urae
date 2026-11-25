@@ -1,4 +1,3 @@
-import {settleWorkDialog} from './financial-work-mode-helper.mjs';
 import {test,expect} from '@playwright/test';
 
 const base='http://127.0.0.1:4173';
@@ -101,9 +100,9 @@ test('T01–T15 lots A/B/C: navigateur, ✓/Entrée, remplacement exact, offline
   });
 
   await test.step('T07 — Entrée remplace exactement 1 000 par 500 dans la même cellule',async()=>{
+    page.once('dialog',dialog=>dialog.accept('Correction T07 1000 vers 500'));
     await cell(0).locator('.cell-target-input').fill('500');
     await cell(0).locator('.cell-target-input').press('Enter');
-    await settleWorkDialog(page,'Correction T07 1000 vers 500');
     await expect.poll(()=>uiAmount(cell(0))).toBe(500);
   });
 

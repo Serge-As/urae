@@ -1,3 +1,4 @@
+import {markRubricHeader} from './smart-grid-view.js';
 import {contextLink}from'./context-link.js';
 import {tontineTimeline}from'./tontine-timeline.js';
 const entityCell=(tag,label,type,id)=>{const n=document.createElement(tag);n.append(contextLink(label,type,id));return n;};
@@ -17,7 +18,7 @@ const isOpen=m=>m?.status==='open';
 const normalizeStatus=s=>String(s??'').toUpperCase();
 const statusFr=s=>({PRESENT:'Présent',LATE:'En retard',REPRESENTED:'Représenté',EXCUSED:'Excusé',ABSENT:'Absent'}[String(s)]??String(s??'—'));
 
-export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics,navigate,openDetail,showError,notify,reloadMeetings}){
+export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics,getRubricMark,navigate,openDetail,showError,notify,reloadMeetings}){
   const root=byId('sessionsWorkspace'),select=byId('sessionsMeetingSelect'),timeline=byId('sessionsTimelineStrip');
   let activeTab='overview';
   let lastRealMeetingId='';
@@ -205,7 +206,7 @@ export function mountSessionsUI({app,getGroups,getMembers,getMeetings,getRubrics
     if(!me.isManager){section.append(el('div',t('La feuille générale récapitulative est réservée aux responsables. Votre fiche individuelle reste disponible.','The cumulative group sheet is restricted to managers. Your individual sheet remains available.'),'empty-state'));return section;}
     const ledger=await app.ledger().catch(()=>({receipts:[]})),receipts=ledger.receipts??[],activeRubrics=rubrics.filter(x=>x.status!=='ARCHIVED'),activeMembers=members.filter(x=>x.status!=='left');
     if(!activeMembers.length||!activeRubrics.length){section.append(el('div',t('Ajoutez au moins un membre et une rubrique pour générer la feuille.','Add at least one member and one rubric to generate the sheet.'),'empty-state'));return section;}
-    const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix sessions-read-table'),head=el('thead'),hr=el('tr');hr.append(el('th',t('Membre','Member')));for(const r of activeRubrics)hr.append(el('th',r.name));hr.append(el('th',t('Total exercice','Exercise total')));head.append(hr);table.append(head);const body=el('tbody');
+    const wrap=el('div',undefined,'matrix-wrap'),table=el('table',undefined,'meeting-matrix sessions-read-table'),head=el('thead'),hr=el('tr');hr.append(el('th',t('Membre','Member')));for(const r of activeRubrics){const th=el('th',r.name);th.scope='col';markRubricHeader(th,getRubricMark(r),t);hr.append(th);}hr.append(el('th',t('Total exercice','Exercise total')));head.append(hr);table.append(head);const body=el('tbody');
     for(const m of activeMembers){const tr=el('tr'),name=entityCell('th',m.displayName,'member',m.id);tr.append(name);let total=0;for(const r of activeRubrics){const amount=receipts.filter(x=>x.membershipId===m.id&&x.rubricId===r.id).reduce((n,x)=>n+Number(x.netAmount??0),0);total+=amount;const td=el('td');const b=button(money(amount),'matrix-cell');b.title=t('Ouvrir les fiches individuelles avant de corriger une séance précise','Open individual sheets before correcting a specific meeting');b.onclick=()=>navigate('operations',{anchor:'twoSheetWorkspace',sheetMode:'individual',force:true});td.append(b);tr.append(td);}tr.append(el('td',money(total)));body.append(tr);}
     const totalRow=el('tr',undefined,'table-total-row');totalRow.append(el('th',t('TOTAL','TOTAL')));let grand=0;for(const r of activeRubrics){const amount=receipts.filter(x=>x.rubricId===r.id).reduce((n,x)=>n+Number(x.netAmount??0),0);grand+=amount;totalRow.append(el('td',money(amount)));}totalRow.append(el('td',money(grand)));body.append(totalRow);table.append(body);wrap.append(table);section.append(wrap);
     const sessions=el('div',undefined,'stack');sessions.append(el('h3',t('Séances déjà intégrées','Sessions already included')));for(const m of meetings.slice().sort((a,b)=>String(meetingAt(a)).localeCompare(String(meetingAt(b))))){const n=receipts.filter(x=>x.meetingId===m.id).reduce((s,x)=>s+Number(x.netAmount??0),0);sessions.append(row(meetingLabel(m),money(n)));}section.append(sessions);
