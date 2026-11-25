@@ -1,4 +1,4 @@
-import {restoreSheetAppearance} from './table-preferences.js';
+import {restoreSheetAppearance, followAppAppearance} from './table-preferences.js';
 let STORAGE_KEY='eco.uiMode';
 window.addEventListener('eco:preference-scope',event=>{const actor=event.detail?.actorId,tenant=event.detail?.tenantId;if(!actor)return;STORAGE_KEY='eco.uiMode.'+encodeURIComponent(JSON.stringify([tenant,actor]));applyUiMode(currentUiMode(),{persist:false,announce:true});});
 const VALID=new Set(['visual','senior','assisted']);
@@ -62,7 +62,37 @@ const openAssistedEntry=()=>{
   },120);
 };
 
+function installAmbianceControl() {
+  const controls = $('uiModeSelect')?.closest('.ui-mode-controls');
+  if (!controls) return;
+  const label = document.createElement('label');
+  label.htmlFor = 'ecoAmbiance';
+  const select = document.createElement('select');
+  select.id = label.htmlFor;
+  label.textContent = 'Ambiance';
+  const themes = [
+    ['', 'Canopée officiel'],
+    ['grand-livre', 'Ivoire Grand-Livre'],
+    ['nuit-doree', 'Nuit Canopée OLED']
+  ];
+  themes.forEach(([value, name]) => select.add(new Option(name, value)));
+  controls.append(label, select);
+  const apply = value => {
+    select.value = themes.some(([theme]) => theme === value) ? value : '';
+    if (select.value) document.body.dataset.ecoAmbiance = select.value;
+    else delete document.body.dataset.ecoAmbiance;
+  };
+  const key = 'eco.presentation.ambiance';
+  try { apply(localStorage.getItem(key)); } catch { apply(''); }
+  select.addEventListener('change', () => {
+    apply(select.value);
+    followAppAppearance();
+    try { localStorage.setItem(key, select.value); } catch {}
+  });
+}
+
 const install=()=>{
+  installAmbianceControl();
   restoreSheetAppearance();
   applyUiMode(currentUiMode(),{persist:false});
   for(const select of document.querySelectorAll('#uiModeSelect, #workspaceUiMode')){

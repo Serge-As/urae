@@ -1,6 +1,6 @@
 {
   "name": "tontine-platform",
-  "version": "1.5.2-45",
+  "version": "1.5.2-46",
   "private": true,
   "type": "module",
   "description": "Eco-System: consolidated productive journeys, canonical resource calendars, consented public notebooks, collective launch programmes, private reminders and local reviewed document preparation.",
@@ -30,7 +30,7 @@
     "lint:contribution": "node scripts/contribution-gate.mjs"
   },
   "devDependencies": {
-    "@playwright/test": "1.56.1",
+    "@playwright/test": "1.58.2",
     "esbuild": "0.28.2",
     "typescript": "^5.8.3",
     "ws": "8.21.0"

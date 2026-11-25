@@ -215,9 +215,10 @@ test('late startup does not reclaim the viewport or a pressed notebook action af
   await api(page,'/api/v1/auth/register','POST',{username:'canopee_startup_'+Date.now(),password:'Synthetic-canopee-startup-20261027!',displayName:'Démarrage synthétique'});
   const project=await api(page,'/api/v1/group-projects','POST',{name:'Groupe synthétique de navigation',kind:'association',governanceModel:'founder_managed',memberCount:1,sessions:1,nominalContribution:0,currency:'XAF'});
   const group=await api(page,'/api/v1/group-projects/'+project.id+'/convert','POST',{}),path='/api/v1/groups/'+group.id;
-  await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),group.id);await page.reload();await expect(page.locator('#authScreen')).toBeHidden();await page.waitForLoadState('networkidle');
+  // Hold an actual cold-start read. A warm session can restore hidden panels entirely from its local projections.
+  await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),group.id);
   let releaseOptional,blocked=false;const gate=new Promise(resolve=>releaseOptional=resolve);
-  await page.route('**'+path+'/trash',async route=>{blocked=true;await gate;await route.continue();});
+  await page.route('**/api/v1/inbox',async route=>{blocked=true;await gate;await route.continue();});
   try{
     await page.reload({waitUntil:'domcontentloaded'});await expect.poll(()=>blocked,{timeout:35000}).toBe(true);
     await page.locator('#mainNav [data-module-open="MARKETPLACE.CORE"]').click();
@@ -243,16 +244,33 @@ test('financial F5 restores the saved column as soon as the sheet is ready, whil
   await api(page,path+'/meetings','POST',{title:'Séance fictive de contrôle du défilement',scheduledAt:'2026-10-26T10:00:00Z'},group.id);
   await api(page,path+'/rubrics','POST',{name:'Contribution fictive de contrôle',facets:{direction:'INFLOW',obligation:'CUSTOM',medium:'CASH',refundability:'CONDITIONAL',replenishment:'CUSTOM',interestMode:'NONE',eligibilityMode:'RULE_BASED'},operatingModel:{ruleRealityStatus:'ALIGNED',targetMode:'OPEN',mandatoryForAbsentees:false,shortfallHandling:'LEAVE_SHORT',payoutMode:'COLLECTED_ONLY',immediateFullPayout:false}},group.id);
   await page.evaluate(id=>localStorage.setItem('tontine.activeGroupId',id),group.id);await page.reload();
-  await expect(page.locator('#authScreen')).toBeHidden();await page.locator('#mainNav [data-view="operations"]').first().click();
+  await expect(page.locator('#authScreen')).toBeHidden();
+  const groupPicker=page.locator('#activeGroupSelect');
+  await expect(groupPicker.locator('option[value="'+group.id+'"]')).toBeAttached();
+  if(await groupPicker.inputValue()!==group.id)await groupPicker.selectOption(group.id);
+  await expect(groupPicker).toHaveValue(group.id);
+  await page.locator('#mainNav [data-view="operations"]').first().click();
   const wrap=page.locator('#meetingMatrix .canonical-financial-wrap');await expect(wrap).toBeVisible({timeout:35000});await page.waitForLoadState('networkidle');
   await page.locator('#meetingMatrix').getByRole('button',{name:'Vue intégrale',exact:true}).click();
   const before=await wrap.evaluate(node=>{node.scrollLeft=node.scrollWidth;return node.scrollLeft;});expect(before).toBeGreaterThan(0);
   const ledger=await api(page,path+'/ledger','GET',undefined,group.id),writes=[];
   page.on('request',r=>{if(!['GET','HEAD'].includes(r.method())&&/\/financial-cells|\/outbox\/apply|\/contributions|\/expenses|\/ledger\//.test(r.url()))writes.push(r.url());});
+  // This scenario exercises a cold server restore. Keep the saved navigation, member data and ledger.
+  // The normal warm F5 with an available session snapshot is covered by refresh-offline-recovery.
+  const wasCached = await page.evaluate(async () => {
+    const { IndexedDbReadSnapshotAdapter } = await import('/packages/offline/src/index.js');
+    const snapshots = new IndexedDbReadSnapshotAdapter();
+    const key = 'session:window:' + sessionStorage.getItem('eco.window.session.v1');
+    const entry = await snapshots.get(key);
+    if (entry?.body?.authenticated) await snapshots.remove(key);
+    return Boolean(entry?.body?.authenticated);
+  });
+  expect(wasCached).toBe(true);
   let releaseMembers,releaseOptional,membersBlocked=false,optionalBlocked=false;
   const membersGate=new Promise(resolve=>releaseMembers=resolve),optionalGate=new Promise(resolve=>releaseOptional=resolve);
   await page.route('**'+path+'/members',async route=>{membersBlocked=true;await membersGate;await route.continue();});
-  await page.route('**'+path+'/applications',async route=>{optionalBlocked=true;await optionalGate;await route.continue();});
+  // Operations revalidates its visible identity panel after the financial matrix. Applications belong to Back office.
+  await page.route('**'+path+'/identity-passport',async route=>{optionalBlocked=true;await optionalGate;await route.continue();});
   try{
     await page.reload({waitUntil:'domcontentloaded'});await expect(page.locator('#view-operations')).toHaveClass(/active/);
     await expect.poll(()=>membersBlocked).toBe(true);await expect(wrap).toHaveCount(0);releaseMembers();

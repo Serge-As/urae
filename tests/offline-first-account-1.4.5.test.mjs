@@ -17,7 +17,8 @@ test('first account can be created locally without any previous server session',
   assert.doesNotMatch(offline,/passwordPlain|plainPassword|storedPassword/);
   assert.match(app,/mode==='register'[\s\S]{0,500}localAuth\.register/);
   assert.match(app,/navigator\.onLine===false[\s\S]{0,300}localFlow/);
-  assert.match(app,/authStatus\(\)[\s\S]{0,1000}LOCAL_PENDING_REGISTRATION/);
+  const authStart=app.indexOf('async authStatus('),authEnd=app.indexOf('currentActor():',authStart);
+  assert.ok(authStart>=0&&authEnd>authStart);assert.match(app.slice(authStart,authEnd),/LOCAL_PENDING_REGISTRATION/);
   assert.match(html,/Première utilisation hors ligne/);
   assert.match(main,/Aucun compte local n’existe encore/);
 });

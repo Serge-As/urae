@@ -115,7 +115,8 @@ test('PWA shell refresh follows the usable workspace and remains versioned witho
   ]);
   // Shell downloads must not delay authentication on a cold mobile profile;
   // finally still registers recovery support if startup reports an error.
-  assert.match(main,/void start\(\)\.finally\(\(\)=>void ensureCurrentServiceWorker\(\)\);/);
+  assert.match(main,/void ensureCurrentServiceWorker\(\);/);
+  assert.ok(main.lastIndexOf('void ensureCurrentServiceWorker();')<main.lastIndexOf('void start();'),'offline installation starts without waiting for authentication or optional panels');
   const release=sw.match(/const CACHE = 'eco-system-v(\d+)-[^']+';/);
   assert.ok(release,'versioned service-worker cache');
   const shellVersion=release[1];

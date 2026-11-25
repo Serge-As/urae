@@ -25,9 +25,14 @@ function applySheetAppearance(name) {
 }
 
 export function restoreSheetAppearance() {
-  let saved = 'canopee';
+  let saved;
   try { saved = sessionStorage.getItem('eco.sheet.appearance'); } catch {}
-  applySheetAppearance(saved);
+  applySheetAppearance(saved || ({'grand-livre':'ivory','nuit-doree':'night'}[document.body.dataset.ecoAmbiance] || 'canopee'));
+}
+
+export function followAppAppearance() {
+  try { sessionStorage.removeItem('eco.sheet.appearance'); } catch {}
+  restoreSheetAppearance();
 }
 
 function appearancePicker(tx) {

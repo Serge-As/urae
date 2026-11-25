@@ -13,3 +13,7 @@ La branche d’intégration joint le commit 6cd6444a à la rénovation. Elle gar
 ## Décision de publication
 
 Vérifier l’intitulé exact, les montants après F5, les deux gestionnaires, l’annulation d’une correction et la coupure suivie d’une reconnexion. Comparer les comportements avec la v45 publique sur une copie isolée. Les résultats sur les différents SHA sont consultables dans les demandes de revue #99 et #100. L’autorisation de mise en ligne impose de conserver les contrôles du dépôt, l’archive de source, la sauvegarde D1 et les vérifications de lecture publique.
+
+## Relais du 25 novembre
+
+Les sondes de latence de la ligne intégrée suivent les propriétaires actifs. Le premier test retarde la boîte de réception pendant la première ouverture authentifiée. Le second retarde le passeport de groupe pendant la reprise de la vue Opérations. Pour exercer explicitement la branche à froid, le test utilise une fenêtre synthétique jetable et retire sa seule copie de lecture de session. Les assertions sur la matrice absente avant le retour des membres, la colonne restaurée, le brouillon, le geste de souris et le registre sont conservées. La reprise avec cache relève en complément de la suite refresh-offline-recovery-20261103.

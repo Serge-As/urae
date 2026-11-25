@@ -122,6 +122,26 @@ export class ConnectedApplication {
   private readonly identityMigration = new IndexedDbIdentityMigrationJournal();
   private readonly sovereign = new IndexedDbSovereignStore();
   private usingOfflineSnapshot=false;
+  private restoringSnapshots=false;
+  isRestoringCachedWorkspace():boolean{return this.restoringSnapshots;}
+  finishCachedWorkspaceRestore():void{this.restoringSnapshots=false;}
+  async restoreCachedSession():Promise<{authenticated:boolean;account:SessionAccount;local?:boolean;registrationState?:string;offline:true}|undefined>{
+    await this.windowSessionReady;
+    // Never borrow session:last or a different window's account.
+    let local:LocalAccountRecord|undefined;try{local=await this.localAuth.current();}catch{}
+    let result:{authenticated:boolean;account:SessionAccount;local?:boolean;registrationState?:string;offline:true}|undefined;
+    if(local)result={authenticated:true,account:this.adoptLocalAccount(local),local:true,registrationState:local.registrationState,offline:true};
+    else try{
+      const saved=await this.readSnapshots.get<any>(this.offlineReadKey('/api/v1/auth/session'));
+      const account=saved?.body?.account;
+      if(saved?.body?.authenticated&&account?.id&&account?.tenantId&&saved.actorId===account.id&&saved.tenantId===account.tenantId){
+        this.actorId=account.id;this.homeTenantId=account.tenantId;this.tenantId=account.tenantId;this.displayName=account.displayName;this.locale=account.locale;
+        result={...saved.body,authenticated:true,account,offline:true};
+      }
+    }catch{}
+    if(result){this.usingOfflineSnapshot=true;this.restoringSnapshots=true;}
+    return result;
+  }
   private transportUnavailableUntil=0;
   private transportRecoveryWakeUsed=false;
   private serverBudgetBlockedUntil=0;
@@ -406,13 +426,19 @@ export class ConnectedApplication {
     finally{if(work&&this.secondaryReads.get(key)===work)this.secondaryReads.delete(key);}
   }
   private async requestOnce<T>(path:string,init:RequestInit={},measurement:RequestBudgetToken|null=null):Promise<T>{
-    const origin={id:this.offlineReadKey(path),actorId:this.actorId,tenantId:this.tenantId};
     await this.windowSessionReady;
+    const origin={id:this.offlineReadKey(path),actorId:this.actorId,tenantId:this.tenantId};
     const headers=new Headers(this.headers());
     if(path==='/api/v1/auth/session'&&this.windowSessionId){try{if(sessionStorage.getItem('eco.window.session.bound.v1')!==this.windowSessionId)headers.set('x-eco-window-adopt-legacy','1');}catch{}}
     for(const [k,v] of new Headers(init.headers??{}))headers.set(k,v);
     if(typeof FormData!=='undefined'&&init.body instanceof FormData)headers.delete('content-type');
     const method=String(init.method??'GET').toUpperCase(),cacheable=method==='GET'&&this.offlineReadAllowed(path),serverRequired=init.cache==='no-store',securityCritical=path.startsWith('/api/v1/auth/');
+    if(this.restoringSnapshots||(typeof navigator!=='undefined'&&navigator.onLine===false)){
+      if(cacheable&&!serverRequired&&IndexedDbReadSnapshotAdapter.supported()){
+        try{const snapshot=await this.readSnapshots.get<T>(this.offlineReadKey(path));if(snapshot){this.requestMeter.local(measurement);this.announceOfflineSnapshot(path,snapshot.updatedAt);return structuredClone(snapshot.body);}}catch{}
+      }
+      throw new Error('NETWORK_UNAVAILABLE');
+    }
     // A slow optional panel must not prevent the independent Live handshake
     // or clock anchor from recovering. Explicit server quota blocks still apply.
     const recoveryControl=/\/(?:live\/ticket|financial-clock-anchor)$/.test(path);
@@ -428,7 +454,7 @@ export class ConnectedApplication {
       }
       throw new Error('NETWORK_UNAVAILABLE');
     }
-    let response:Response;
+    let response:Response,body:any;
     // navigator.onLine can be true on a hotspot with no Internet. Bound actual
     // server attempts; after one failure a short local circuit breaker makes
     // subsequent offline-capable actions immediate without periodic probing.
@@ -442,10 +468,12 @@ export class ConnectedApplication {
     let requestTimer:ReturnType<typeof setTimeout>|undefined;
     try{
       this.requestMeter.network(measurement);
-      const send=fetch(`${this.baseUrl}${path}`,{...init,headers,...(abort?{signal:abort.signal}:{})});
-      response=await Promise.race([send,new Promise<Response>((_,reject)=>{
+      // The deadline includes the response body: headers alone do not prove a
+      // completed read. A stalled JSON stream must not hang every startup await.
+      const send=(async()=>{const response=await fetch(`${this.baseUrl}${path}`,{...init,headers,...(abort?{signal:abort.signal}:{})});const body=await response.json().catch(error=>{if(response.ok)throw error;return{error:`HTTP_${response.status}`};});return{response,body};})();
+      ({response,body}=await Promise.race([send,new Promise<never>((_,reject)=>{
         requestTimer=setTimeout(()=>{abort?.abort();reject(new Error('NETWORK_UNAVAILABLE'));},timeoutMs);
-      })]);
+      })]));
     }catch(error){
       this.markTransportUnavailable();
       if(cacheable&&!serverRequired&&IndexedDbReadSnapshotAdapter.supported()){
@@ -453,7 +481,6 @@ export class ConnectedApplication {
       }
       throw new Error('NETWORK_UNAVAILABLE',{cause:error});
     }finally{if(requestTimer)clearTimeout(requestTimer);}
-    const body=await response.json().catch(()=>({error:`HTTP_${response.status}`}));
     this.requestMeter.json(measurement,body);
     if(!response.ok){
       const errorCode=String((body as any)?.error??'');
@@ -475,8 +502,8 @@ export class ConnectedApplication {
     return body as T;
   }
 
-  async bootstrap(input:{actorId?:string;tenantId?:string;displayName?:string;locale?:string}={}):Promise<{restoredOutbox:number;groups:Group[]}>{
-    const session=await this.authStatus();if(!session.authenticated || !session.account)throw Error('AUTHENTICATION_REQUIRED');
+  async bootstrap(input:{actorId?:string;tenantId?:string;displayName?:string;locale?:string;session?:{authenticated:boolean;account:SessionAccount|null}}={}):Promise<{restoredOutbox:number;groups:Group[]}>{
+    const session=input.session??await this.authStatus();if(!session.authenticated || !session.account)throw Error('AUTHENTICATION_REQUIRED');
     this.actorId=session.account.id;this.homeTenantId=session.account.tenantId;this.tenantId=session.account.tenantId;this.displayName=session.account.displayName;
     let preferred:string|undefined;try{preferred=localStorage.getItem('tontine.locale')??undefined;}catch{}this.locale=preferred??session.account.locale;
     if(IndexedDbOutboxAdapter.supported())try{const persisted=await this.outboxStorage.load();this.outbox.restore(persisted.filter(x=>x.actorId===this.actorId));}catch{}
@@ -488,13 +515,18 @@ export class ConnectedApplication {
     if(this.activeGroupId&&!groups.some(g=>g.id===this.activeGroupId))this.selectGroup(undefined);
     if(!this.activeGroupId&&groups[0])this.selectGroup(groups[0].id);
     else this.selectGroup(this.activeGroupId);
-    if(!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)await this.warmFinancialClock();}
+    if(!this.restoringSnapshots&&!this.usingOfflineSnapshot){await this.request('/api/v1/bootstrap',{method:'POST',body:JSON.stringify({displayName:this.displayName,locale:this.locale})});await this.groupTrashItems().catch(()=>[]);if(this.activeGroupId)await this.warmFinancialClock();}
     return{restoredOutbox:this.outbox.list().length,groups};
   }
 
-  async authStatus():Promise<{authenticated:boolean;account:SessionAccount|null;local?:boolean;registrationState?:string;offline?:boolean}>{
+  async authStatus(options:{requireServer?:boolean}={}):Promise<{authenticated:boolean;account:SessionAccount|null;local?:boolean;registrationState?:string;offline?:boolean}>{
     await this.windowSessionReady;
     let local:LocalAccountRecord|undefined;try{local=await this.localAuth.current();}catch{}
+    if(options.requireServer){
+      const server=await this.request<{authenticated:boolean;account:SessionAccount|null}>('/api/v1/auth/session',{cache:'no-store'});
+      if(server.authenticated&&server.account){this.bindWindowSession();this.actorId=server.account.id;this.homeTenantId=server.account.tenantId;this.tenantId=server.account.tenantId;this.displayName=server.account.displayName;this.usingOfflineSnapshot=false;}
+      return server;
+    }
     if(local?.registrationState==='LOCAL_PENDING_REGISTRATION'){
       const account=this.adoptLocalAccount(local);return{authenticated:true,account,local:true,registrationState:local.registrationState,offline:true};
     }

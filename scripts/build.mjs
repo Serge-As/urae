@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 
 await import('./generate-offline-capabilities.mjs');
-const RELEASE_VERSION='1.5.2.45-fiscalibre-host';
+const RELEASE_VERSION='1.5.2.46-offline-resume';
 const compiler=path.resolve('node_modules/typescript/bin/tsc');
 try{await access(compiler);}catch{await import('./build-portable.mjs');process.exit(0);}
 const output=path.resolve('.build');
